@@ -1,0 +1,4 @@
+ollama
+pydantic
+langchain
+langchain-ollama
