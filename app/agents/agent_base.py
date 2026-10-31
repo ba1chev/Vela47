@@ -13,7 +13,7 @@ from app.memory.short_term_memory.short_term_memory import ShortTermMemory
 from app.memory.short_term_memory.context_window.context_window import ContextWindow
 
 
-class Agent(ABC):
+class AgentBase(ABC):
     """Abstract base for all agents in the system. Owns its ShortTermMemory and
     wires it to a ContextWindow. The context window policy is not set here —
     middleware injects it into the ContextWindow before each inference call.
