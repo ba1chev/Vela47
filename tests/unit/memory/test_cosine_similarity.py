@@ -1,6 +1,6 @@
 import pytest
 
-from app.memory.vector_db_memory.vector_db_operation.vector_db_utils import cosine_similarity
+from app.intelligence.memory import cosine_similarity
 
 
 class TestCosineSimilarity:
