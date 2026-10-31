@@ -3,7 +3,7 @@ from typing import Optional
 from app.intelligence.tools.tool_registry import ToolRegistry
 from app.intelligence.messages.message_tool import MessageTool
 from app.intelligence.tracing.trace_event_type import TraceEventType
-from app.intelligence.tracing.tracing_service import NullTracingService
+from app.intelligence.tracing.tracing_service_null import TracingServiceNull
 from app.intelligence.tracing.tracing_service_base import TracingServiceBase
 from app.intelligence.messages.message_tool_calls.message_tool_call import MessageToolCall
 
@@ -27,7 +27,7 @@ class ToolExecutor:
         self._tracing_service: TracingServiceBase = (
             tracing_service
             if tracing_service is not None
-            else NullTracingService()
+            else TracingServiceNull()
         )
 
     def _report(self, tool_call: MessageToolCall, result: MessageTool) -> MessageTool:
