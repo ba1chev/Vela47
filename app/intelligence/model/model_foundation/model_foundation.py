@@ -3,16 +3,16 @@ from uuid import uuid4
 from time import perf_counter
 from typing import Iterator, Optional
 
-from app.intelligence.model.mode_base import ModelBase
-from app.intelligence.messages.message_ai import MessageAI
-from app.intelligence.model.model_config import ModelConfig
-from app.intelligence.tracing.trace_event_type import TraceEventType
-from app.intelligence.messages.message_base.message_base import MessageBase
-from app.intelligence.tracing.tracing_service_null import TracingServiceNull
-from app.intelligence.tracing.tracing_service_base import TracingServiceBase
-from app.intelligence.model.model_foundation.model_role_map import MODEL_ROLE_MAP
-from app.intelligence.messages.message_usage_metadata import MessageUsageMetadata
-from app.intelligence.messages.message_tool_calls.message_tool_call import MessageToolCall
+from app.intelligence.model import ModelBase
+from app.intelligence.messages import MessageAI
+from app.intelligence.model import ModelConfig
+from app.intelligence.tracing import TraceEventType
+from app.intelligence.messages import MessageBase
+from app.intelligence.tracing import TracingServiceNull
+from app.intelligence.tracing import TracingServiceBase
+from app.intelligence.model import MODEL_ROLE_MAP
+from app.intelligence.messages import MessageUsageMetadata
+from app.intelligence.messages import MessageToolCall
 
 
 class ModelFoundation(ModelBase):
