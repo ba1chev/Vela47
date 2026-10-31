@@ -4,9 +4,11 @@ from abc import ABC, abstractmethod
 from app.messages.message_ai import MessageAI
 from app.tools.tool_registry import ToolRegistry
 from app.tools.tool_executor import ToolExecutor
+from app.messages.message_tool import MessageTool
 from app.messages.message_type import MessageType
 from app.messages.message_human import MessageHuman
 from app.agents.prompts.prompt_manager import PromptManager
+from app.messages.message_base.message_base import MessageBase
 from app.memory.vector_db_memory.vector_db_memory import VectorDbMemory
 from app.model.model_foundation.model_foundation import ModelFoundation
 from app.memory.short_term_memory.short_term_memory import ShortTermMemory
@@ -44,10 +46,25 @@ class AgentBase(ABC):
     def _append_ai(self, message: MessageAI) -> None:
         self._short_term_memory.append_message(message.content, MessageType.AI_MESSAGE)
 
-    def _build_messages(self) -> list:
-        self._context_window.update()
+    def _append_tool(self, message: MessageTool) -> None:
+        self._short_term_memory.append_message(
+            message.content,
+            MessageType.TOOL_MESSAGE,
+            tool_call_id = message.tool_call_id,
+            status = message.status
+        )
+
+    def _compose_messages(self) -> list[MessageBase]:
+        """Prepends the system prompts to the context window's current view without
+        refreshing it. Use this when a middleware has already run update() on the
+        window — refreshing twice would re-resolve the policy and, for policies that
+        call a model (summarisation), pay for that call a second time."""
         system_messages = self._prompt_manager.build_system_messages()
         return system_messages + self._context_window.build()
+
+    def _build_messages(self) -> list[MessageBase]:
+        self._context_window.update()
+        return self._compose_messages()
 
     @abstractmethod
     def execute(self, human_message: MessageHuman) -> MessageAI:
