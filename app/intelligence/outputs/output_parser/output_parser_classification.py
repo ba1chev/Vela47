@@ -1,11 +1,11 @@
 import json
 from typing import Generic, TypeVar
 
-from app.intelligence.messages.message_ai import MessageAI
-from app.intelligence.outputs.output_entry import OutputEntry
-from app.intelligence.outputs.output_classification import OutputClassification
-from app.intelligence.outputs.output_parser.output_parser_base import OutputParserBase
-from app.intelligence.outputs.output_parser.output_parser_type import OutputParserType
+from app.intelligence.messages import MessageAI
+from app.intelligence.outputs import OutputEntry
+from app.intelligence.outputs import OutputClassification
+from app.intelligence.outputs import OutputParserBase
+from app.intelligence.outputs import OutputParserType
 
 T = TypeVar("T", bound = OutputEntry)
 
