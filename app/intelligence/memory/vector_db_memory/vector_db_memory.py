@@ -1,10 +1,10 @@
 from app.intelligence.memory import MemoryBase
 from app.intelligence.messages import MessageType
 from app.intelligence.messages import MessageBase
-from app.intelligence.messages import MessageFactory
 from app.intelligence.model import ModelEmbeddings
-from app.intelligence.messages import MessageFactoryBase
+from app.intelligence.messages import MessageFactory
 from app.intelligence.memory import VectorDbMemoryEntry
+from app.intelligence.messages import MessageFactoryBase
 from app.intelligence.memory import VectorDbOperationPolicy
 from app.intelligence.memory import VectorDbOperationManager
 
