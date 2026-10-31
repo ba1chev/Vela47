@@ -1,6 +1,6 @@
 from pydantic import Field
 
-from app.intelligence.messages.message_base.message_immutable_model import MessageImmutableModel
+from app.intelligence.messages import MessageImmutableModel
 
 
 class MessageUsageMetadata(MessageImmutableModel):
