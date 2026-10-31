@@ -1,5 +1,5 @@
-from app.intelligence.middleware import MiddlewareBase
 from app.intelligence.memory import ContextWindow
+from app.intelligence.middleware import MiddlewareBase
 from app.intelligence.memory import SlidingWindowPolicy
 
 
