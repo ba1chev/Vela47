@@ -1,7 +1,7 @@
 from pydantic import Field
 from typing import Literal, Optional
 
-from app.intelligence.messages.message_base.message_immutable_model import MessageImmutableModel
+from app.intelligence.messages import MessageImmutableModel
 
 
 class MessageInvalidToolCall(MessageImmutableModel):
