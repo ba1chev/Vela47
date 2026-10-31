@@ -1,6 +1,6 @@
-from app.intelligence.tools.tool_base import ToolBase
-from app.intelligence.sandbox.sandbox_env.sandbox_env import SandboxEnv
-from app.intelligence.tools.subagent_tools.tool_search_files.tool_search_files_input import ToolSearchFilesInput
+from app.intelligence.tools import ToolBase
+from app.intelligence.sandbox import SandboxEnv
+from app.intelligence.tools import ToolSearchFilesInput
 
 
 class ToolSearchFiles(ToolBase[ToolSearchFilesInput, str]):
