@@ -1,9 +1,9 @@
 from typing import Callable
 
-from app.intelligence.middleware.middleware_base import MiddlewareBase
-from app.intelligence.messages.message_base.message_base import MessageBase
-from app.intelligence.memory.short_term_memory.context_window.context_window import ContextWindow
-from app.intelligence.memory.short_term_memory.context_window.context_window_operation.context_window_policy_summarize_oldest import SummarizeOldestPolicy
+from app.intelligence.middleware import MiddlewareBase
+from app.intelligence.messages import MessageBase
+from app.intelligence.memory import ContextWindow
+from app.intelligence.memory import SummarizeOldestPolicy
 
 
 class MiddlewareSummarization(MiddlewareBase[ContextWindow]):
