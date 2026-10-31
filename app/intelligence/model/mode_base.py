@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Iterator, Optional
 
-from app.intelligence.messages.message_ai import MessageAI
-from app.intelligence.messages.message_base.message_base import MessageBase
+from app.intelligence.messages import MessageAI
+from app.intelligence.messages import MessageBase
 
 
 class ModelBase(ABC):
