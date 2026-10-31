@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from typing import Any, Callable, Iterator, Optional
 
-from app.intelligence.tracing.trace_event import TraceEvent
-from app.intelligence.tracing.trace_event_type import TraceEventType
+from app.intelligence.tracing import TraceEvent
+from app.intelligence.tracing import TraceEventType
 
 
 class TracingServiceBase(ABC):
