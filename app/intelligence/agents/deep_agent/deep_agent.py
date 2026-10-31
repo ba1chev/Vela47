@@ -3,13 +3,13 @@ from typing import Optional
 from app.intelligence.agents import AgentBase
 from app.intelligence.messages import MessageAI
 from app.intelligence.tools import ToolRegistry
-from app.intelligence.messages import MessageHuman
 from app.intelligence.agents import PromptManager
-from app.intelligence.tracing import TracingServiceBase
-from app.intelligence.agents import OperationContext
-from app.intelligence.agents import OperationPipeline
+from app.intelligence.messages import MessageHuman
 from app.intelligence.memory import VectorDbMemory
 from app.intelligence.model import ModelFoundation
+from app.intelligence.agents import OperationContext
+from app.intelligence.agents import OperationPipeline
+from app.intelligence.tracing import TracingServiceBase
 
 
 class DeepAgent(AgentBase):
