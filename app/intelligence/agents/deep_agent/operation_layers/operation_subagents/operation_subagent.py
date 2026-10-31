@@ -4,12 +4,12 @@ from app.intelligence.tools import ToolBase
 from app.intelligence.agents import AgentBase
 from app.intelligence.messages import MessageAI
 from app.intelligence.tools import ToolRegistry
-from app.intelligence.messages import MessageHuman
-from app.intelligence.middleware import MiddlewareBase
 from app.intelligence.agents import PromptManager
-from app.intelligence.tracing import TracingServiceBase
-from app.intelligence.model import ModelFoundation
 from app.intelligence.memory import ContextWindow
+from app.intelligence.messages import MessageHuman
+from app.intelligence.model import ModelFoundation
+from app.intelligence.middleware import MiddlewareBase
+from app.intelligence.tracing import TracingServiceBase
 
 
 class OperationSubagent(AgentBase):
