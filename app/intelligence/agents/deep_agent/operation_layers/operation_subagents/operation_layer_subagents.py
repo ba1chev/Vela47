@@ -1,16 +1,16 @@
 from typing import Optional
 
-from app.intelligence.messages.message_human import MessageHuman
-from app.intelligence.tracing.trace_event_type import TraceEventType
-from app.intelligence.sandbox.sandbox_pool_base import SandboxPoolBase
-from app.intelligence.tracing.tracing_service_null import TracingServiceNull
-from app.intelligence.tracing.tracing_service_base import TracingServiceBase
-from app.intelligence.agents.deep_agent.operation_context import OperationContext
-from app.intelligence.agents.deep_agent.operation_layers.operation_layer_type import OperationType
-from app.intelligence.agents.deep_agent.operation_layers.operation_layer_base import OperationLayerBase
-from app.intelligence.agents.deep_agent.operation_layers.operation_decomposition.operation_task import OperationTask
-from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent_result import OperationSubagentResult
-from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagents_factory.operation_subagent_factory_base import OperationSubagentFactoryBase
+from app.intelligence.messages import MessageHuman
+from app.intelligence.tracing import TraceEventType
+from app.intelligence.sandbox import SandboxPoolBase
+from app.intelligence.tracing import TracingServiceNull
+from app.intelligence.tracing import TracingServiceBase
+from app.intelligence.agents import OperationContext
+from app.intelligence.agents import OperationType
+from app.intelligence.agents import OperationLayerBase
+from app.intelligence.agents import OperationTask
+from app.intelligence.agents import OperationSubagentResult
+from app.intelligence.agents import OperationSubagentFactoryBase
 
 
 class OperationSubagentsLayer(OperationLayerBase):
