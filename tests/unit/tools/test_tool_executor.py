@@ -1,53 +1,15 @@
 from pydantic import BaseModel
 
-from app.tools.tool_base import ToolBase
-from app.tools.tool_registry import ToolRegistry
-from app.tools.tool_executor import ToolExecutor
-from app.messages.message_tool import MessageTool
-from app.messages.message_tool_calls.message_tool_call import MessageToolCall
-
-
-class AddInput(BaseModel):
-    a: int
-    b: int
-
-
-class MultiplyInput(BaseModel):
-    x: float
-    y: float
-
-
-class AddTool(ToolBase[AddInput, int]):
-    @property
-    def name(self): return "add"
-    @property
-    def description(self): return "Adds two integers."
-    @property
-    def input_schema(self): return AddInput
-    def execute(self, input: AddInput) -> int:
-        return self._function_predicate(input.a, input.b)
-
-
-class MultiplyTool(ToolBase[MultiplyInput, float]):
-    @property
-    def name(self): return "multiply"
-    @property
-    def description(self): return "Multiplies two numbers."
-    @property
-    def input_schema(self): return MultiplyInput
-    def execute(self, input: MultiplyInput) -> float:
-        return self._function_predicate(input.x, input.y)
-
-
-class FailingTool(ToolBase[AddInput, int]):
-    @property
-    def name(self): return "fail"
-    @property
-    def description(self): return "Always fails."
-    @property
-    def input_schema(self): return AddInput
-    def execute(self, input: AddInput) -> int:
-        raise RuntimeError("tool exploded")
+from app.intelligence.tools import ToolBase
+from app.intelligence.tools import ToolRegistry
+from app.intelligence.tools import ToolExecutor
+from app.intelligence.messages import MessageTool
+from tests.fixtures.tools.add_tool import AddTool
+from tests.fixtures.tools.add_input import AddInput
+from app.intelligence.messages import MessageToolCall
+from tests.fixtures.tools.failing_tool import FailingTool
+from tests.fixtures.tools.multiply_tool import MultiplyTool
+from tests.fixtures.tools.multiply_input import MultiplyInput
 
 
 def make_registry(*tools):
