@@ -1,8 +1,8 @@
 import posixpath
 
-from app.intelligence.tools.tool_base import ToolBase
-from app.intelligence.sandbox.sandbox_env.sandbox_env import SandboxEnv
-from app.intelligence.tools.subagent_tools.tool_write_test.tool_write_test_input import ToolWriteTestInput
+from app.intelligence.tools import ToolBase
+from app.intelligence.sandbox import SandboxEnv
+from app.intelligence.tools import ToolWriteTestInput
 
 
 class ToolWriteTest(ToolBase[ToolWriteTestInput, str]):
