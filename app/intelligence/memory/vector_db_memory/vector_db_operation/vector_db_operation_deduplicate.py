@@ -1,6 +1,6 @@
-from app.intelligence.memory import VectorDbMemoryEntry
 from app.intelligence.memory import cosine_similarity
 from app.intelligence.memory import VectorDbOperation
+from app.intelligence.memory import VectorDbMemoryEntry
 from app.intelligence.memory import VectorDbOperationType
 
 
