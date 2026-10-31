@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent import OperationSubagent
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent_type import OperationSubagentType
+from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_env import OperationSandboxEnv
 
 
 class OperationSubagentFactoryBase(ABC):
@@ -11,5 +12,6 @@ class OperationSubagentFactoryBase(ABC):
     can change without touching the layer."""
 
     @abstractmethod
-    def create(self, type: OperationSubagentType) -> OperationSubagent:
+    def create(self, type: OperationSubagentType,
+        sandbox_env: OperationSandboxEnv) -> OperationSubagent:
         raise NotImplementedError("Must be implemented")
