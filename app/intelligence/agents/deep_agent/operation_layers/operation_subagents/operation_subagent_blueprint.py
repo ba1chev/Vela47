@@ -1,30 +1,37 @@
+from typing import Callable
+
 from app.intelligence.tools.tool_base import ToolBase
 from app.intelligence.middleware.middleware_base import MiddlewareBase
-from app.intelligence.agents.prompts.prompt_manager import PromptManager
 from app.intelligence.model.model_foundation.model_foundation import ModelFoundation
 from app.intelligence.memory.short_term_memory.context_window.context_window import ContextWindow
+from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_env import OperationSandboxEnv
 
 
 class OperationSubagentBlueprint:
-    """The full recipe for one kind of subagent — which tool it gets, which model
-    it runs on, how its context window is managed, and how long its ReAct loop may
-    run. Holds only stateless collaborators, which is what makes it reusable: the
-    factory builds a fresh OperationSubagent from the same blueprint for every
-    task, and each gets its own ShortTermMemory and ContextWindow while sharing
-    the model and tool instances.
+    """The full recipe for one kind of subagent — how to build its tool, which model
+    it runs on, how its context window is managed, and how long its ReAct loop may run.
+
+    The tool arrives as a factory rather than an instance because it cannot exist yet:
+    a tool acts on the sandbox its agent was leased, and that lease is only made when
+    a task is dispatched. One shared instance would have every subagent writing into
+    whichever sandbox happened to be bound first.
+
+    The prompt is a template for the same reason. It has to name the tool for a small
+    model to reliably call it, and the tool's name is only knowable once the factory
+    has produced one — so the text is finished at creation time, not here.
 
     Keeping the recipe in a blueprint rather than hard-coding it in the factory is
-    what lets a RESEARCH agent run a small fast model with a sliding window while
-    a REVIEW agent runs a reasoning model with summarisation, without either being
-    a separate class."""
+    what lets a RESEARCH agent run a small fast model with a sliding window while a
+    REVIEW agent runs a reasoning model with summarisation, without either being a
+    separate class."""
 
-    def __init__(self, tool: ToolBase, model: ModelFoundation,
-        prompt_manager: PromptManager, max_context_window_size: int,
+    def __init__(self, tool_factory: Callable[[OperationSandboxEnv], ToolBase],
+        prompt_template: str, model: ModelFoundation, max_context_window_size: int,
         context_window_middleware: MiddlewareBase[ContextWindow],
         max_iterations: int = 5) -> None:
-        self.tool: ToolBase = tool
+        self.tool_factory: Callable[[OperationSandboxEnv], ToolBase] = tool_factory
+        self.prompt_template: str = prompt_template
         self.model: ModelFoundation = model
-        self.prompt_manager: PromptManager = prompt_manager
         self.max_context_window_size: int = max_context_window_size
         self.context_window_middleware: MiddlewareBase[ContextWindow] = context_window_middleware
         self.max_iterations: int = max_iterations
