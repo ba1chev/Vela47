@@ -1,7 +1,7 @@
-from app.messages.message_ai import MessageAI
-from app.messages.message_human import MessageHuman
-from app.memory.short_term_memory.context_window.context_window_operation.context_window_operation_type import ContextWindowOperationType
-from app.memory.short_term_memory.context_window.context_window_operation.context_window_operation_flatten import ContextWindowOperationFlatten
+from app.intelligence.messages import MessageAI
+from app.intelligence.messages import MessageHuman
+from app.intelligence.memory import ContextWindowOperationType
+from app.intelligence.memory import ContextWindowOperationFlatten
 
 
 class TestFlatten:
