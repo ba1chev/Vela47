@@ -11,27 +11,26 @@ from app.memory.vector_db_memory.vector_db_memory import VectorDbMemory
 from app.model.model_foundation.model_foundation import ModelFoundation
 from app.memory.short_term_memory.short_term_memory import ShortTermMemory
 from app.memory.short_term_memory.context_window.context_window import ContextWindow
-from app.memory.short_term_memory.context_window.context_window_operation.context_window_policy import ContextWindowPolicy
 
 
 class Agent(ABC):
     """Abstract base for all agents in the system. Owns its ShortTermMemory and
-    wires it to a ContextWindow built from the supplied policy. Concrete subclasses
-    implement execute() and define the inference loop — how human messages turn into
-    AI responses, whether tools are invoked, and how the context window is updated
-    between turns. The vector_db_memory and tool_registry are optional: agents that
-    do not need long-term retrieval or tool use omit them."""
+    wires it to a ContextWindow. The context window policy is not set here —
+    middleware injects it into the ContextWindow before each inference call.
+    Concrete subclasses implement execute() and define the inference loop — how
+    human messages turn into AI responses, whether tools are invoked, and how the
+    context window is updated between turns. The vector_db_memory and tool_registry
+    are optional: agents that do not need long-term retrieval or tool use omit them."""
 
     def __init__(self, model: ModelFoundation, prompt_manager: PromptManager,
-        context_window_policy: ContextWindowPolicy, max_context_window_size: int,
-        tool_registry: Optional[ToolRegistry] = None, vector_db_memory: Optional[VectorDbMemory] = None) -> None:
+        max_context_window_size: int, tool_registry: Optional[ToolRegistry] = None,
+        vector_db_memory: Optional[VectorDbMemory] = None) -> None:
         self._model: ModelFoundation = model
         self._prompt_manager: PromptManager = prompt_manager
         self._short_term_memory: ShortTermMemory = ShortTermMemory()
         self._context_window: ContextWindow = ContextWindow(
             memory = self._short_term_memory,
-            max_window_size = max_context_window_size,
-            policy = context_window_policy
+            max_window_size = max_context_window_size
         )
         self._tool_registry: Optional[ToolRegistry] = tool_registry
         self._tool_executor: Optional[ToolExecutor] = (
