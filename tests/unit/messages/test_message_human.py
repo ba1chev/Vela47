@@ -1,8 +1,8 @@
 import pytest
 from pydantic import ValidationError
 
-from app.messages.message_type import MessageType
-from app.messages.message_human import MessageHuman
+from app.intelligence.messages import MessageType
+from app.intelligence.messages import MessageHuman
 
 
 class TestMessageHuman:
