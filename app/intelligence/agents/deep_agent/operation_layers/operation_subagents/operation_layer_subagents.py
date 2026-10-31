@@ -1,4 +1,9 @@
+from typing import Optional
+
 from app.intelligence.messages.message_human import MessageHuman
+from app.intelligence.tracing.trace_event_type import TraceEventType
+from app.intelligence.tracing.tracing_service import NullTracingService
+from app.intelligence.tracing.tracing_service_base import TracingServiceBase
 from app.intelligence.agents.deep_agent.operation_context import OperationContext
 from app.intelligence.agents.deep_agent.operation_layers.operation_layer_type import OperationType
 from app.intelligence.agents.deep_agent.operation_layers.operation_layer_base import OperationLayerBase
@@ -25,9 +30,15 @@ class OperationSubagentsLayer(OperationLayerBase):
     subagent cannot leak a slot and starve the rest of the run."""
 
     def __init__(self, subagent_factory: OperationSubagentFactoryBase,
-        sandbox_pool: OperationSandboxPoolBase) -> None:
+        sandbox_pool: OperationSandboxPoolBase,
+        tracing_service: Optional[TracingServiceBase] = None) -> None:
         self._subagent_factory: OperationSubagentFactoryBase = subagent_factory
         self._sandbox_pool: OperationSandboxPoolBase = sandbox_pool
+        self._tracing_service: TracingServiceBase = (
+            tracing_service
+            if tracing_service is not None
+            else NullTracingService()
+        )
 
     @property
     def operation_type(self) -> OperationType:
@@ -35,26 +46,45 @@ class OperationSubagentsLayer(OperationLayerBase):
 
     def _run_task(self, task: OperationTask) -> OperationSubagentResult:
         slot = self._sandbox_pool.acquire()
+        self._tracing_service.emit(
+            TraceEventType.SANDBOX_ACQUIRED,
+            f"slot {slot.id}",
+            {"slot": slot.id, "available": self._sandbox_pool.available, "task_id": task.id}
+        )
         try:
-            subagent = self._subagent_factory.create(task.subagent_type)
-            response = subagent.execute(MessageHuman(content = task.instruction))
+            with self._tracing_service.span(
+                TraceEventType.SUBAGENT_STARTED,
+                TraceEventType.SUBAGENT_FINISHED,
+                task.subagent_type.name,
+                {"task_id": task.id, "slot": slot.id, "instruction": task.instruction}
+            ) as span:
+                try:
+                    subagent = self._subagent_factory.create(task.subagent_type)
+                    response = subagent.execute(MessageHuman(content = task.instruction))
+                    content = (
+                        response.content
+                        if isinstance(response.content, str)
+                        else str(response.content)
+                    )
+                    status = "success"
+                except Exception as e:
+                    content = str(e)
+                    status = "error"
+                span["status"] = status
+                span["result"] = content
             return OperationSubagentResult(
                 task_id = task.id,
                 subagent_type = task.subagent_type,
-                content = response.content
-                if isinstance(response.content, str)
-                else str(response.content),
-                status = "success"
-            )
-        except Exception as e:
-            return OperationSubagentResult(
-                task_id = task.id,
-                subagent_type = task.subagent_type,
-                content = str(e),
-                status = "error"
+                content = content,
+                status = status
             )
         finally:
             self._sandbox_pool.release(slot)
+            self._tracing_service.emit(
+                TraceEventType.SANDBOX_RELEASED,
+                f"slot {slot.id}",
+                {"slot": slot.id, "available": self._sandbox_pool.available}
+            )
 
     def execute(self, context: OperationContext) -> None:
         context.results = [self._run_task(current_task) for current_task in context.tasks]
