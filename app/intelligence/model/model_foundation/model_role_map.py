@@ -1,4 +1,4 @@
-from app.intelligence.messages.message_type import MessageType
+from app.intelligence.messages import MessageType
 
 
 MODEL_ROLE_MAP: dict[MessageType, str] = {
