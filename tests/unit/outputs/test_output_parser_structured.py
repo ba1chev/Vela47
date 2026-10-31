@@ -2,15 +2,11 @@ import json
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from app.messages.message_ai import MessageAI
-from app.outputs.output_structured import OutputStructured
-from app.outputs.output_parser.output_parser_type import OutputParserType
-from app.outputs.output_parser.output_parser_structured import OutputParserStructured
-
-
-class Contact(BaseModel):
-    name: str
-    email: str
+from app.intelligence.messages import MessageAI
+from tests.fixtures.outputs.contact import Contact
+from app.intelligence.outputs import OutputStructured
+from app.intelligence.outputs import OutputParserType
+from app.intelligence.outputs import OutputParserStructured
 
 
 class TestOutputParserStructured:
