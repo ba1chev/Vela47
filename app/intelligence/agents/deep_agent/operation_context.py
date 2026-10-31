@@ -2,11 +2,11 @@ from uuid import uuid4
 from typing import Optional
 from pydantic import BaseModel, Field
 
-from app.intelligence.messages.message_ai import MessageAI
-from app.intelligence.messages.message_human import MessageHuman
-from app.intelligence.agents.deep_agent.operation_layers.operation_planning.operation_plan import OperationPlan
-from app.intelligence.agents.deep_agent.operation_layers.operation_decomposition.operation_task import OperationTask
-from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent_result import OperationSubagentResult
+from app.intelligence.messages import MessageAI
+from app.intelligence.messages import MessageHuman
+from app.intelligence.agents import OperationPlan
+from app.intelligence.agents import OperationTask
+from app.intelligence.agents import OperationSubagentResult
 
 
 class OperationContext(BaseModel):
