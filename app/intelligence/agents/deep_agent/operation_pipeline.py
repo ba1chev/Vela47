@@ -1,11 +1,11 @@
 from typing import Any, Optional
 
 from app.intelligence.tracing import TraceEventType
+from app.intelligence.agents import OperationPolicy
+from app.intelligence.agents import OperationContext
+from app.intelligence.agents import OperationLayerBase
 from app.intelligence.tracing import TracingServiceNull
 from app.intelligence.tracing import TracingServiceBase
-from app.intelligence.agents import OperationContext
-from app.intelligence.agents import OperationPolicy
-from app.intelligence.agents import OperationLayerBase
 from app.intelligence.agents import OperationLayersFactory
 from app.intelligence.agents import OperationLayersFactoryBase
 
