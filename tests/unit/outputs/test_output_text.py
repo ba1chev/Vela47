@@ -1,6 +1,6 @@
-from app.messages.message_ai import MessageAI
-from app.outputs.output_type import OutputType
-from app.outputs.output_text import OutputText
+from app.intelligence.messages import MessageAI
+from app.intelligence.outputs import OutputType
+from app.intelligence.outputs import OutputText
 
 
 class TestOutputText:
