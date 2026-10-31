@@ -1,13 +1,9 @@
 from pydantic import BaseModel
 
-from app.messages.message_ai import MessageAI
-from app.outputs.output_type import OutputType
-from app.outputs.output_structured import OutputStructured
-
-
-class Contact(BaseModel):
-    name: str
-    email: str
+from app.intelligence.messages import MessageAI
+from app.intelligence.outputs import OutputType
+from tests.fixtures.outputs.contact import Contact
+from app.intelligence.outputs import OutputStructured
 
 
 class TestOutputStructured:
