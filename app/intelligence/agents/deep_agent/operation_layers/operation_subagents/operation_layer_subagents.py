@@ -44,7 +44,7 @@ class OperationSubagentsLayer(OperationLayerBase):
     def operation_type(self) -> OperationType:
         return OperationType.SUBAGENTS
 
-    def _run_task(self, task: OperationTask) -> OperationSubagentResult:
+    def _run_task(self, task: OperationTask, run_id: str) -> OperationSubagentResult:
         slot = self._sandbox_pool.acquire()
         self._tracing_service.emit(
             TraceEventType.SANDBOX_ACQUIRED,
@@ -59,7 +59,8 @@ class OperationSubagentsLayer(OperationLayerBase):
                 {"task_id": task.id, "slot": slot.id, "instruction": task.instruction}
             ) as span:
                 try:
-                    subagent = self._subagent_factory.create(task.subagent_type)
+                    sandbox_env = self._sandbox_pool.env_for(slot, run_id)
+                    subagent = self._subagent_factory.create(task.subagent_type, sandbox_env)
                     response = subagent.execute(MessageHuman(content = task.instruction))
                     content = (
                         response.content
@@ -87,4 +88,6 @@ class OperationSubagentsLayer(OperationLayerBase):
             )
 
     def execute(self, context: OperationContext) -> None:
-        context.results = [self._run_task(current_task) for current_task in context.tasks]
+        context.results = [
+            self._run_task(current_task, context.run_id) for current_task in context.tasks
+        ]
