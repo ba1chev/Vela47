@@ -12,7 +12,7 @@ def make_pipeline(log, tracer = None):
     layers = [
         RecordingLayer(OperationType.PLANNING, log, "planning"),
         RecordingLayer(OperationType.DECOMPOSITION, log, "decomposition"),
-        RecordingLayer(OperationType.MERGING, log, "merging"),
+        RecordingLayer(OperationType.MERGING, log, "merging")
     ]
     return OperationPipeline(StaticPolicy(layers), tracer)
 
@@ -27,7 +27,6 @@ class TestOperationPipeline:
         assert log == ["planning", "decomposition", "merging"]
 
     def test_the_same_context_instance_is_returned(self):
-        """Callers inspect the plan and the individual results, not only the answer."""
         context = OperationContext(goal = MessageHuman(content = "x"))
         assert make_pipeline([]).run(context) is context
 

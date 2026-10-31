@@ -13,7 +13,7 @@ def make_context(*types):
         plan = OperationPlan(
             goal = "goal",
             steps = [OperationStep(index = i, description = f"step {i}", subagent_type = t)
-                     for i, t in enumerate(types)]
+                for i, t in enumerate(types)]
         )
     )
 
@@ -28,8 +28,6 @@ class TestOperationDecompositionLayer:
         assert len(context.tasks) == 2
 
     def test_task_ids_are_unique(self):
-        """The id is how a result is paired back to its task, so a duplicate would
-        silently attribute one subagent's work to another."""
         context = make_context(*[OperationSubagentType.CODE] * 5)
         OperationDecompositionLayer().execute(context)
         assert len({task.id for task in context.tasks}) == 5
@@ -51,8 +49,6 @@ class TestOperationDecompositionLayer:
         assert context.tasks[0].instruction == "step 0"
 
     def test_no_plan_produces_no_tasks_rather_than_an_error(self):
-        """A pipeline configured without a planning stage should do nothing here,
-        not crash."""
         context = OperationContext(goal = MessageHuman(content = "goal"))
         OperationDecompositionLayer().execute(context)
         assert context.tasks == []

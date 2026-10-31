@@ -42,8 +42,6 @@ class TestToolSearchFiles:
         assert "a.py" in output and "b/c.py" in output
 
     def test_results_are_capped(self):
-        """Matches are fed back into a context window, so an unbounded list would
-        evict the task the agent is working on."""
         tool = make_tool()
         tool._sandbox_env.write_file("many.py", "hit\n" * (ToolSearchFiles.MAX_MATCHES + 20))
         output = tool.execute(ToolSearchFilesInput(query = "hit"))

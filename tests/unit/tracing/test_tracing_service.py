@@ -26,8 +26,6 @@ class TestTracingService:
         assert len(service.events()) == 1
 
     def test_empty_service_is_truthy(self):
-        """An empty tracer must not be falsy — components select it with an explicit
-        None check, and a falsy service would silently be replaced by a null one."""
         assert bool(TracingService())
 
     def test_subscriber_receives_events(self):

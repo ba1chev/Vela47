@@ -31,8 +31,6 @@ class TestToolReadFile:
         assert "empty" in tool.execute(ToolReadFileInput(path = "a.py"))
 
     def test_a_miss_lists_what_does_exist(self):
-        """The agent has no second tool to list the workspace, so a bare 'not found'
-        would leave it with nowhere to go."""
         tool = make_tool()
         tool._sandbox_env.write_file("real.py", "x")
         output = tool.execute(ToolReadFileInput(path = "wrong.py"))

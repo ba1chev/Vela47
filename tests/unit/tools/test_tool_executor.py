@@ -24,7 +24,7 @@ class TestToolExecutor:
         self.registry = make_registry(
             AddTool(lambda a, b: a + b),
             MultiplyTool(lambda x, y: x * y),
-            FailingTool(lambda a, b: a + b),
+            FailingTool(lambda a, b: a + b)
         )
         self.executor = ToolExecutor(self.registry)
 

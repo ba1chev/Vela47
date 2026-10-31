@@ -16,7 +16,7 @@ def make_agent(policy = None, max_size = 10, prompt_manager = None):
     agent = EchoAgent(
         model = ModelFoundation(config = config),
         prompt_manager = prompt_manager or PromptManager(),
-        max_context_window_size = max_size,
+        max_context_window_size = max_size
     )
     agent._context_window.set_policy(policy or KeepAllPolicy())
     return agent
@@ -66,7 +66,7 @@ class TestAgent:
         agent = CapturingAgent(
             model = ModelFoundation(config = config),
             prompt_manager = pm,
-            max_context_window_size = 10,
+            max_context_window_size = 10
         )
         agent._context_window.set_policy(KeepAllPolicy())
         agent.execute(MessageHuman(content = "hi"))

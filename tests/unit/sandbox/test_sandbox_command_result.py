@@ -6,8 +6,6 @@ class TestSandboxCommandResult:
         assert SandboxCommandResult(exit_code = 0, output = "ok").timed_out is False
 
     def test_non_zero_exit_is_a_result_not_an_error(self):
-        """A failing command is something the agent reads and reacts to, so it must
-        arrive as data rather than as an exception."""
         result = SandboxCommandResult(exit_code = 1, output = "boom")
         assert result.exit_code == 1 and result.output == "boom"
 

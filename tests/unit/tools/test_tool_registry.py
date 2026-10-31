@@ -29,7 +29,7 @@ class TestToolRegistry:
     def test_len(self):
         reg = make_registry(
             AddTool(lambda a, b: a + b),
-            MultiplyTool(lambda x, y: x * y),
+            MultiplyTool(lambda x, y: x * y)
         )
         assert len(reg) == 2
 

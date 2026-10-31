@@ -20,8 +20,6 @@ class TestToolWriteTest:
         assert result == "Wrote tests/test_sort.py (1 lines)."
 
     def test_a_bare_name_is_given_the_convention(self):
-        """A test saved where no runner looks is an artefact nobody will execute, and
-        the agent writing it has no way to notice."""
         tool = make_tool()
         tool.execute(ToolWriteTestInput(path = "sort", content = "def test_x(): pass\n"))
         assert tool._sandbox_env.list_files() == ["tests/test_sort.py"]

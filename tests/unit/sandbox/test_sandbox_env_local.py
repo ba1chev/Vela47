@@ -50,7 +50,7 @@ class TestSandboxEnvLocal:
         "../../outside.txt",
         "/etc/passwd",
         "a/../../outside.txt",
-        "nested/../../../outside.txt",
+        "nested/../../../outside.txt"
     ])
     def test_paths_outside_the_root_are_refused(self, escape):
         """Every path reaching a sandbox came from a model, so traversal is the
@@ -91,7 +91,5 @@ class TestSandboxEnvLocal:
         assert env.list_files() == ["real.py"]
 
     def test_running_a_command_is_refused(self):
-        """A bare directory cannot contain anything, so it must not pretend to —
-        running model-written code on the host is exactly what the sandbox prevents."""
         with pytest.raises(RuntimeError, match = "cannot run commands"):
             make_env().run("echo hi")

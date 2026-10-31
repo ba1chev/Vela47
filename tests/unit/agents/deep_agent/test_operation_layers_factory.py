@@ -8,7 +8,6 @@ from app.intelligence.agents import OPERATION_LAYERS_REGISTRY
 
 class TestOperationLayersFactory:
     def test_every_type_is_registered(self):
-        """A type with no class would fail only once a policy asked for it."""
         for operation_type in OperationType:
             assert operation_type in OPERATION_LAYERS_REGISTRY
 

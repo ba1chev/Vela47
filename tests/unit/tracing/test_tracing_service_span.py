@@ -32,7 +32,6 @@ class TestTracingServiceSpan:
         assert finished.payload == {"task_id": "t1", "status": "success"}
 
     def test_span_closes_when_body_raises(self):
-        """A step that blows up must still close, or the UI shows it running forever."""
         service = TracingService()
         with pytest.raises(ValueError):
             with service.span(TraceEventType.LAYER_STARTED, TraceEventType.LAYER_FINISHED, "L"):

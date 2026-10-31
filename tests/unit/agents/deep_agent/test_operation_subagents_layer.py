@@ -17,8 +17,8 @@ def make_context(count = 2):
     return OperationContext(
         goal = MessageHuman(content = "goal"),
         tasks = [OperationTask(id = f"t{i}", step_index = i,
-                               subagent_type = OperationSubagentType.CODE,
-                               instruction = f"task {i}") for i in range(count)])
+            subagent_type = OperationSubagentType.CODE,
+            instruction = f"task {i}") for i in range(count)])
 
 
 def make_pool(size = 3):
@@ -57,14 +57,11 @@ class TestOperationSubagentsLayer:
         assert [r.status for r in context.results] == ["error", "error"]
 
     def test_a_failure_still_returns_the_slot(self):
-        """Release happens in a finally block, or one crash starves the whole run."""
         pool = make_pool(2)
         OperationSubagentsLayer(StubSubagentFactory(fail = True), pool).execute(make_context(2))
         assert pool.available == 2
 
     def test_every_task_in_a_run_gets_the_same_workspace(self):
-        """Slots are leased per task but files belong to the run, so a CODE
-        subagent's output is still there for a REVIEW subagent."""
         factory = StubSubagentFactory()
         OperationSubagentsLayer(factory, make_pool()).execute(make_context(2))
         roots = {env.root for env in factory.envs}

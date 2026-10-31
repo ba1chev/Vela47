@@ -9,11 +9,11 @@ def entry(content, vector):
 
 
 ENTRIES = [
-    entry("Python basics",  [1.0, 0.0, 0.0]),
+    entry("Python basics", [1.0, 0.0, 0.0]),
     entry("Coffee recipes", [0.0, 1.0, 0.0]),
-    entry("Python async",   [0.9, 0.1, 0.0]),
-    entry("Python typing",  [0.85, 0.15, 0.0]),
-    entry("Tea brewing",    [0.0, 0.9, 0.1]),
+    entry("Python async", [0.9, 0.1, 0.0]),
+    entry("Python typing", [0.85, 0.15, 0.0]),
+    entry("Tea brewing",  [0.0, 0.9, 0.1])
 ]
 
 
