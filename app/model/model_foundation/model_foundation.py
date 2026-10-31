@@ -1,5 +1,6 @@
 import ollama
-from typing import Iterator
+from uuid import uuid4
+from typing import Iterator, Optional
 
 from app.model.mode_base import ModelBase
 from app.messages.message_ai import MessageAI
@@ -7,6 +8,7 @@ from app.model.model_config import ModelConfig
 from app.messages.message_base.message_base import MessageBase
 from app.model.model_foundation.model_role_map import MODEL_ROLE_MAP
 from app.messages.message_usage_metadata import MessageUsageMetadata
+from app.messages.message_tool_calls.message_tool_call import MessageToolCall
 
 
 class ModelFoundation(ModelBase):
@@ -47,17 +49,30 @@ class ModelFoundation(ModelBase):
             options["num_predict"] = self._config.max_output_tokens
         return options
 
-    def invoke(self, messages: list[MessageBase]) -> MessageAI:
+    def _parse_tool_calls(self, message: dict) -> list[MessageToolCall]:
+        return [
+            MessageToolCall(
+                name = current_call["function"]["name"],
+                args = current_call["function"].get("arguments", {}) or {},
+                id = str(uuid4())
+            )
+            for current_call in (message.get("tool_calls") or [])
+        ]
+
+    def invoke(self, messages: list[MessageBase],
+        tools: Optional[list[dict]] = None) -> MessageAI:
         response = ollama.chat(
             model = self._config.model_name,
             messages = self._format_messages(messages),
             options = self._build_options(),
-            keep_alive = self._config.keep_alive
+            keep_alive = self._config.keep_alive,
+            tools = tools
         )
         input_tokens = response.get("prompt_eval_count", 0)
         output_tokens = response.get("eval_count", 0)
         return MessageAI(
             content = response["message"]["content"],
+            tool_calls = self._parse_tool_calls(response["message"]),
             usage_metadata = MessageUsageMetadata(
                 input_tokens = input_tokens,
                 output_tokens = output_tokens,
