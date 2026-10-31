@@ -1,3 +1,4 @@
+from uuid import uuid4
 from typing import Optional
 from pydantic import BaseModel, Field
 
@@ -19,6 +20,12 @@ class OperationContext(BaseModel):
     this is intentionally not frozen — mutation in place is the mechanism by
     which layers communicate."""
 
+    run_id: str = Field(
+        default_factory = lambda: uuid4().hex[:12],
+        description = "Identifies this run's shared workspace. Sandbox slots are leased per "
+            "task, but the directory they operate on belongs to the run — this is what ties "
+            "a file a CODE subagent wrote to the REVIEW subagent that later reads it."
+    )
     goal: MessageHuman = Field(
         description = "The request that started this run, exactly as it reached the DeepAgent. "
             "Never overwritten by a layer, so it stays available as ground truth for every "
