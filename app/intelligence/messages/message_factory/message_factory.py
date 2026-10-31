@@ -1,12 +1,12 @@
 from typing import Any, Union
 
-from app.intelligence.messages.message_ai import MessageAI
-from app.intelligence.messages.message_type import MessageType
-from app.intelligence.messages.message_tool import MessageTool
-from app.intelligence.messages.message_human import MessageHuman
-from app.intelligence.messages.message_system import MessageSystem
-from app.intelligence.messages.message_base.message_base import MessageBase, ContentPart
-from app.intelligence.messages.message_factory.message_base_factory import MessageFactoryBase
+from app.intelligence.messages import MessageAI
+from app.intelligence.messages import MessageType
+from app.intelligence.messages import MessageTool
+from app.intelligence.messages import MessageHuman
+from app.intelligence.messages import MessageSystem
+from app.intelligence.messages import MessageBase, ContentPart
+from app.intelligence.messages import MessageFactoryBase
 
 
 class MessageFactory(MessageFactoryBase):
