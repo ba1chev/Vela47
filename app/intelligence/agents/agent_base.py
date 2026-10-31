@@ -7,9 +7,9 @@ from app.intelligence.tools.tool_executor import ToolExecutor
 from app.intelligence.messages.message_tool import MessageTool
 from app.intelligence.messages.message_type import MessageType
 from app.intelligence.messages.message_human import MessageHuman
-from app.intelligence.tracing.tracing_service import NullTracingService
 from app.intelligence.agents.prompts.prompt_manager import PromptManager
 from app.intelligence.messages.message_base.message_base import MessageBase
+from app.intelligence.tracing.tracing_service_null import TracingServiceNull
 from app.intelligence.tracing.tracing_service_base import TracingServiceBase
 from app.intelligence.memory.vector_db_memory.vector_db_memory import VectorDbMemory
 from app.intelligence.model.model_foundation.model_foundation import ModelFoundation
@@ -40,7 +40,7 @@ class AgentBase(ABC):
         self._tracing_service: TracingServiceBase = (
             tracing_service
             if tracing_service is not None
-            else NullTracingService()
+            else TracingServiceNull()
         )
         self._tool_registry: Optional[ToolRegistry] = tool_registry
         self._tool_executor: Optional[ToolExecutor] = (
