@@ -1,6 +1,6 @@
 from typing import Any, Optional
-from datetime import datetime, timezone
 from pydantic import BaseModel, Field
+from datetime import datetime, timezone
 
 from app.intelligence.tracing import TraceEventType
 
