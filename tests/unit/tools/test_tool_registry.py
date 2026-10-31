@@ -1,39 +1,11 @@
 from pydantic import BaseModel
 
-from app.tools.tool_base import ToolBase
-from app.tools.tool_registry import ToolRegistry
-
-
-class AddInput(BaseModel):
-    a: int
-    b: int
-
-
-class MultiplyInput(BaseModel):
-    x: float
-    y: float
-
-
-class AddTool(ToolBase[AddInput, int]):
-    @property
-    def name(self): return "add"
-    @property
-    def description(self): return "Adds two integers."
-    @property
-    def input_schema(self): return AddInput
-    def execute(self, input: AddInput) -> int:
-        return self._function_predicate(input.a, input.b)
-
-
-class MultiplyTool(ToolBase[MultiplyInput, float]):
-    @property
-    def name(self): return "multiply"
-    @property
-    def description(self): return "Multiplies two numbers."
-    @property
-    def input_schema(self): return MultiplyInput
-    def execute(self, input: MultiplyInput) -> float:
-        return self._function_predicate(input.x, input.y)
+from app.intelligence.tools import ToolBase
+from app.intelligence.tools import ToolRegistry
+from tests.fixtures.tools.add_tool import AddTool
+from tests.fixtures.tools.add_input import AddInput
+from tests.fixtures.tools.multiply_tool import MultiplyTool
+from tests.fixtures.tools.multiply_input import MultiplyInput
 
 
 def make_registry(*tools):
