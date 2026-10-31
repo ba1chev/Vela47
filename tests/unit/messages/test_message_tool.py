@@ -1,5 +1,5 @@
-from app.messages.message_type import MessageType
-from app.messages.message_tool import MessageTool
+from app.intelligence.messages import MessageType
+from app.intelligence.messages import MessageTool
 
 
 class TestMessageTool:
