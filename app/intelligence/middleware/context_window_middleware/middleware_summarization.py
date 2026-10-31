@@ -1,8 +1,8 @@
 from typing import Callable
 
-from app.intelligence.middleware import MiddlewareBase
 from app.intelligence.messages import MessageBase
 from app.intelligence.memory import ContextWindow
+from app.intelligence.middleware import MiddlewareBase
 from app.intelligence.memory import SummarizeOldestPolicy
 
 
