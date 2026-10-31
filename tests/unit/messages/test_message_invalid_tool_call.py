@@ -1,4 +1,4 @@
-from app.messages.message_tool_calls.message_invalid_tool_call import MessageInvalidToolCall
+from app.intelligence.messages import MessageInvalidToolCall
 
 
 class TestMessageInvalidToolCall:
