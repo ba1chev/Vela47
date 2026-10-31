@@ -1,5 +1,5 @@
-from app.messages.message_system import MessageSystem
-from app.agents.prompts.prompt_manager import PromptManager
+from app.intelligence.agents import PromptManager
+from app.intelligence.messages import MessageSystem
 
 
 class TestPromptManager:
