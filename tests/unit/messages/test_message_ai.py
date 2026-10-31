@@ -1,7 +1,7 @@
-from app.messages.message_ai import MessageAI
-from app.messages.message_type import MessageType
-from app.messages.message_usage_metadata import MessageUsageMetadata
-from app.messages.message_tool_calls.message_tool_call import MessageToolCall
+from app.intelligence.messages import MessageAI
+from app.intelligence.messages import MessageType
+from app.intelligence.messages import MessageToolCall
+from app.intelligence.messages import MessageUsageMetadata
 
 
 class TestMessageAI:
