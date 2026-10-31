@@ -7,8 +7,8 @@ from app.intelligence.tracing.trace_event_type import TraceEventType
 from app.intelligence.tracing.tracing_service_null import TracingServiceNull
 from app.intelligence.tracing.tracing_service_base import TracingServiceBase
 from app.intelligence.agents.deep_agent.operation_context import OperationContext
-from app.intelligence.agents.deep_agent.system_prompt import MERGING_SYSTEM_PROMPT
 from app.intelligence.model.model_foundation.model_foundation import ModelFoundation
+from app.intelligence.agents.deep_agent.prompts.merging_system_prompt import MERGING_SYSTEM_PROMPT
 from app.intelligence.agents.deep_agent.operation_layers.operation_layer_type import OperationType
 from app.intelligence.agents.deep_agent.operation_layers.operation_layer_base import OperationLayerBase
 
