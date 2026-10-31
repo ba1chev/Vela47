@@ -1,35 +1,25 @@
-from app.agents.agent_base import Agent
-from app.messages.message_ai import MessageAI
-from app.messages.message_human import MessageHuman
-from app.messages.message_system import MessageSystem
-from app.agents.prompts.prompt_manager import PromptManager
-from app.model.model_config import ModelConfig
-from app.model.model_foundation.model_foundation import ModelFoundation
-from app.memory.short_term_memory.context_window.context_window_operation.context_window_policy import ContextWindowPolicy
-from app.memory.short_term_memory.context_window.context_window_operation.context_window_policy_sliding_window import SlidingWindowPolicy
-
-
-class KeepAllPolicy(ContextWindowPolicy):
-    def resolve(self, messages, capacity): return []
-
-
-class EchoAgent(Agent):
-    def execute(self, human_message: MessageHuman) -> MessageAI:
-        self._append_human(human_message)
-        self._build_messages()
-        response = MessageAI(content = f"Echo: {human_message.content}")
-        self._append_ai(response)
-        return response
+from app.intelligence.agents import AgentBase
+from app.intelligence.model import ModelConfig
+from app.intelligence.messages import MessageAI
+from app.intelligence.agents import PromptManager
+from app.intelligence.messages import MessageHuman
+from app.intelligence.model import ModelFoundation
+from app.intelligence.messages import MessageSystem
+from tests.fixtures.agents.echo_agent import EchoAgent
+from app.intelligence.memory import ContextWindowPolicy
+from app.intelligence.memory import SlidingWindowPolicy
+from tests.fixtures.memory.keep_all_policy import KeepAllPolicy
 
 
 def make_agent(policy = None, max_size = 10, prompt_manager = None):
     config = ModelConfig(model_name = "qwen3:1.7b")
-    return EchoAgent(
+    agent = EchoAgent(
         model = ModelFoundation(config = config),
         prompt_manager = prompt_manager or PromptManager(),
-        context_window_policy = policy or KeepAllPolicy(),
         max_context_window_size = max_size,
     )
+    agent._context_window.set_policy(policy or KeepAllPolicy())
+    return agent
 
 
 class TestAgent:
@@ -63,7 +53,7 @@ class TestAgent:
         pm.register("sys", "Be helpful.")
         captured = []
 
-        class CapturingAgent(Agent):
+        class CapturingAgent(AgentBase):
             def execute(self, human_message):
                 self._append_human(human_message)
                 msgs = self._build_messages()
@@ -76,9 +66,9 @@ class TestAgent:
         agent = CapturingAgent(
             model = ModelFoundation(config = config),
             prompt_manager = pm,
-            context_window_policy = KeepAllPolicy(),
             max_context_window_size = 10,
         )
+        agent._context_window.set_policy(KeepAllPolicy())
         agent.execute(MessageHuman(content = "hi"))
         assert isinstance(captured[0], MessageSystem)
         assert captured[0].content == "Be helpful."
