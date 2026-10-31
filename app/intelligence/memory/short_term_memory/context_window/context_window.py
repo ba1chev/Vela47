@@ -1,9 +1,9 @@
 from typing import Optional
 
-from app.intelligence.messages.message_base.message_base import MessageBase
-from app.intelligence.memory.short_term_memory.short_term_memory import ShortTermMemory
-from app.intelligence.memory.short_term_memory.context_window.context_window_operation.context_window_policy import ContextWindowPolicy
-from app.intelligence.memory.short_term_memory.context_window.context_window_operation.context_window_operation_manager import ContextWindowOperationManager
+from app.intelligence.messages import MessageBase
+from app.intelligence.memory import ShortTermMemory
+from app.intelligence.memory import ContextWindowPolicy
+from app.intelligence.memory import ContextWindowOperationManager
 
 
 class ContextWindow:
