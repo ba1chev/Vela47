@@ -1,9 +1,9 @@
 from threading import Lock
 from typing import Any, Callable, Optional
 
-from app.intelligence.tracing.trace_event import TraceEvent
-from app.intelligence.tracing.trace_event_type import TraceEventType
-from app.intelligence.tracing.tracing_service_base import TracingServiceBase
+from app.intelligence.tracing import TraceEvent
+from app.intelligence.tracing import TraceEventType
+from app.intelligence.tracing import TracingServiceBase
 
 
 class TracingService(TracingServiceBase):
