@@ -1,20 +1,20 @@
 from typing import Optional
 from abc import ABC, abstractmethod
 
-from app.intelligence.messages.message_ai import MessageAI
-from app.intelligence.tools.tool_registry import ToolRegistry
-from app.intelligence.tools.tool_executor import ToolExecutor
-from app.intelligence.messages.message_tool import MessageTool
-from app.intelligence.messages.message_type import MessageType
-from app.intelligence.messages.message_human import MessageHuman
-from app.intelligence.agents.prompts.prompt_manager import PromptManager
-from app.intelligence.messages.message_base.message_base import MessageBase
-from app.intelligence.tracing.tracing_service_null import TracingServiceNull
-from app.intelligence.tracing.tracing_service_base import TracingServiceBase
-from app.intelligence.memory.vector_db_memory.vector_db_memory import VectorDbMemory
-from app.intelligence.model.model_foundation.model_foundation import ModelFoundation
-from app.intelligence.memory.short_term_memory.short_term_memory import ShortTermMemory
-from app.intelligence.memory.short_term_memory.context_window.context_window import ContextWindow
+from app.intelligence.messages import MessageAI
+from app.intelligence.tools import ToolRegistry
+from app.intelligence.tools import ToolExecutor
+from app.intelligence.messages import MessageTool
+from app.intelligence.messages import MessageType
+from app.intelligence.messages import MessageHuman
+from app.intelligence.agents import PromptManager
+from app.intelligence.messages import MessageBase
+from app.intelligence.tracing import TracingServiceNull
+from app.intelligence.tracing import TracingServiceBase
+from app.intelligence.memory import VectorDbMemory
+from app.intelligence.model import ModelFoundation
+from app.intelligence.memory import ShortTermMemory
+from app.intelligence.memory import ContextWindow
 
 
 class AgentBase(ABC):
