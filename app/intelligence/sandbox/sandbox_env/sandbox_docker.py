@@ -1,9 +1,9 @@
 import pathlib
 import subprocess
 
-from app.intelligence.sandbox.sandbox_env.sandbox_env import SandboxEnv
-from app.intelligence.sandbox.sandbox_env.sandbox_env_local import SandboxEnvLocal
-from app.intelligence.sandbox.sandbox_env.sandbox_command_result import SandboxCommandResult
+from app.intelligence.sandbox import SandboxEnv
+from app.intelligence.sandbox import SandboxEnvLocal
+from app.intelligence.sandbox import SandboxCommandResult
 
 
 class SandboxDocker(SandboxEnv):
