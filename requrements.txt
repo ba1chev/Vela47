@@ -2,4 +2,6 @@ ollama
 pydantic
 langchain
 langchain-ollama
+fastapi
+uvicorn[standard]
 pytest
