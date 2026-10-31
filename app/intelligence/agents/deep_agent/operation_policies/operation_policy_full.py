@@ -39,5 +39,9 @@ class OperationPolicyFull(OperationPolicy):
                 sandbox_pool = self._sandbox_pool,
                 tracing_service = self._tracing_service
             ),
-            factory.create(OperationType.MERGING, model = self._merging_model)
+            factory.create(
+                OperationType.MERGING,
+                model = self._merging_model,
+                tracing_service = self._tracing_service
+            )
         ]
