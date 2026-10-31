@@ -1,11 +1,15 @@
 import ollama
 from uuid import uuid4
+from time import perf_counter
 from typing import Iterator, Optional
 
 from app.intelligence.model.mode_base import ModelBase
 from app.intelligence.messages.message_ai import MessageAI
 from app.intelligence.model.model_config import ModelConfig
+from app.intelligence.tracing.trace_event_type import TraceEventType
+from app.intelligence.tracing.tracing_service import NullTracingService
 from app.intelligence.messages.message_base.message_base import MessageBase
+from app.intelligence.tracing.tracing_service_base import TracingServiceBase
 from app.intelligence.model.model_foundation.model_role_map import MODEL_ROLE_MAP
 from app.intelligence.messages.message_usage_metadata import MessageUsageMetadata
 from app.intelligence.messages.message_tool_calls.message_tool_call import MessageToolCall
@@ -17,10 +21,20 @@ class ModelFoundation(ModelBase):
     defaults live here. _format_messages() translates the framework's MessageBase
     list into Ollama's role/content dict format using _ROLE_MAP. invoke() blocks
     until the full response arrives and attaches a populated MessageUsageMetadata;
-    stream() yields raw text chunks as they are produced, token by token."""
+    stream() yields raw text chunks as they are produced, token by token.
 
-    def __init__(self, config: ModelConfig) -> None:
+    Every invoke() is reported to the injected tracer, which is where a run's token
+    accounting comes from — the model is the only component that sees usage, so if
+    it stays silent no layer above it can report cost."""
+
+    def __init__(self, config: ModelConfig,
+        tracing_service: Optional[TracingServiceBase] = None) -> None:
         self._config = config
+        self._tracing_service: TracingServiceBase = (
+            tracing_service
+            if tracing_service is not None
+            else NullTracingService()
+        )
 
     def _format_messages(self, messages: list[MessageBase]) -> list[dict]:
         return [
@@ -61,6 +75,7 @@ class ModelFoundation(ModelBase):
 
     def invoke(self, messages: list[MessageBase],
         tools: Optional[list[dict]] = None) -> MessageAI:
+        start = perf_counter()
         response = ollama.chat(
             model = self._config.model_name,
             messages = self._format_messages(messages),
@@ -70,9 +85,24 @@ class ModelFoundation(ModelBase):
         )
         input_tokens = response.get("prompt_eval_count", 0)
         output_tokens = response.get("eval_count", 0)
+        tool_calls = self._parse_tool_calls(response["message"])
+
+        self._tracing_service.emit(
+            TraceEventType.MODEL_INVOKED,
+            self._config.model_name,
+            {
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "total_tokens": input_tokens + output_tokens,
+                "tool_calls": [current_call.name for current_call in tool_calls],
+                "messages": len(messages)
+            },
+            (perf_counter() - start) * 1000.0
+        )
+
         return MessageAI(
             content = response["message"]["content"],
-            tool_calls = self._parse_tool_calls(response["message"]),
+            tool_calls = tool_calls,
             usage_metadata = MessageUsageMetadata(
                 input_tokens = input_tokens,
                 output_tokens = output_tokens,
