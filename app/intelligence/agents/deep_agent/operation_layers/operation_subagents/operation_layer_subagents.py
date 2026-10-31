@@ -2,7 +2,7 @@ from typing import Optional
 
 from app.intelligence.messages.message_human import MessageHuman
 from app.intelligence.tracing.trace_event_type import TraceEventType
-from app.intelligence.tracing.tracing_service import NullTracingService
+from app.intelligence.tracing.tracing_service_null import TracingServiceNull
 from app.intelligence.tracing.tracing_service_base import TracingServiceBase
 from app.intelligence.agents.deep_agent.operation_context import OperationContext
 from app.intelligence.agents.deep_agent.operation_layers.operation_layer_type import OperationType
@@ -37,7 +37,7 @@ class OperationSubagentsLayer(OperationLayerBase):
         self._tracing_service: TracingServiceBase = (
             tracing_service
             if tracing_service is not None
-            else NullTracingService()
+            else TracingServiceNull()
         )
 
     @property
