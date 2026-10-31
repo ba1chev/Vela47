@@ -1,11 +1,11 @@
 import pytest
 
-from app.messages.message_ai import MessageAI
-from app.messages.message_tool import MessageTool
-from app.messages.message_type import MessageType
-from app.messages.message_human import MessageHuman
-from app.messages.message_system import MessageSystem
-from app.messages.message_factory.message_factory import MessageFactory
+from app.intelligence.messages import MessageAI
+from app.intelligence.messages import MessageTool
+from app.intelligence.messages import MessageType
+from app.intelligence.messages import MessageHuman
+from app.intelligence.messages import MessageSystem
+from app.intelligence.messages import MessageFactory
 
 
 class TestMessageFactory:
