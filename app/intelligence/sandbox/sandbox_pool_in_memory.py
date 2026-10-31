@@ -1,22 +1,22 @@
 import pathlib
 import tempfile
 
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_slot import OperationSandboxSlot
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_pool_base import OperationSandboxPoolBase
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_env import OperationSandboxEnv
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_env_local import OperationSandboxEnvLocal
+from app.intelligence.sandbox.sandbox_slot import SandboxSlot
+from app.intelligence.sandbox.sandbox_pool_base import SandboxPoolBase
+from app.intelligence.sandbox.sandbox_env.sandbox_env import SandboxEnv
+from app.intelligence.sandbox.sandbox_env.sandbox_env_local import SandboxEnvLocal
 
 
-class OperationInMemorySandboxPool(OperationSandboxPoolBase):
+class SandboxPoolInMemory(SandboxPoolBase):
     """Sandbox pool that tracks slot occupancy without provisioning anything.
     Enforces the same capacity contract as a real backend — a fixed number of
     slots, acquire fails when all are taken — so the subagents layer can be
     built and tested against pool semantics before any container runtime exists.
     Swapping in a Docker-backed pool later changes no caller, because the layer
-    depends on OperationSandboxPoolBase rather than on this class."""
+    depends on SandboxPoolBase rather than on this class."""
 
     def __init__(self, size: int = 10, base_directory: pathlib.Path | None = None) -> None:
-        self._slots: list[OperationSandboxSlot] = [OperationSandboxSlot(id = index) for index in range(size)]
+        self._slots: list[SandboxSlot] = [SandboxSlot(id = index) for index in range(size)]
         self._busy: set[int] = set()
         self._base_directory: pathlib.Path = (
             pathlib.Path(base_directory)
@@ -24,7 +24,7 @@ class OperationInMemorySandboxPool(OperationSandboxPoolBase):
             else pathlib.Path(tempfile.mkdtemp(prefix = "vela47-"))
         )
 
-    def acquire(self) -> OperationSandboxSlot:
+    def acquire(self) -> SandboxSlot:
         for current_slot in self._slots:
             if current_slot.id not in self._busy:
                 self._busy.add(current_slot.id)
@@ -34,11 +34,11 @@ class OperationInMemorySandboxPool(OperationSandboxPoolBase):
             f"Increase the pool size or reduce how many subagents run at once."
         )
 
-    def release(self, slot: OperationSandboxSlot) -> None:
+    def release(self, slot: SandboxSlot) -> None:
         self._busy.discard(slot.id)
 
-    def env_for(self, slot: OperationSandboxSlot, run_id: str) -> OperationSandboxEnv:
-        return OperationSandboxEnvLocal(
+    def env_for(self, slot: SandboxSlot, run_id: str) -> SandboxEnv:
+        return SandboxEnvLocal(
             root = self._base_directory / run_id,
             identifier = f"local-slot-{slot.id}"
         )

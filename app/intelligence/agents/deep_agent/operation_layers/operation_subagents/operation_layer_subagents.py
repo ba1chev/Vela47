@@ -2,13 +2,13 @@ from typing import Optional
 
 from app.intelligence.messages.message_human import MessageHuman
 from app.intelligence.tracing.trace_event_type import TraceEventType
+from app.intelligence.sandbox.sandbox_pool_base import SandboxPoolBase
 from app.intelligence.tracing.tracing_service_null import TracingServiceNull
 from app.intelligence.tracing.tracing_service_base import TracingServiceBase
 from app.intelligence.agents.deep_agent.operation_context import OperationContext
 from app.intelligence.agents.deep_agent.operation_layers.operation_layer_type import OperationType
 from app.intelligence.agents.deep_agent.operation_layers.operation_layer_base import OperationLayerBase
 from app.intelligence.agents.deep_agent.operation_layers.operation_decomposition.operation_task import OperationTask
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_pool_base import OperationSandboxPoolBase
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent_result import OperationSubagentResult
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagents_factory.operation_subagent_factory_base import OperationSubagentFactoryBase
 
@@ -30,10 +30,10 @@ class OperationSubagentsLayer(OperationLayerBase):
     subagent cannot leak a slot and starve the rest of the run."""
 
     def __init__(self, subagent_factory: OperationSubagentFactoryBase,
-        sandbox_pool: OperationSandboxPoolBase,
+        sandbox_pool: SandboxPoolBase,
         tracing_service: Optional[TracingServiceBase] = None) -> None:
         self._subagent_factory: OperationSubagentFactoryBase = subagent_factory
-        self._sandbox_pool: OperationSandboxPoolBase = sandbox_pool
+        self._sandbox_pool: SandboxPoolBase = sandbox_pool
         self._tracing_service: TracingServiceBase = (
             tracing_service
             if tracing_service is not None

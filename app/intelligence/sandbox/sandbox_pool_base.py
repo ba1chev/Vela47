@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_slot import OperationSandboxSlot
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_env import OperationSandboxEnv
+from app.intelligence.sandbox.sandbox_slot import SandboxSlot
+from app.intelligence.sandbox.sandbox_env.sandbox_env import SandboxEnv
 
 
-class OperationSandboxPoolBase(ABC):
+class SandboxPoolBase(ABC):
     """Abstract base for a fixed-size pool of pre-provisioned execution
     environments, operated like a vending machine: the pool is filled once up
     front, callers take a slot while they need one and put it back when done,
@@ -18,15 +18,15 @@ class OperationSandboxPoolBase(ABC):
     so a caller's finally-block is always safe to run."""
 
     @abstractmethod
-    def acquire(self) -> OperationSandboxSlot:
+    def acquire(self) -> SandboxSlot:
         raise NotImplementedError("Must be implemented")
 
     @abstractmethod
-    def release(self, slot: OperationSandboxSlot) -> None:
+    def release(self, slot: SandboxSlot) -> None:
         raise NotImplementedError("Must be implemented")
 
     @abstractmethod
-    def env_for(self, slot: OperationSandboxSlot, run_id: str) -> OperationSandboxEnv:
+    def env_for(self, slot: SandboxSlot, run_id: str) -> SandboxEnv:
         raise NotImplementedError("Must be implemented")
 
     @property

@@ -1,9 +1,9 @@
 from pydantic import BaseModel, Field
 
 
-class OperationSandboxSlot(BaseModel):
+class SandboxSlot(BaseModel):
     """A lease on one isolated execution environment, handed out by a
-    OperationSandboxPoolBase for the duration of a single subagent run. The slot is a
+    SandboxPoolBase for the duration of a single subagent run. The slot is a
     handle, not the environment itself — it identifies which of the pool's
     pre-provisioned units the holder may use. A Docker-backed pool carries the
     container id here; the in-memory pool carries only the index."""

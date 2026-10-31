@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_command_result import OperationSandboxCommandResult
+from app.intelligence.sandbox.sandbox_env.sandbox_command_result import SandboxCommandResult
 
 
-class OperationSandboxEnv(ABC):
+class SandboxEnv(ABC):
     """Where one subagent's tool operations actually take effect.
 
     The subagent itself never runs in here — its reasoning loop lives in the server
@@ -35,5 +35,5 @@ class OperationSandboxEnv(ABC):
         raise NotImplementedError("Must be implemented")
 
     @abstractmethod
-    def run(self, command: str, timeout_seconds: int = 60) -> OperationSandboxCommandResult:
+    def run(self, command: str, timeout_seconds: int = 60) -> SandboxCommandResult:
         raise NotImplementedError("Must be implemented")

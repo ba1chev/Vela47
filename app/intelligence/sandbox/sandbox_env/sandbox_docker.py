@@ -1,12 +1,12 @@
 import pathlib
 import subprocess
 
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_env import OperationSandboxEnv
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_env_local import OperationSandboxEnvLocal
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_command_result import OperationSandboxCommandResult
+from app.intelligence.sandbox.sandbox_env.sandbox_env import SandboxEnv
+from app.intelligence.sandbox.sandbox_env.sandbox_env_local import SandboxEnvLocal
+from app.intelligence.sandbox.sandbox_env.sandbox_command_result import SandboxCommandResult
 
 
-class OperationSandboxDocker(OperationSandboxEnv):
+class SandboxDocker(SandboxEnv):
     """A container that a subagent's commands run inside, over a directory shared
     with the host.
 
@@ -31,7 +31,7 @@ class OperationSandboxDocker(OperationSandboxEnv):
         container_directory: str) -> None:
         self._container_name: str = container_name
         self._container_directory: str = container_directory
-        self._files: OperationSandboxEnvLocal = OperationSandboxEnvLocal(
+        self._files: SandboxEnvLocal = SandboxEnvLocal(
             root = host_directory,
             identifier = container_name
         )
@@ -53,7 +53,7 @@ class OperationSandboxDocker(OperationSandboxEnv):
     def list_files(self) -> list[str]:
         return self._files.list_files()
 
-    def run(self, command: str, timeout_seconds: int = 60) -> OperationSandboxCommandResult:
+    def run(self, command: str, timeout_seconds: int = 60) -> SandboxCommandResult:
         try:
             completed = subprocess.run(
                 [
@@ -66,13 +66,13 @@ class OperationSandboxDocker(OperationSandboxEnv):
                 check = False
             )
         except subprocess.TimeoutExpired:
-            return OperationSandboxCommandResult(
+            return SandboxCommandResult(
                 exit_code = -1,
                 output = f"Command exceeded {timeout_seconds}s and was abandoned.",
                 timed_out = True
             )
         except FileNotFoundError:
-            return OperationSandboxCommandResult(
+            return SandboxCommandResult(
                 exit_code = -1,
                 output = "The docker CLI is not available on this host."
             )
@@ -81,7 +81,7 @@ class OperationSandboxDocker(OperationSandboxEnv):
         if len(output) > self.MAX_OUTPUT_CHARS:
             output = output[:self.MAX_OUTPUT_CHARS] + "\n… output truncated."
 
-        return OperationSandboxCommandResult(
+        return SandboxCommandResult(
             exit_code = completed.returncode,
             output = output.strip() or "(no output)"
         )

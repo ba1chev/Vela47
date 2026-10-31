@@ -1,8 +1,8 @@
 import posixpath
 
 from app.intelligence.tools.tool_base import ToolBase
+from app.intelligence.sandbox.sandbox_env.sandbox_env import SandboxEnv
 from app.intelligence.tools.subagent_tools.tool_write_test.tool_write_test_input import ToolWriteTestInput
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_env import OperationSandboxEnv
 
 
 class ToolWriteTest(ToolBase[ToolWriteTestInput, str]):
@@ -21,9 +21,9 @@ class ToolWriteTest(ToolBase[ToolWriteTestInput, str]):
     TESTS_DIRECTORY = "tests"
     TEST_PREFIX = "test_"
 
-    def __init__(self, sandbox_env: OperationSandboxEnv) -> None:
+    def __init__(self, sandbox_env: SandboxEnv) -> None:
         super().__init__()
-        self._sandbox_env: OperationSandboxEnv = sandbox_env
+        self._sandbox_env: SandboxEnv = sandbox_env
 
     @property
     def name(self) -> str:

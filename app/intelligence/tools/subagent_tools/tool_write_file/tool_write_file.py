@@ -1,6 +1,6 @@
 from app.intelligence.tools.tool_base import ToolBase
+from app.intelligence.sandbox.sandbox_env.sandbox_env import SandboxEnv
 from app.intelligence.tools.subagent_tools.tool_write_file.tool_write_file_input import ToolWriteFileInput
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_env import OperationSandboxEnv
 
 
 class ToolWriteFile(ToolBase[ToolWriteFileInput, str]):
@@ -15,9 +15,9 @@ class ToolWriteFile(ToolBase[ToolWriteFileInput, str]):
     what a REVIEW subagent later reads — the only channel through which two isolated
     subagents can collaborate."""
 
-    def __init__(self, sandbox_env: OperationSandboxEnv) -> None:
+    def __init__(self, sandbox_env: SandboxEnv) -> None:
         super().__init__()
-        self._sandbox_env: OperationSandboxEnv = sandbox_env
+        self._sandbox_env: SandboxEnv = sandbox_env
 
     @property
     def name(self) -> str:

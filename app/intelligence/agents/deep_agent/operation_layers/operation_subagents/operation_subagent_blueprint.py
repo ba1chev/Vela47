@@ -2,9 +2,9 @@ from typing import Callable
 
 from app.intelligence.tools.tool_base import ToolBase
 from app.intelligence.middleware.middleware_base import MiddlewareBase
+from app.intelligence.sandbox.sandbox_env.sandbox_env import SandboxEnv
 from app.intelligence.model.model_foundation.model_foundation import ModelFoundation
 from app.intelligence.memory.short_term_memory.context_window.context_window import ContextWindow
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_env import OperationSandboxEnv
 
 
 class OperationSubagentBlueprint:
@@ -25,11 +25,11 @@ class OperationSubagentBlueprint:
     REVIEW agent runs a reasoning model with summarisation, without either being a
     separate class."""
 
-    def __init__(self, tool_factory: Callable[[OperationSandboxEnv], ToolBase],
+    def __init__(self, tool_factory: Callable[[SandboxEnv], ToolBase],
         prompt_template: str, model: ModelFoundation, max_context_window_size: int,
         context_window_middleware: MiddlewareBase[ContextWindow],
         max_iterations: int = 5) -> None:
-        self.tool_factory: Callable[[OperationSandboxEnv], ToolBase] = tool_factory
+        self.tool_factory: Callable[[SandboxEnv], ToolBase] = tool_factory
         self.prompt_template: str = prompt_template
         self.model: ModelFoundation = model
         self.max_context_window_size: int = max_context_window_size

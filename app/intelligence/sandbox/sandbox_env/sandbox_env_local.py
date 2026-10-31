@@ -1,11 +1,11 @@
 import pathlib
 from typing import Iterator
 
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_env import OperationSandboxEnv
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_command_result import OperationSandboxCommandResult
+from app.intelligence.sandbox.sandbox_env.sandbox_env import SandboxEnv
+from app.intelligence.sandbox.sandbox_env.sandbox_command_result import SandboxCommandResult
 
 
-class OperationSandboxEnvLocal(OperationSandboxEnv):
+class SandboxEnvLocal(SandboxEnv):
     """A plain directory on the host, with no containment beyond path confinement.
 
     Files written here are real files, which is enough to build and test every tool
@@ -77,7 +77,7 @@ class OperationSandboxEnvLocal(OperationSandboxEnv):
                 continue
             yield current
 
-    def run(self, command: str, timeout_seconds: int = 60) -> OperationSandboxCommandResult:
+    def run(self, command: str, timeout_seconds: int = 60) -> SandboxCommandResult:
         raise RuntimeError(
             "This sandbox cannot run commands — it is a bare host directory with no "
             "isolation. Start the Docker-backed pool to give agents an environment "

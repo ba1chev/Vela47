@@ -1,11 +1,11 @@
 from typing import Optional
 
+from app.intelligence.sandbox.sandbox_pool_base import SandboxPoolBase
 from app.intelligence.tracing.tracing_service_base import TracingServiceBase
 from app.intelligence.model.model_foundation.model_foundation import ModelFoundation
 from app.intelligence.agents.deep_agent.operation_policies.operation_policy import OperationPolicy
 from app.intelligence.agents.deep_agent.operation_layers.operation_layer_type import OperationType
 from app.intelligence.agents.deep_agent.operation_layers.operation_layer_base import OperationLayerBase
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_pool_base import OperationSandboxPoolBase
 from app.intelligence.agents.deep_agent.operation_layers.operation_layers_factory.operation_layers_factory_base import OperationLayersFactoryBase
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagents_factory.operation_subagent_factory_base import OperationSubagentFactoryBase
 
@@ -21,12 +21,12 @@ class OperationPolicyFull(OperationPolicy):
 
     def __init__(self, planning_model: ModelFoundation, merging_model: ModelFoundation,
         subagent_factory: OperationSubagentFactoryBase,
-        sandbox_pool: OperationSandboxPoolBase,
+        sandbox_pool: SandboxPoolBase,
         tracing_service: Optional[TracingServiceBase] = None) -> None:
         self._planning_model: ModelFoundation = planning_model
         self._merging_model: ModelFoundation = merging_model
         self._subagent_factory: OperationSubagentFactoryBase = subagent_factory
-        self._sandbox_pool: OperationSandboxPoolBase = sandbox_pool
+        self._sandbox_pool: SandboxPoolBase = sandbox_pool
         self._tracing_service: Optional[TracingServiceBase] = tracing_service
 
     def resolve(self, factory: OperationLayersFactoryBase) -> list[OperationLayerBase]:

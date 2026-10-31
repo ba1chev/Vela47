@@ -1,6 +1,6 @@
 from app.intelligence.tools.tool_base import ToolBase
+from app.intelligence.sandbox.sandbox_env.sandbox_env import SandboxEnv
 from app.intelligence.tools.subagent_tools.tool_search_files.tool_search_files_input import ToolSearchFilesInput
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_env import OperationSandboxEnv
 
 
 class ToolSearchFiles(ToolBase[ToolSearchFilesInput, str]):
@@ -16,9 +16,9 @@ class ToolSearchFiles(ToolBase[ToolSearchFilesInput, str]):
     MAX_MATCHES = 40
     MAX_LINE_CHARS = 200
 
-    def __init__(self, sandbox_env: OperationSandboxEnv) -> None:
+    def __init__(self, sandbox_env: SandboxEnv) -> None:
         super().__init__()
-        self._sandbox_env: OperationSandboxEnv = sandbox_env
+        self._sandbox_env: SandboxEnv = sandbox_env
 
     @property
     def name(self) -> str:

@@ -2,15 +2,15 @@ import pathlib
 import tempfile
 import subprocess
 
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_slot import OperationSandboxSlot
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_pool_base import OperationSandboxPoolBase
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_env import OperationSandboxEnv
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_docker import OperationSandboxDocker
+from app.intelligence.sandbox.sandbox_slot import SandboxSlot
+from app.intelligence.sandbox.sandbox_pool_base import SandboxPoolBase
+from app.intelligence.sandbox.sandbox_env.sandbox_env import SandboxEnv
+from app.intelligence.sandbox.sandbox_env.sandbox_docker import SandboxDocker
 
 CONTAINER_MOUNT_PATH = "/runs"
 
 
-class OperationSandboxPoolDocker(OperationSandboxPoolBase):
+class SandboxPoolDocker(SandboxPoolBase):
     """A fixed set of containers started once and reused, like a vending machine
     stocked at opening time.
 
@@ -45,7 +45,7 @@ class OperationSandboxPoolDocker(OperationSandboxPoolBase):
             if base_directory is not None
             else pathlib.Path(tempfile.mkdtemp(prefix = "vela47-"))
         )
-        self._slots: list[OperationSandboxSlot] = []
+        self._slots: list[SandboxSlot] = []
         self._busy: set[int] = set()
 
     @property
@@ -99,7 +99,7 @@ class OperationSandboxPoolDocker(OperationSandboxPoolBase):
                     f"Could not start sandbox container '{name}': {created.stderr.strip()}"
                 )
 
-            self._slots.append(OperationSandboxSlot(
+            self._slots.append(SandboxSlot(
                 id = index,
                 reference = created.stdout.strip()[:12] or name
             ))
@@ -115,7 +115,7 @@ class OperationSandboxPoolDocker(OperationSandboxPoolBase):
         self._slots = []
         self._busy = set()
 
-    def acquire(self) -> OperationSandboxSlot:
+    def acquire(self) -> SandboxSlot:
         if not self._slots:
             raise RuntimeError(
                 "The Docker sandbox pool has no containers — start() was not called "
@@ -132,11 +132,11 @@ class OperationSandboxPoolDocker(OperationSandboxPoolBase):
             f"Increase the pool size or reduce how many subagents run at once."
         )
 
-    def release(self, slot: OperationSandboxSlot) -> None:
+    def release(self, slot: SandboxSlot) -> None:
         self._busy.discard(slot.id)
 
-    def env_for(self, slot: OperationSandboxSlot, run_id: str) -> OperationSandboxEnv:
-        return OperationSandboxDocker(
+    def env_for(self, slot: SandboxSlot, run_id: str) -> SandboxEnv:
+        return SandboxDocker(
             container_name = self._container_name(slot.id),
             host_directory = self._base_directory / run_id,
             container_directory = f"{CONTAINER_MOUNT_PATH}/{run_id}"

@@ -1,11 +1,11 @@
 from typing import Optional
 
+from app.intelligence.sandbox.sandbox_env.sandbox_env import SandboxEnv
 from app.intelligence.agents.prompts.prompt_manager import PromptManager
 from app.intelligence.tracing.tracing_service_base import TracingServiceBase
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent import OperationSubagent
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent_type import OperationSubagentType
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent_blueprint import OperationSubagentBlueprint
-from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_env import OperationSandboxEnv
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagents_factory.operation_subagent_factory_base import OperationSubagentFactoryBase
 
 
@@ -28,7 +28,7 @@ class OperationSubagentFactory(OperationSubagentFactoryBase):
         self._tracing_service = tracing_service
 
     def create(self, type: OperationSubagentType,
-        sandbox_env: OperationSandboxEnv) -> OperationSubagent:
+        sandbox_env: SandboxEnv) -> OperationSubagent:
         blueprint = self._blueprints.get(type)
 
         if blueprint is None:

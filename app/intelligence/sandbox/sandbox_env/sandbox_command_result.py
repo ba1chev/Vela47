@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 
 
-class OperationSandboxCommandResult(BaseModel):
+class SandboxCommandResult(BaseModel):
     """What running a command inside a sandbox produced. A failed command is a
     result, not an exception: the subagent that asked for it is expected to read
     the output and react, so a non-zero exit has to reach the model rather than
