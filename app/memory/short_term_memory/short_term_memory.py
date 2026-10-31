@@ -1,3 +1,5 @@
+from typing import Any
+
 from app.memory.memory_base import MemoryBase
 from app.messages.message_type import MessageType
 from app.messages.message_base.message_base import MessageBase
@@ -16,10 +18,10 @@ class ShortTermMemory(MemoryBase):
         self._messages_factory: MessageFactoryBase = MessageFactory()
         self._messages_container: list[MessageBase] = []
 
-    def append_message(self, message: str, message_type: MessageType) -> None:
+    def append_message(self, message: str, message_type: MessageType, **kwargs: Any) -> None:
         self._messages_container.append(
             self._messages_factory.create(
-                message_type, message
+                message_type, message, **kwargs
             )
         )
 
