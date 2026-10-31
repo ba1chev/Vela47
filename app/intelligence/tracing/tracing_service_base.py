@@ -13,7 +13,7 @@ class TracingServiceBase(ABC):
     shared buffer would interleave unrelated runs into one unreadable stream.
 
     Components depend on this interface rather than a concrete service, which is what
-    lets NullTracingService stand in wherever tracing is not wanted. That is the reason
+    lets TracingServiceNull stand in wherever tracing is not wanted. That is the reason
     nothing in the framework ever checks whether a tracer is present before reporting."""
 
     @abstractmethod
