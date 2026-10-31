@@ -1,7 +1,7 @@
 from typing import Callable
 
-from app.intelligence.memory import VectorDbMemoryEntry
 from app.intelligence.memory import VectorDbOperation
+from app.intelligence.memory import VectorDbMemoryEntry
 from app.intelligence.memory import VectorDbOperationType
 
 
