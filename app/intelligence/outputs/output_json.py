@@ -1,8 +1,8 @@
 from pydantic import Field
 from typing import Any, Literal
 
-from app.intelligence.outputs.output_type import OutputType
-from app.intelligence.outputs.output_base.output_base import OutputBase
+from app.intelligence.outputs import OutputType
+from app.intelligence.outputs import OutputBase
 
 
 class OutputJSON(OutputBase):
