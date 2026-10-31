@@ -1,12 +1,12 @@
-from app.intelligence.memory.memory_base import MemoryBase
-from app.intelligence.messages.message_type import MessageType
-from app.intelligence.messages.message_base.message_base import MessageBase
-from app.intelligence.messages.message_factory.message_factory import MessageFactory
-from app.intelligence.model.model_embeddings.model_embeddings import ModelEmbeddings
-from app.intelligence.messages.message_factory.message_base_factory import MessageFactoryBase
-from app.intelligence.memory.vector_db_memory.vector_db_memory_entry import VectorDbMemoryEntry
-from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_policy import VectorDbOperationPolicy
-from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_manager import VectorDbOperationManager
+from app.intelligence.memory import MemoryBase
+from app.intelligence.messages import MessageType
+from app.intelligence.messages import MessageBase
+from app.intelligence.messages import MessageFactory
+from app.intelligence.model import ModelEmbeddings
+from app.intelligence.messages import MessageFactoryBase
+from app.intelligence.memory import VectorDbMemoryEntry
+from app.intelligence.memory import VectorDbOperationPolicy
+from app.intelligence.memory import VectorDbOperationManager
 
 
 class VectorDbMemory(MemoryBase):
