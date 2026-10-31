@@ -2,7 +2,7 @@ from typing import Any, Optional
 from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 
-from app.intelligence.tracing.trace_event_type import TraceEventType
+from app.intelligence.tracing import TraceEventType
 
 
 class TraceEvent(BaseModel):
