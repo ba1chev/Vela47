@@ -1,7 +1,7 @@
-from app.messages.message_human import MessageHuman
-from app.messages.message_system import MessageSystem
-from app.memory.short_term_memory.context_window.context_window_operation.context_window_operation_type import ContextWindowOperationType
-from app.memory.short_term_memory.context_window.context_window_operation.context_window_policy_summarize_oldest import SummarizeOldestPolicy
+from app.intelligence.messages import MessageHuman
+from app.intelligence.messages import MessageSystem
+from app.intelligence.memory import SummarizeOldestPolicy
+from app.intelligence.memory import ContextWindowOperationType
 
 
 class TestSummarizeOldestPolicy:
