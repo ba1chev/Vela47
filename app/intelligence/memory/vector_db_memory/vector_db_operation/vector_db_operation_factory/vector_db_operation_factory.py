@@ -1,9 +1,9 @@
 from typing import Any
 
-from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation import VectorDbOperation
-from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_type import VectorDbOperationType
-from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_factory.vector_db_operation_registry import VECTOR_DB_OPERATION_REGISTRY
-from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_factory.vector_db_operation_base_factory import VectorDbOperationBaseFactory
+from app.intelligence.memory import VectorDbOperation
+from app.intelligence.memory import VectorDbOperationType
+from app.intelligence.memory import VECTOR_DB_OPERATION_REGISTRY
+from app.intelligence.memory import VectorDbOperationBaseFactory
 
 
 class VectorDbOperationFactory(VectorDbOperationBaseFactory):
