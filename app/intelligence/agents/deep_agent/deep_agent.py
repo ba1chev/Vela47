@@ -5,6 +5,7 @@ from app.intelligence.messages.message_ai import MessageAI
 from app.intelligence.tools.tool_registry import ToolRegistry
 from app.intelligence.messages.message_human import MessageHuman
 from app.intelligence.agents.prompts.prompt_manager import PromptManager
+from app.intelligence.tracing.tracing_service_base import TracingServiceBase
 from app.intelligence.agents.deep_agent.operation_context import OperationContext
 from app.intelligence.agents.deep_agent.operation_pipeline import OperationPipeline
 from app.intelligence.memory.vector_db_memory.vector_db_memory import VectorDbMemory
@@ -30,11 +31,13 @@ class DeepAgent(AgentBase):
     def __init__(self, model: ModelFoundation, prompt_manager: PromptManager,
         max_context_window_size: int, operation_pipeline: OperationPipeline,
         tool_registry: Optional[ToolRegistry] = None,
-        vector_db_memory: Optional[VectorDbMemory] = None) -> None:
+        vector_db_memory: Optional[VectorDbMemory] = None,
+        tracing_service: Optional[TracingServiceBase] = None) -> None:
         super().__init__(
             model = model,
             prompt_manager = prompt_manager,
             max_context_window_size = max_context_window_size,
+            tracing_service = tracing_service,
             tool_registry = tool_registry,
             vector_db_memory = vector_db_memory
         )
