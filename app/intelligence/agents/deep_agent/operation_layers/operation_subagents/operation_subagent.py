@@ -1,15 +1,15 @@
 from typing import Optional
 
-from app.intelligence.tools.tool_base import ToolBase
-from app.intelligence.agents.agent_base import AgentBase
-from app.intelligence.messages.message_ai import MessageAI
-from app.intelligence.tools.tool_registry import ToolRegistry
-from app.intelligence.messages.message_human import MessageHuman
-from app.intelligence.middleware.middleware_base import MiddlewareBase
-from app.intelligence.agents.prompts.prompt_manager import PromptManager
-from app.intelligence.tracing.tracing_service_base import TracingServiceBase
-from app.intelligence.model.model_foundation.model_foundation import ModelFoundation
-from app.intelligence.memory.short_term_memory.context_window.context_window import ContextWindow
+from app.intelligence.tools import ToolBase
+from app.intelligence.agents import AgentBase
+from app.intelligence.messages import MessageAI
+from app.intelligence.tools import ToolRegistry
+from app.intelligence.messages import MessageHuman
+from app.intelligence.middleware import MiddlewareBase
+from app.intelligence.agents import PromptManager
+from app.intelligence.tracing import TracingServiceBase
+from app.intelligence.model import ModelFoundation
+from app.intelligence.memory import ContextWindow
 
 
 class OperationSubagent(AgentBase):
