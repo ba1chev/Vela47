@@ -1,11 +1,11 @@
 from pydantic import Field
 from typing import Literal, Optional
 
-from app.intelligence.messages.message_type import MessageType
-from app.intelligence.messages.message_base.message_base import MessageBase
-from app.intelligence.messages.message_usage_metadata import MessageUsageMetadata
-from app.intelligence.messages.message_tool_calls.message_tool_call import MessageToolCall
-from app.intelligence.messages.message_tool_calls.message_invalid_tool_call import MessageInvalidToolCall
+from app.intelligence.messages import MessageType
+from app.intelligence.messages import MessageBase
+from app.intelligence.messages import MessageUsageMetadata
+from app.intelligence.messages import MessageToolCall
+from app.intelligence.messages import MessageInvalidToolCall
 
 
 class MessageAI(MessageBase):
