@@ -1,13 +1,8 @@
-from app.messages.message_ai import MessageAI
-from app.outputs.output_type import OutputType
-from app.outputs.output_entry import OutputEntry
-from app.outputs.output_classification import OutputClassification
-
-
-class Sentiment(OutputEntry):
-    POSITIVE = "positive"
-    NEUTRAL = "neutral"
-    NEGATIVE = "negative"
+from app.intelligence.messages import MessageAI
+from app.intelligence.outputs import OutputType
+from app.intelligence.outputs import OutputEntry
+from tests.fixtures.outputs.sentiment import Sentiment
+from app.intelligence.outputs import OutputClassification
 
 
 class TestOutputClassification:
