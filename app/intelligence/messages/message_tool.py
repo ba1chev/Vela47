@@ -1,8 +1,8 @@
 from pydantic import Field
 from typing import Any, Literal, Optional
 
-from app.intelligence.messages.message_type import MessageType
-from app.intelligence.messages.message_base.message_base import MessageBase
+from app.intelligence.messages import MessageType
+from app.intelligence.messages import MessageBase
 
 
 class MessageTool(MessageBase):
