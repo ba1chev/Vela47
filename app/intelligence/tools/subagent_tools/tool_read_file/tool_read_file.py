@@ -1,6 +1,6 @@
-from app.intelligence.tools.tool_base import ToolBase
-from app.intelligence.sandbox.sandbox_env.sandbox_env import SandboxEnv
-from app.intelligence.tools.subagent_tools.tool_read_file.tool_read_file_input import ToolReadFileInput
+from app.intelligence.tools import ToolBase
+from app.intelligence.sandbox import SandboxEnv
+from app.intelligence.tools import ToolReadFileInput
 
 
 class ToolReadFile(ToolBase[ToolReadFileInput, str]):
