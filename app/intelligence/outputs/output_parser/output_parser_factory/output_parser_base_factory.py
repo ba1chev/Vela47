@@ -1,8 +1,8 @@
 from typing import Any
 from abc import ABC, abstractmethod
 
-from app.intelligence.outputs.output_parser.output_parser_base import OutputParserBase
-from app.intelligence.outputs.output_parser.output_parser_type import OutputParserType
+from app.intelligence.outputs import OutputParserBase
+from app.intelligence.outputs import OutputParserType
 
 
 class OutputParserBaseFactory(ABC):
