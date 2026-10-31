@@ -1,9 +1,9 @@
 from pydantic import Field
 from typing import Generic, Literal, TypeVar
 
-from app.intelligence.outputs.output_type import OutputType
-from app.intelligence.outputs.output_entry import OutputEntry
-from app.intelligence.outputs.output_base.output_base import OutputBase
+from app.intelligence.outputs import OutputType
+from app.intelligence.outputs import OutputEntry
+from app.intelligence.outputs import OutputBase
 
 T = TypeVar("T", bound = OutputEntry)
 
