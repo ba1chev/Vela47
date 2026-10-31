@@ -1,9 +1,9 @@
 import json
 
-from app.intelligence.messages.message_ai import MessageAI
-from app.intelligence.outputs.output_json import OutputJSON
-from app.intelligence.outputs.output_parser.output_parser_base import OutputParserBase
-from app.intelligence.outputs.output_parser.output_parser_type import OutputParserType
+from app.intelligence.messages import MessageAI
+from app.intelligence.outputs import OutputJSON
+from app.intelligence.outputs import OutputParserBase
+from app.intelligence.outputs import OutputParserType
 
 
 class OutputParserJSON(OutputParserBase):
