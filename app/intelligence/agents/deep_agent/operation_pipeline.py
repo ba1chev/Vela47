@@ -1,13 +1,13 @@
 from typing import Any, Optional
 
-from app.intelligence.tracing.trace_event_type import TraceEventType
-from app.intelligence.tracing.tracing_service_null import TracingServiceNull
-from app.intelligence.tracing.tracing_service_base import TracingServiceBase
-from app.intelligence.agents.deep_agent.operation_context import OperationContext
-from app.intelligence.agents.deep_agent.operation_policies.operation_policy import OperationPolicy
-from app.intelligence.agents.deep_agent.operation_layers.operation_layer_base import OperationLayerBase
-from app.intelligence.agents.deep_agent.operation_layers.operation_layers_factory.operation_layers_factory import OperationLayersFactory
-from app.intelligence.agents.deep_agent.operation_layers.operation_layers_factory.operation_layers_factory_base import OperationLayersFactoryBase
+from app.intelligence.tracing import TraceEventType
+from app.intelligence.tracing import TracingServiceNull
+from app.intelligence.tracing import TracingServiceBase
+from app.intelligence.agents import OperationContext
+from app.intelligence.agents import OperationPolicy
+from app.intelligence.agents import OperationLayerBase
+from app.intelligence.agents import OperationLayersFactory
+from app.intelligence.agents import OperationLayersFactoryBase
 
 
 class OperationPipeline:
