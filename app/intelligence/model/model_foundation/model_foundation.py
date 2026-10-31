@@ -7,8 +7,8 @@ from app.intelligence.model.mode_base import ModelBase
 from app.intelligence.messages.message_ai import MessageAI
 from app.intelligence.model.model_config import ModelConfig
 from app.intelligence.tracing.trace_event_type import TraceEventType
-from app.intelligence.tracing.tracing_service import NullTracingService
 from app.intelligence.messages.message_base.message_base import MessageBase
+from app.intelligence.tracing.tracing_service_null import TracingServiceNull
 from app.intelligence.tracing.tracing_service_base import TracingServiceBase
 from app.intelligence.model.model_foundation.model_role_map import MODEL_ROLE_MAP
 from app.intelligence.messages.message_usage_metadata import MessageUsageMetadata
@@ -33,7 +33,7 @@ class ModelFoundation(ModelBase):
         self._tracing_service: TracingServiceBase = (
             tracing_service
             if tracing_service is not None
-            else NullTracingService()
+            else TracingServiceNull()
         )
 
     def _format_messages(self, messages: list[MessageBase]) -> list[dict]:
