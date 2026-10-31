@@ -1,7 +1,7 @@
 from typing import Callable
 
-from app.intelligence.messages import MessageSystem
 from app.intelligence.messages import MessageBase
+from app.intelligence.messages import MessageSystem
 from app.intelligence.memory import ContextWindowOperation
 from app.intelligence.memory import ContextWindowOperationType
 
