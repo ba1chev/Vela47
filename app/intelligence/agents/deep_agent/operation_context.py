@@ -3,9 +3,9 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 from app.intelligence.messages import MessageAI
-from app.intelligence.messages import MessageHuman
 from app.intelligence.agents import OperationPlan
 from app.intelligence.agents import OperationTask
+from app.intelligence.messages import MessageHuman
 from app.intelligence.agents import OperationSubagentResult
 
 
