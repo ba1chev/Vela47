@@ -3,9 +3,9 @@ from typing import Generic, TypeVar
 
 from app.intelligence.messages import MessageAI
 from app.intelligence.outputs import OutputEntry
-from app.intelligence.outputs import OutputClassification
 from app.intelligence.outputs import OutputParserBase
 from app.intelligence.outputs import OutputParserType
+from app.intelligence.outputs import OutputClassification
 
 T = TypeVar("T", bound = OutputEntry)
 
