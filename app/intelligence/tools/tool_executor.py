@@ -3,9 +3,9 @@ from typing import Optional
 from app.intelligence.tools import ToolRegistry
 from app.intelligence.messages import MessageTool
 from app.intelligence.tracing import TraceEventType
+from app.intelligence.messages import MessageToolCall
 from app.intelligence.tracing import TracingServiceNull
 from app.intelligence.tracing import TracingServiceBase
-from app.intelligence.messages import MessageToolCall
 
 
 class ToolExecutor:
