@@ -1,3 +1,6 @@
+from typing import Optional
+
+from app.intelligence.tracing.tracing_service_base import TracingServiceBase
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent import OperationSubagent
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent_type import OperationSubagentType
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent_blueprint import OperationSubagentBlueprint
@@ -16,8 +19,10 @@ class OperationSubagentFactory(OperationSubagentFactoryBase):
     task must start from an empty ShortTermMemory, so reusing one instance across
     tasks would leak one task's conversation into the next."""
 
-    def __init__(self, blueprints: dict[OperationSubagentType, OperationSubagentBlueprint]) -> None:
+    def __init__(self, blueprints: dict[OperationSubagentType, OperationSubagentBlueprint],
+        tracing_service: Optional[TracingServiceBase] = None) -> None:
         self._blueprints = dict(blueprints)
+        self._tracing_service = tracing_service
 
     def create(self, type: OperationSubagentType) -> OperationSubagent:
         blueprint = self._blueprints.get(type)
@@ -34,7 +39,8 @@ class OperationSubagentFactory(OperationSubagentFactoryBase):
             max_context_window_size = blueprint.max_context_window_size,
             tool = blueprint.tool,
             context_window_middleware = blueprint.context_window_middleware,
-            max_iterations = blueprint.max_iterations
+            max_iterations = blueprint.max_iterations,
+            tracing_service = self._tracing_service
         )
 
     def __contains__(self, type: OperationSubagentType) -> bool:
