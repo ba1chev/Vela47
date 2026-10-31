@@ -1,6 +1,6 @@
-from app.intelligence.tools.tool_base import ToolBase
-from app.intelligence.sandbox.sandbox_env.sandbox_env import SandboxEnv
-from app.intelligence.tools.subagent_tools.tool_write_file.tool_write_file_input import ToolWriteFileInput
+from app.intelligence.tools import ToolBase
+from app.intelligence.sandbox import SandboxEnv
+from app.intelligence.tools import ToolWriteFileInput
 
 
 class ToolWriteFile(ToolBase[ToolWriteFileInput, str]):
