@@ -1,5 +1,11 @@
+from typing import Optional
+
+from app.intelligence.messages.message_ai import MessageAI
 from app.intelligence.messages.message_human import MessageHuman
 from app.intelligence.messages.message_system import MessageSystem
+from app.intelligence.tracing.trace_event_type import TraceEventType
+from app.intelligence.tracing.tracing_service_null import TracingServiceNull
+from app.intelligence.tracing.tracing_service_base import TracingServiceBase
 from app.intelligence.agents.deep_agent.operation_context import OperationContext
 from app.intelligence.agents.deep_agent.system_prompt import MERGING_SYSTEM_PROMPT
 from app.intelligence.model.model_foundation.model_foundation import ModelFoundation
@@ -19,8 +25,14 @@ class OperationMergingLayer(OperationLayerBase):
     Errors are passed to the model verbatim rather than filtered out, because a
     gap the user should know about is part of an honest answer."""
 
-    def __init__(self, model: ModelFoundation) -> None:
+    def __init__(self, model: ModelFoundation,
+        tracing_service: Optional[TracingServiceBase] = None) -> None:
         self._model: ModelFoundation = model
+        self._tracing_service: TracingServiceBase = (
+            tracing_service
+            if tracing_service is not None
+            else TracingServiceNull()
+        )
 
     @property
     def operation_type(self) -> OperationType:
@@ -45,7 +57,14 @@ class OperationMergingLayer(OperationLayerBase):
         return "\n".join(lines)
 
     def execute(self, context: OperationContext) -> None:
-        context.final = self._model.invoke([
+        parts: list[str] = []
+        for current_chunk in self._model.stream([
             MessageSystem(content = MERGING_SYSTEM_PROMPT),
             MessageHuman(content = self._build_report(context))
-        ])
+        ]):
+            parts.append(current_chunk)
+            self._tracing_service.emit(
+                TraceEventType.ANSWER_CHUNK, "answer", {"text": current_chunk}
+            )
+
+        context.final = MessageAI(content = "".join(parts))
