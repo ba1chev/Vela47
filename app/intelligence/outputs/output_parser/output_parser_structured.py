@@ -1,10 +1,10 @@
 from pydantic import BaseModel
 from typing import Generic, TypeVar
 
-from app.intelligence.messages.message_ai import MessageAI
-from app.intelligence.outputs.output_structured import OutputStructured
-from app.intelligence.outputs.output_parser.output_parser_base import OutputParserBase
-from app.intelligence.outputs.output_parser.output_parser_type import OutputParserType
+from app.intelligence.messages import MessageAI
+from app.intelligence.outputs import OutputStructured
+from app.intelligence.outputs import OutputParserBase
+from app.intelligence.outputs import OutputParserType
 
 T = TypeVar("T", bound = BaseModel)
 
