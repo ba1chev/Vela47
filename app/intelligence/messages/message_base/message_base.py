@@ -2,8 +2,8 @@ from pydantic import Field
 from abc import ABC, abstractmethod
 from typing import Any, Optional, Union
 
-from app.intelligence.messages.message_type import MessageType
-from app.intelligence.messages.message_base.message_immutable_model import MessageImmutableModel
+from app.intelligence.messages import MessageType
+from app.intelligence.messages import MessageImmutableModel
 
 ContentPart = Union[str, dict[str, Any]]
 
