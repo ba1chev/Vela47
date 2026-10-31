@@ -1,5 +1,5 @@
-from app.intelligence.memory import VectorDbMemoryEntry
 from app.intelligence.memory import VectorDbOperation
+from app.intelligence.memory import VectorDbMemoryEntry
 from app.intelligence.memory import VectorDbOperationPolicy
 from app.intelligence.memory import VectorDbOperationSearch
 
