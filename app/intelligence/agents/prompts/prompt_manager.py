@@ -1,7 +1,7 @@
 from typing import Optional
 
-from app.intelligence.messages.message_system import MessageSystem
-from app.intelligence.agents.prompts.prompt_registry import PROMPT_REGISTRY
+from app.intelligence.messages import MessageSystem
+from app.intelligence.agents import PROMPT_REGISTRY
 
 
 class PromptManager:
