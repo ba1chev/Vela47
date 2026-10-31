@@ -1,6 +1,6 @@
-from app.intelligence.middleware.middleware_base import MiddlewareBase
-from app.intelligence.memory.short_term_memory.context_window.context_window import ContextWindow
-from app.intelligence.memory.short_term_memory.context_window.context_window_operation.context_window_policy_sliding_window import SlidingWindowPolicy
+from app.intelligence.middleware import MiddlewareBase
+from app.intelligence.memory import ContextWindow
+from app.intelligence.memory import SlidingWindowPolicy
 
 
 class MiddlewareSlidingWindow(MiddlewareBase[ContextWindow]):
