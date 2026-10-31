@@ -1,4 +1,4 @@
-from app.messages.message_usage_metadata import MessageUsageMetadata
+from app.intelligence.messages import MessageUsageMetadata
 
 
 class TestMessageUsageMetadata:
