@@ -1,13 +1,13 @@
 from typing import Optional
 
-from app.intelligence.sandbox.sandbox_pool_base import SandboxPoolBase
-from app.intelligence.tracing.tracing_service_base import TracingServiceBase
-from app.intelligence.model.model_foundation.model_foundation import ModelFoundation
-from app.intelligence.agents.deep_agent.operation_policies.operation_policy import OperationPolicy
-from app.intelligence.agents.deep_agent.operation_layers.operation_layer_type import OperationType
-from app.intelligence.agents.deep_agent.operation_layers.operation_layer_base import OperationLayerBase
-from app.intelligence.agents.deep_agent.operation_layers.operation_layers_factory.operation_layers_factory_base import OperationLayersFactoryBase
-from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagents_factory.operation_subagent_factory_base import OperationSubagentFactoryBase
+from app.intelligence.sandbox import SandboxPoolBase
+from app.intelligence.tracing import TracingServiceBase
+from app.intelligence.model import ModelFoundation
+from app.intelligence.agents import OperationPolicy
+from app.intelligence.agents import OperationType
+from app.intelligence.agents import OperationLayerBase
+from app.intelligence.agents import OperationLayersFactoryBase
+from app.intelligence.agents import OperationSubagentFactoryBase
 
 
 class OperationPolicyFull(OperationPolicy):
