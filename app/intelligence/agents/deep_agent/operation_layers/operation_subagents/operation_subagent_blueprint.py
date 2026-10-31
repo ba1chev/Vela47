@@ -1,10 +1,10 @@
 from typing import Callable
 
-from app.intelligence.tools.tool_base import ToolBase
-from app.intelligence.middleware.middleware_base import MiddlewareBase
-from app.intelligence.sandbox.sandbox_env.sandbox_env import SandboxEnv
-from app.intelligence.model.model_foundation.model_foundation import ModelFoundation
-from app.intelligence.memory.short_term_memory.context_window.context_window import ContextWindow
+from app.intelligence.tools import ToolBase
+from app.intelligence.middleware import MiddlewareBase
+from app.intelligence.sandbox import SandboxEnv
+from app.intelligence.model import ModelFoundation
+from app.intelligence.memory import ContextWindow
 
 
 class OperationSubagentBlueprint:
