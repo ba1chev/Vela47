@@ -1,16 +1,16 @@
 from typing import Optional
 
 from app.intelligence.messages import MessageAI
+from app.intelligence.agents import OperationType
 from app.intelligence.messages import MessageHuman
+from app.intelligence.model import ModelFoundation
 from app.intelligence.messages import MessageSystem
 from app.intelligence.tracing import TraceEventType
+from app.intelligence.agents import OperationContext
+from app.intelligence.agents import OperationLayerBase
 from app.intelligence.tracing import TracingServiceNull
 from app.intelligence.tracing import TracingServiceBase
-from app.intelligence.agents import OperationContext
-from app.intelligence.model import ModelFoundation
 from app.intelligence.agents import MERGING_SYSTEM_PROMPT
-from app.intelligence.agents import OperationType
-from app.intelligence.agents import OperationLayerBase
 
 
 class OperationMergingLayer(OperationLayerBase):
