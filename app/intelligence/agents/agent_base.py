@@ -6,15 +6,15 @@ from app.intelligence.tools import ToolRegistry
 from app.intelligence.tools import ToolExecutor
 from app.intelligence.messages import MessageTool
 from app.intelligence.messages import MessageType
-from app.intelligence.messages import MessageHuman
 from app.intelligence.agents import PromptManager
 from app.intelligence.messages import MessageBase
-from app.intelligence.tracing import TracingServiceNull
-from app.intelligence.tracing import TracingServiceBase
+from app.intelligence.memory import ContextWindow
+from app.intelligence.messages import MessageHuman
 from app.intelligence.memory import VectorDbMemory
 from app.intelligence.model import ModelFoundation
 from app.intelligence.memory import ShortTermMemory
-from app.intelligence.memory import ContextWindow
+from app.intelligence.tracing import TracingServiceNull
+from app.intelligence.tracing import TracingServiceBase
 
 
 class AgentBase(ABC):
