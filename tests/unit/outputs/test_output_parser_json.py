@@ -1,10 +1,10 @@
 import json
 import pytest
 
-from app.messages.message_ai import MessageAI
-from app.outputs.output_json import OutputJSON
-from app.outputs.output_parser.output_parser_type import OutputParserType
-from app.outputs.output_parser.output_parser_json import OutputParserJSON
+from app.intelligence.messages import MessageAI
+from app.intelligence.outputs import OutputJSON
+from app.intelligence.outputs import OutputParserType
+from app.intelligence.outputs import OutputParserJSON
 
 
 class TestOutputParserJSON:
