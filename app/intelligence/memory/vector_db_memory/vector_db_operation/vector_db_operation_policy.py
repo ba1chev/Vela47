@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from app.intelligence.memory.vector_db_memory.vector_db_memory_entry import VectorDbMemoryEntry
-from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation import VectorDbOperation
+from app.intelligence.memory import VectorDbMemoryEntry
+from app.intelligence.memory import VectorDbOperation
 
 
 class VectorDbOperationPolicy(ABC):
