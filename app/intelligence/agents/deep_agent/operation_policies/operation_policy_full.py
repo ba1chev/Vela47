@@ -1,11 +1,11 @@
 from typing import Optional
 
-from app.intelligence.sandbox import SandboxPoolBase
-from app.intelligence.tracing import TracingServiceBase
+from app.intelligence.agents import OperationType
 from app.intelligence.model import ModelFoundation
 from app.intelligence.agents import OperationPolicy
-from app.intelligence.agents import OperationType
+from app.intelligence.sandbox import SandboxPoolBase
 from app.intelligence.agents import OperationLayerBase
+from app.intelligence.tracing import TracingServiceBase
 from app.intelligence.agents import OperationLayersFactoryBase
 from app.intelligence.agents import OperationSubagentFactoryBase
 
