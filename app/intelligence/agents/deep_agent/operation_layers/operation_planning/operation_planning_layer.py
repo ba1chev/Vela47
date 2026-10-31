@@ -7,8 +7,8 @@ from app.intelligence.outputs.output_parser.output_parser_structured import Outp
 from app.intelligence.agents.deep_agent.operation_layers.operation_layer_type import OperationType
 from app.intelligence.agents.deep_agent.prompts.planning_system_prompt import PLANNING_SYSTEM_PROMPT
 from app.intelligence.agents.deep_agent.operation_layers.operation_layer_base import OperationLayerBase
+from app.intelligence.agents.deep_agent.prompts.subagent_capabilities import format_subagent_capabilities
 from app.intelligence.agents.deep_agent.operation_layers.operation_planning.operation_plan import OperationPlan
-from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent_type import OperationSubagentType
 
 
 class OperationPlanningLayer(OperationLayerBase):
@@ -35,7 +35,7 @@ class OperationPlanningLayer(OperationLayerBase):
     def _build_system_message(self) -> MessageSystem:
         return MessageSystem(
             content = PLANNING_SYSTEM_PROMPT.format(
-                subagent_types = ", ".join(current.name for current in OperationSubagentType),
+                subagent_types = format_subagent_capabilities(),
                 schema = json.dumps(OperationPlan.model_json_schema(), indent = 2)
             )
         )
