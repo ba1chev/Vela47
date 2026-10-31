@@ -1,7 +1,7 @@
-from app.messages.message_ai import MessageAI
-from app.outputs.output_text import OutputText
-from app.outputs.output_parser.output_parser_type import OutputParserType
-from app.outputs.output_parser.output_parser_text import OutputParserText
+from app.intelligence.messages import MessageAI
+from app.intelligence.outputs import OutputText
+from app.intelligence.outputs import OutputParserType
+from app.intelligence.outputs import OutputParserText
 
 
 class TestOutputParserText:
