@@ -1,6 +1,6 @@
-from app.messages.message_human import MessageHuman
-from app.memory.short_term_memory.context_window.context_window_operation.context_window_operation_type import ContextWindowOperationType
-from app.memory.short_term_memory.context_window.context_window_operation.context_window_policy_sliding_window import SlidingWindowPolicy
+from app.intelligence.messages import MessageHuman
+from app.intelligence.memory import SlidingWindowPolicy
+from app.intelligence.memory import ContextWindowOperationType
 
 
 class TestSlidingWindowPolicy:
