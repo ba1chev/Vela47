@@ -45,21 +45,3 @@ class TracingService(TracingServiceBase):
     def subscribe(self, callback: Callable[[TraceEvent], None]) -> None:
         with self._lock:
             self._subscribers.append(callback)
-
-
-class NullTracingService(TracingServiceBase):
-    """Tracer that discards everything. Exists so components can always hold a
-    TracingServiceBase and report unconditionally, instead of guarding every call site
-    with a None check. Tracing then costs one no-op method call when it is switched
-    off, and the code that reports reads the same whether anyone is listening."""
-
-    def emit(self, type: TraceEventType, label: str,
-        payload: Optional[dict[str, Any]] = None,
-        duration_ms: Optional[float] = None) -> None:
-        return None
-
-    def events(self) -> list[TraceEvent]:
-        return []
-
-    def subscribe(self, callback: Callable[[TraceEvent], None]) -> None:
-        return None
