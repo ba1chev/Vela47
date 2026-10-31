@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from app.intelligence.sandbox import SandboxSlot
 from app.intelligence.sandbox import SandboxEnv
+from app.intelligence.sandbox import SandboxSlot
 
 
 class SandboxPoolBase(ABC):
