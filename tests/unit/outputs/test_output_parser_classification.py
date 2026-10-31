@@ -1,17 +1,12 @@
 import json
 import pytest
 
-from app.messages.message_ai import MessageAI
-from app.outputs.output_entry import OutputEntry
-from app.outputs.output_classification import OutputClassification
-from app.outputs.output_parser.output_parser_type import OutputParserType
-from app.outputs.output_parser.output_parser_classification import OutputParserClassification
-
-
-class Sentiment(OutputEntry):
-    POSITIVE = "positive"
-    NEUTRAL = "neutral"
-    NEGATIVE = "negative"
+from app.intelligence.messages import MessageAI
+from app.intelligence.outputs import OutputEntry
+from app.intelligence.outputs import OutputParserType
+from tests.fixtures.outputs.sentiment import Sentiment
+from app.intelligence.outputs import OutputClassification
+from app.intelligence.outputs import OutputParserClassification
 
 
 class TestOutputParserClassification:
