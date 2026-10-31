@@ -1,0 +1,71 @@
+import pytest
+import pathlib
+import tempfile
+
+from app.intelligence.tools import ToolWriteFile
+from app.intelligence.sandbox import SandboxEnvLocal
+from tests.fixtures.model.fake_model import FakeModel
+from app.intelligence.agents import OperationSubagentType
+from app.intelligence.agents import OperationSubagentFactory
+from app.intelligence.agents import OperationSubagentBlueprint
+from app.intelligence.middleware import MiddlewareSlidingWindow
+
+
+def make_factory(prompt = "You write code. Use {tool}."):
+    blueprint = OperationSubagentBlueprint(
+        tool_factory = ToolWriteFile,
+        prompt_template = prompt,
+        model = FakeModel(),
+        max_context_window_size = 8,
+        context_window_middleware = MiddlewareSlidingWindow(step = 2),
+        max_iterations = 2,
+    )
+    return OperationSubagentFactory({OperationSubagentType.CODE: blueprint})
+
+
+def make_env():
+    return SandboxEnvLocal(pathlib.Path(tempfile.mkdtemp()) / "run")
+
+
+class TestOperationSubagentFactory:
+    def test_it_builds_an_agent_for_a_known_type(self):
+        agent = make_factory().create(OperationSubagentType.CODE, make_env())
+        assert agent is not None
+
+    def test_an_unregistered_type_is_refused(self):
+        """A pipeline given no blueprint for a type should fail loudly rather than
+        silently substituting a different agent."""
+        with pytest.raises(ValueError, match = "No blueprint registered"):
+            make_factory().create(OperationSubagentType.REVIEW, make_env())
+
+    def test_the_tool_is_bound_to_the_env_it_was_given(self):
+        env = make_env()
+        agent = make_factory().create(OperationSubagentType.CODE, env)
+        assert agent._tool_registry.get("write_file")._sandbox_env is env
+
+    def test_each_call_binds_its_own_env(self):
+        """Slots are leased per task, so one shared tool would write into whichever
+        sandbox happened to be bound first."""
+        factory = make_factory()
+        first_env, second_env = make_env(), make_env()
+        first = factory.create(OperationSubagentType.CODE, first_env)
+        second = factory.create(OperationSubagentType.CODE, second_env)
+        assert first._tool_registry.get("write_file")._sandbox_env is first_env
+        assert second._tool_registry.get("write_file")._sandbox_env is second_env
+
+    def test_each_agent_starts_with_empty_memory(self):
+        """Reusing one instance would leak a task's conversation into the next."""
+        factory = make_factory()
+        agent = factory.create(OperationSubagentType.CODE, make_env())
+        assert len(agent._short_term_memory) == 0
+
+    def test_the_prompt_is_told_the_tool_name(self):
+        """Small models skip a tool they are told about only in the abstract."""
+        agent = make_factory().create(OperationSubagentType.CODE, make_env())
+        prompt = agent._prompt_manager.build_system_messages()[0].content
+        assert "write_file" in prompt and "{tool}" not in prompt
+
+    def test_contains_reports_what_is_registered(self):
+        factory = make_factory()
+        assert OperationSubagentType.CODE in factory
+        assert OperationSubagentType.TEST not in factory
