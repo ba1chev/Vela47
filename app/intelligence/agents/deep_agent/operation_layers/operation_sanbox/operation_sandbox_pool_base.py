@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_slot import OperationSandboxSlot
+from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_env import OperationSandboxEnv
 
 
 class OperationSandboxPoolBase(ABC):
@@ -24,7 +25,17 @@ class OperationSandboxPoolBase(ABC):
     def release(self, slot: OperationSandboxSlot) -> None:
         raise NotImplementedError("Must be implemented")
 
+    @abstractmethod
+    def env_for(self, slot: OperationSandboxSlot, run_id: str) -> OperationSandboxEnv:
+        raise NotImplementedError("Must be implemented")
+
     @property
     @abstractmethod
     def available(self) -> int:
         raise NotImplementedError("Must be implemented")
+
+    def start(self) -> None:
+        return None
+
+    def shutdown(self) -> None:
+        return None
