@@ -1,9 +1,9 @@
 from uuid import uuid4
 
-from app.intelligence.agents import OperationContext
 from app.intelligence.agents import OperationType
-from app.intelligence.agents import OperationLayerBase
 from app.intelligence.agents import OperationTask
+from app.intelligence.agents import OperationContext
+from app.intelligence.agents import OperationLayerBase
 
 
 class OperationDecompositionLayer(OperationLayerBase):
