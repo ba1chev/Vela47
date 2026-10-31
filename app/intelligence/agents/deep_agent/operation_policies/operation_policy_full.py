@@ -1,3 +1,6 @@
+from typing import Optional
+
+from app.intelligence.tracing.tracing_service_base import TracingServiceBase
 from app.intelligence.model.model_foundation.model_foundation import ModelFoundation
 from app.intelligence.agents.deep_agent.operation_policies.operation_policy import OperationPolicy
 from app.intelligence.agents.deep_agent.operation_layers.operation_layer_type import OperationType
@@ -18,11 +21,13 @@ class OperationPolicyFull(OperationPolicy):
 
     def __init__(self, planning_model: ModelFoundation, merging_model: ModelFoundation,
         subagent_factory: OperationSubagentFactoryBase,
-        sandbox_pool: OperationSandboxPoolBase) -> None:
+        sandbox_pool: OperationSandboxPoolBase,
+        tracing_service: Optional[TracingServiceBase] = None) -> None:
         self._planning_model: ModelFoundation = planning_model
         self._merging_model: ModelFoundation = merging_model
         self._subagent_factory: OperationSubagentFactoryBase = subagent_factory
         self._sandbox_pool: OperationSandboxPoolBase = sandbox_pool
+        self._tracing_service: Optional[TracingServiceBase] = tracing_service
 
     def resolve(self, factory: OperationLayersFactoryBase) -> list[OperationLayerBase]:
         return [
@@ -31,7 +36,8 @@ class OperationPolicyFull(OperationPolicy):
             factory.create(
                 OperationType.SUBAGENTS,
                 subagent_factory = self._subagent_factory,
-                sandbox_pool = self._sandbox_pool
+                sandbox_pool = self._sandbox_pool,
+                tracing_service = self._tracing_service
             ),
             factory.create(OperationType.MERGING, model = self._merging_model)
         ]
