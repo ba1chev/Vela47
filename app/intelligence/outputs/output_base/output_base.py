@@ -1,9 +1,9 @@
 from abc import ABC
 from pydantic import Field
 
-from app.intelligence.messages.message_ai import MessageAI
-from app.intelligence.outputs.output_type import OutputType
-from app.intelligence.messages.message_base.message_immutable_model import MessageImmutableModel
+from app.intelligence.messages import MessageAI
+from app.intelligence.outputs import OutputType
+from app.intelligence.messages import MessageImmutableModel
 
 
 class OutputBase(MessageImmutableModel, ABC):
