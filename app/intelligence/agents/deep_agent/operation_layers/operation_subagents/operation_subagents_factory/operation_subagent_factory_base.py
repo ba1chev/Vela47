@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 
-from app.intelligence.sandbox.sandbox_env.sandbox_env import SandboxEnv
-from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent import OperationSubagent
-from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent_type import OperationSubagentType
+from app.intelligence.sandbox import SandboxEnv
+from app.intelligence.agents import OperationSubagent
+from app.intelligence.agents import OperationSubagentType
 
 
 class OperationSubagentFactoryBase(ABC):
