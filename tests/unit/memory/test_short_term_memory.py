@@ -1,9 +1,9 @@
 import pytest
 
-from app.messages.message_type import MessageType
-from app.messages.message_human import MessageHuman
-from app.messages.message_ai import MessageAI
-from app.memory.short_term_memory.short_term_memory import ShortTermMemory
+from app.intelligence.messages import MessageAI
+from app.intelligence.messages import MessageType
+from app.intelligence.messages import MessageHuman
+from app.intelligence.memory import ShortTermMemory
 
 
 class TestShortTermMemory:
