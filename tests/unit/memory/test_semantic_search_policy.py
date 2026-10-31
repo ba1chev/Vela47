@@ -1,7 +1,7 @@
-from app.messages.message_human import MessageHuman
-from app.memory.vector_db_memory.vector_db_memory_entry import VectorDbMemoryEntry
-from app.memory.vector_db_memory.vector_db_operation.vector_db_operation_type import VectorDbOperationType
-from app.memory.vector_db_memory.vector_db_operation.vector_db_operation_policy_semantic_search import SemanticSearchPolicy
+from app.intelligence.messages import MessageHuman
+from app.intelligence.memory import VectorDbMemoryEntry
+from app.intelligence.memory import SemanticSearchPolicy
+from app.intelligence.memory import VectorDbOperationType
 
 
 def entry(content, vector):
