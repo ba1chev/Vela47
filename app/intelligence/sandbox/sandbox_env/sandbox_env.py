@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from app.intelligence.sandbox.sandbox_env.sandbox_command_result import SandboxCommandResult
+from app.intelligence.sandbox import SandboxCommandResult
 
 
 class SandboxEnv(ABC):
