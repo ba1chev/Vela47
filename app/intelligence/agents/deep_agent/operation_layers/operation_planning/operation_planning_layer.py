@@ -2,10 +2,10 @@ import json
 
 from app.intelligence.messages.message_system import MessageSystem
 from app.intelligence.agents.deep_agent.operation_context import OperationContext
-from app.intelligence.agents.deep_agent.system_prompt import PLANNING_SYSTEM_PROMPT
 from app.intelligence.model.model_foundation.model_foundation import ModelFoundation
 from app.intelligence.outputs.output_parser.output_parser_structured import OutputParserStructured
 from app.intelligence.agents.deep_agent.operation_layers.operation_layer_type import OperationType
+from app.intelligence.agents.deep_agent.prompts.planning_system_prompt import PLANNING_SYSTEM_PROMPT
 from app.intelligence.agents.deep_agent.operation_layers.operation_layer_base import OperationLayerBase
 from app.intelligence.agents.deep_agent.operation_layers.operation_planning.operation_plan import OperationPlan
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent_type import OperationSubagentType
