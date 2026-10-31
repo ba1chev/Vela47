@@ -1,9 +1,9 @@
 from typing import Any
 
-from app.intelligence.outputs.output_parser.output_parser_base import OutputParserBase
-from app.intelligence.outputs.output_parser.output_parser_type import OutputParserType
-from app.intelligence.outputs.output_parser.output_parser_factory.output_parser_registry import OUTPUT_PARSER_REGISTRY
-from app.intelligence.outputs.output_parser.output_parser_factory.output_parser_base_factory import OutputParserBaseFactory
+from app.intelligence.outputs import OutputParserBase
+from app.intelligence.outputs import OutputParserType
+from app.intelligence.outputs import OUTPUT_PARSER_REGISTRY
+from app.intelligence.outputs import OutputParserBaseFactory
 
 
 class OutputParserFactory(OutputParserBaseFactory):
