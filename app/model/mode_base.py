@@ -1,5 +1,5 @@
-from typing import Iterator
 from abc import ABC, abstractmethod
+from typing import Iterator, Optional
 
 from app.messages.message_ai import MessageAI
 from app.messages.message_base.message_base import MessageBase
@@ -14,7 +14,8 @@ class ModelBase(ABC):
     the provider's native format."""
 
     @abstractmethod
-    def invoke(self, messages: list[MessageBase]) -> MessageAI:
+    def invoke(self, messages: list[MessageBase],
+        tools: Optional[list[dict]] = None) -> MessageAI:
         raise NotImplementedError("Must be implemented")
 
     @abstractmethod
