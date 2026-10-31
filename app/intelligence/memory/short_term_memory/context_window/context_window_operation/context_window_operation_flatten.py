@@ -1,6 +1,6 @@
-from app.intelligence.messages.message_base.message_base import MessageBase
-from app.intelligence.memory.short_term_memory.context_window.context_window_operation.context_window_operation import ContextWindowOperation
-from app.intelligence.memory.short_term_memory.context_window.context_window_operation.context_window_operation_type import ContextWindowOperationType
+from app.intelligence.messages import MessageBase
+from app.intelligence.memory import ContextWindowOperation
+from app.intelligence.memory import ContextWindowOperationType
 
 
 class ContextWindowOperationFlatten(ContextWindowOperation):
