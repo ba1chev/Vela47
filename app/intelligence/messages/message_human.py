@@ -1,8 +1,8 @@
 from typing import Literal
 from pydantic import Field
 
-from app.intelligence.messages.message_type import MessageType
-from app.intelligence.messages.message_base.message_base import MessageBase
+from app.intelligence.messages import MessageType
+from app.intelligence.messages import MessageBase
 
 
 class MessageHuman(MessageBase):
