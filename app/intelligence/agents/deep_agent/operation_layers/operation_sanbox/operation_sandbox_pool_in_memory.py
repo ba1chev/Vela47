@@ -1,5 +1,10 @@
+import pathlib
+import tempfile
+
 from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_slot import OperationSandboxSlot
 from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_pool_base import OperationSandboxPoolBase
+from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_env import OperationSandboxEnv
+from app.intelligence.agents.deep_agent.operation_layers.operation_sanbox.operation_sandbox_env.operation_sandbox_env_local import OperationSandboxEnvLocal
 
 
 class OperationInMemorySandboxPool(OperationSandboxPoolBase):
@@ -10,9 +15,14 @@ class OperationInMemorySandboxPool(OperationSandboxPoolBase):
     Swapping in a Docker-backed pool later changes no caller, because the layer
     depends on OperationSandboxPoolBase rather than on this class."""
 
-    def __init__(self, size: int = 10) -> None:
+    def __init__(self, size: int = 10, base_directory: pathlib.Path | None = None) -> None:
         self._slots: list[OperationSandboxSlot] = [OperationSandboxSlot(id = index) for index in range(size)]
         self._busy: set[int] = set()
+        self._base_directory: pathlib.Path = (
+            pathlib.Path(base_directory)
+            if base_directory is not None
+            else pathlib.Path(tempfile.mkdtemp(prefix = "vela47-"))
+        )
 
     def acquire(self) -> OperationSandboxSlot:
         for current_slot in self._slots:
@@ -26,6 +36,16 @@ class OperationInMemorySandboxPool(OperationSandboxPoolBase):
 
     def release(self, slot: OperationSandboxSlot) -> None:
         self._busy.discard(slot.id)
+
+    def env_for(self, slot: OperationSandboxSlot, run_id: str) -> OperationSandboxEnv:
+        return OperationSandboxEnvLocal(
+            root = self._base_directory / run_id,
+            identifier = f"local-slot-{slot.id}"
+        )
+
+    @property
+    def base_directory(self) -> pathlib.Path:
+        return self._base_directory
 
     @property
     def available(self) -> int:
