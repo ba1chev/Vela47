@@ -1,8 +1,8 @@
 from typing import Any
 from abc import ABC, abstractmethod
 
-from app.intelligence.agents.deep_agent.operation_layers.operation_layer_type import OperationType
-from app.intelligence.agents.deep_agent.operation_layers.operation_layer_base import OperationLayerBase
+from app.intelligence.agents import OperationType
+from app.intelligence.agents import OperationLayerBase
 
 
 class OperationLayersFactoryBase(ABC):
