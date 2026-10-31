@@ -1,22 +1,13 @@
 import pytest
 from pydantic import BaseModel
 
-from app.messages.message_ai import MessageAI
-from app.outputs.output_entry import OutputEntry
-from app.outputs.output_parser.output_parser_type import OutputParserType
-from app.outputs.output_parser.output_parser_factory.output_parser_factory import OutputParserFactory
-from app.outputs.output_parser.output_parser_factory.output_parser_registry import OUTPUT_PARSER_REGISTRY
-
-
-class Contact(BaseModel):
-    name: str
-    email: str
-
-
-class Sentiment(OutputEntry):
-    POSITIVE = "positive"
-    NEUTRAL = "neutral"
-    NEGATIVE = "negative"
+from app.intelligence.messages import MessageAI
+from app.intelligence.outputs import OutputEntry
+from tests.fixtures.outputs.contact import Contact
+from app.intelligence.outputs import OutputParserType
+from tests.fixtures.outputs.sentiment import Sentiment
+from app.intelligence.outputs import OutputParserFactory
+from app.intelligence.outputs import OUTPUT_PARSER_REGISTRY
 
 
 class TestOutputParserFactory:
