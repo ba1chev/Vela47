@@ -1,14 +1,14 @@
 from typing import Optional
 
+from app.intelligence.agents import OperationType
+from app.intelligence.agents import OperationTask
 from app.intelligence.messages import MessageHuman
 from app.intelligence.tracing import TraceEventType
 from app.intelligence.sandbox import SandboxPoolBase
+from app.intelligence.agents import OperationContext
+from app.intelligence.agents import OperationLayerBase
 from app.intelligence.tracing import TracingServiceNull
 from app.intelligence.tracing import TracingServiceBase
-from app.intelligence.agents import OperationContext
-from app.intelligence.agents import OperationType
-from app.intelligence.agents import OperationLayerBase
-from app.intelligence.agents import OperationTask
 from app.intelligence.agents import OperationSubagentResult
 from app.intelligence.agents import OperationSubagentFactoryBase
 
