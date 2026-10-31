@@ -1,4 +1,4 @@
-from app.intelligence.tools.tool_base import ToolBase
+from app.intelligence.tools import ToolBase
 
 
 class ToolRegistry:
