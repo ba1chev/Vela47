@@ -1,15 +1,15 @@
 from typing import Optional
 
-from app.intelligence.agents.agent_base import AgentBase
-from app.intelligence.messages.message_ai import MessageAI
-from app.intelligence.tools.tool_registry import ToolRegistry
-from app.intelligence.messages.message_human import MessageHuman
-from app.intelligence.agents.prompts.prompt_manager import PromptManager
-from app.intelligence.tracing.tracing_service_base import TracingServiceBase
-from app.intelligence.agents.deep_agent.operation_context import OperationContext
-from app.intelligence.agents.deep_agent.operation_pipeline import OperationPipeline
-from app.intelligence.memory.vector_db_memory.vector_db_memory import VectorDbMemory
-from app.intelligence.model.model_foundation.model_foundation import ModelFoundation
+from app.intelligence.agents import AgentBase
+from app.intelligence.messages import MessageAI
+from app.intelligence.tools import ToolRegistry
+from app.intelligence.messages import MessageHuman
+from app.intelligence.agents import PromptManager
+from app.intelligence.tracing import TracingServiceBase
+from app.intelligence.agents import OperationContext
+from app.intelligence.agents import OperationPipeline
+from app.intelligence.memory import VectorDbMemory
+from app.intelligence.model import ModelFoundation
 
 
 class DeepAgent(AgentBase):
