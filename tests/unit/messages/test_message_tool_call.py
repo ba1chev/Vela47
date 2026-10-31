@@ -1,4 +1,4 @@
-from app.messages.message_tool_calls.message_tool_call import MessageToolCall
+from app.intelligence.messages import MessageToolCall
 
 
 class TestMessageToolCall:
