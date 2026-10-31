@@ -1,5 +1,5 @@
-from app.messages.message_type import MessageType
-from app.messages.message_system import MessageSystem
+from app.intelligence.messages import MessageType
+from app.intelligence.messages import MessageSystem
 
 
 class TestMessageSystem:
