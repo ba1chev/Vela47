@@ -1,12 +1,7 @@
 import pytest
 
-from app.outputs.output_entry import OutputEntry
-
-
-class Sentiment(OutputEntry):
-    POSITIVE = "positive"
-    NEUTRAL = "neutral"
-    NEGATIVE = "negative"
+from app.intelligence.outputs import OutputEntry
+from tests.fixtures.outputs.sentiment import Sentiment
 
 
 class TestOutputEntry:
