@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 
-from app.intelligence.messages.message_ai import MessageAI
-from app.intelligence.outputs.output_base.output_base import OutputBase
-from app.intelligence.outputs.output_parser.output_parser_type import OutputParserType
+from app.intelligence.messages import MessageAI
+from app.intelligence.outputs import OutputBase
+from app.intelligence.outputs import OutputParserType
 
 
 class OutputParserBase(ABC):
