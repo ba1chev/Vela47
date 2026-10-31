@@ -3,8 +3,8 @@ from typing import Literal, Optional
 
 from app.intelligence.messages import MessageType
 from app.intelligence.messages import MessageBase
-from app.intelligence.messages import MessageUsageMetadata
 from app.intelligence.messages import MessageToolCall
+from app.intelligence.messages import MessageUsageMetadata
 from app.intelligence.messages import MessageInvalidToolCall
 
 
