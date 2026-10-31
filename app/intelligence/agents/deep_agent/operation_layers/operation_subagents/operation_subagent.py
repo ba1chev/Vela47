@@ -1,3 +1,5 @@
+from typing import Optional
+
 from app.intelligence.tools.tool_base import ToolBase
 from app.intelligence.agents.agent_base import AgentBase
 from app.intelligence.messages.message_ai import MessageAI
@@ -5,6 +7,7 @@ from app.intelligence.tools.tool_registry import ToolRegistry
 from app.intelligence.messages.message_human import MessageHuman
 from app.intelligence.middleware.middleware_base import MiddlewareBase
 from app.intelligence.agents.prompts.prompt_manager import PromptManager
+from app.intelligence.tracing.tracing_service_base import TracingServiceBase
 from app.intelligence.model.model_foundation.model_foundation import ModelFoundation
 from app.intelligence.memory.short_term_memory.context_window.context_window import ContextWindow
 
@@ -30,14 +33,16 @@ class OperationSubagent(AgentBase):
     def __init__(self, model: ModelFoundation, prompt_manager: PromptManager,
         max_context_window_size: int, tool: ToolBase,
         context_window_middleware: MiddlewareBase[ContextWindow],
-        max_iterations: int = 5) -> None:
+        max_iterations: int = 5,
+        tracing_service: Optional[TracingServiceBase] = None) -> None:
         tool_registry = ToolRegistry()
         tool_registry.register(tool)
         super().__init__(
             model = model,
             prompt_manager = prompt_manager,
             max_context_window_size = max_context_window_size,
-            tool_registry = tool_registry
+            tool_registry = tool_registry,
+            tracing_service = tracing_service
         )
         self._context_window_middleware = context_window_middleware
         self._max_iterations = max_iterations
