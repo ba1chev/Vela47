@@ -7,8 +7,10 @@ from app.intelligence.tools.tool_executor import ToolExecutor
 from app.intelligence.messages.message_tool import MessageTool
 from app.intelligence.messages.message_type import MessageType
 from app.intelligence.messages.message_human import MessageHuman
+from app.intelligence.tracing.tracing_service import NullTracingService
 from app.intelligence.agents.prompts.prompt_manager import PromptManager
 from app.intelligence.messages.message_base.message_base import MessageBase
+from app.intelligence.tracing.tracing_service_base import TracingServiceBase
 from app.intelligence.memory.vector_db_memory.vector_db_memory import VectorDbMemory
 from app.intelligence.model.model_foundation.model_foundation import ModelFoundation
 from app.intelligence.memory.short_term_memory.short_term_memory import ShortTermMemory
@@ -26,7 +28,8 @@ class AgentBase(ABC):
 
     def __init__(self, model: ModelFoundation, prompt_manager: PromptManager,
         max_context_window_size: int, tool_registry: Optional[ToolRegistry] = None,
-        vector_db_memory: Optional[VectorDbMemory] = None) -> None:
+        vector_db_memory: Optional[VectorDbMemory] = None,
+        tracing_service: Optional[TracingServiceBase] = None) -> None:
         self._model: ModelFoundation = model
         self._prompt_manager: PromptManager = prompt_manager
         self._short_term_memory: ShortTermMemory = ShortTermMemory()
@@ -34,9 +37,15 @@ class AgentBase(ABC):
             memory = self._short_term_memory,
             max_window_size = max_context_window_size
         )
+        self._tracing_service: TracingServiceBase = (
+            tracing_service
+            if tracing_service is not None
+            else NullTracingService()
+        )
         self._tool_registry: Optional[ToolRegistry] = tool_registry
         self._tool_executor: Optional[ToolExecutor] = (
-            ToolExecutor(tool_registry) if tool_registry is not None else None
+            ToolExecutor(tool_registry, self._tracing_service)
+            if tool_registry is not None else None
         )
         self._vector_db_memory: Optional[VectorDbMemory] = vector_db_memory
 
@@ -55,10 +64,6 @@ class AgentBase(ABC):
         )
 
     def _compose_messages(self) -> list[MessageBase]:
-        """Prepends the system prompts to the context window's current view without
-        refreshing it. Use this when a middleware has already run update() on the
-        window — refreshing twice would re-resolve the policy and, for policies that
-        call a model (summarisation), pay for that call a second time."""
         system_messages = self._prompt_manager.build_system_messages()
         return system_messages + self._context_window.build()
 
