@@ -1,7 +1,7 @@
-from app.intelligence.memory.vector_db_memory.vector_db_memory_entry import VectorDbMemoryEntry
-from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_utils import cosine_similarity
-from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation import VectorDbOperation
-from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_type import VectorDbOperationType
+from app.intelligence.memory import VectorDbMemoryEntry
+from app.intelligence.memory import cosine_similarity
+from app.intelligence.memory import VectorDbOperation
+from app.intelligence.memory import VectorDbOperationType
 
 
 class VectorDbOperationSearch(VectorDbOperation):
