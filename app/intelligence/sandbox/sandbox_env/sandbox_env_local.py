@@ -1,8 +1,8 @@
 import pathlib
 from typing import Iterator
 
-from app.intelligence.sandbox.sandbox_env.sandbox_env import SandboxEnv
-from app.intelligence.sandbox.sandbox_env.sandbox_command_result import SandboxCommandResult
+from app.intelligence.sandbox import SandboxEnv
+from app.intelligence.sandbox import SandboxCommandResult
 
 
 class SandboxEnvLocal(SandboxEnv):
