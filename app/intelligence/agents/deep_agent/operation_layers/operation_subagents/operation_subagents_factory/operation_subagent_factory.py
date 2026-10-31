@@ -2,8 +2,8 @@ from typing import Optional
 
 from app.intelligence.sandbox import SandboxEnv
 from app.intelligence.agents import PromptManager
-from app.intelligence.tracing import TracingServiceBase
 from app.intelligence.agents import OperationSubagent
+from app.intelligence.tracing import TracingServiceBase
 from app.intelligence.agents import OperationSubagentType
 from app.intelligence.agents import OperationSubagentBlueprint
 from app.intelligence.agents import OperationSubagentFactoryBase
