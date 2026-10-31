@@ -4,15 +4,15 @@ from time import perf_counter
 from typing import Iterator, Optional
 
 from app.intelligence.model import ModelBase
-from app.intelligence.messages import MessageAI
 from app.intelligence.model import ModelConfig
-from app.intelligence.tracing import TraceEventType
+from app.intelligence.messages import MessageAI
 from app.intelligence.messages import MessageBase
+from app.intelligence.model import MODEL_ROLE_MAP
+from app.intelligence.tracing import TraceEventType
+from app.intelligence.messages import MessageToolCall
 from app.intelligence.tracing import TracingServiceNull
 from app.intelligence.tracing import TracingServiceBase
-from app.intelligence.model import MODEL_ROLE_MAP
 from app.intelligence.messages import MessageUsageMetadata
-from app.intelligence.messages import MessageToolCall
 
 
 class ModelFoundation(ModelBase):
