@@ -1,10 +1,10 @@
 import pathlib
 import tempfile
 
-from app.intelligence.sandbox.sandbox_slot import SandboxSlot
-from app.intelligence.sandbox.sandbox_pool_base import SandboxPoolBase
-from app.intelligence.sandbox.sandbox_env.sandbox_env import SandboxEnv
-from app.intelligence.sandbox.sandbox_env.sandbox_env_local import SandboxEnvLocal
+from app.intelligence.sandbox import SandboxSlot
+from app.intelligence.sandbox import SandboxPoolBase
+from app.intelligence.sandbox import SandboxEnv
+from app.intelligence.sandbox import SandboxEnvLocal
 
 
 class SandboxPoolInMemory(SandboxPoolBase):
