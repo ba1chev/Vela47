@@ -111,6 +111,10 @@ class ModelFoundation(ModelBase):
         )
 
     def stream(self, messages: list[MessageBase]) -> Iterator[str]:
+        start = perf_counter()
+        input_tokens = 0
+        output_tokens = 0
+
         for chunk in ollama.chat(
             model = self._config.model_name,
             messages = self._format_messages(messages),
@@ -118,6 +122,22 @@ class ModelFoundation(ModelBase):
             keep_alive = self._config.keep_alive,
             stream = True
         ):
+            input_tokens = chunk.get("prompt_eval_count", 0) or input_tokens
+            output_tokens = chunk.get("eval_count", 0) or output_tokens
             content = chunk.get("message", {}).get("content", "")
             if content:
                 yield content
+
+        self._tracing_service.emit(
+            TraceEventType.MODEL_INVOKED,
+            self._config.model_name,
+            {
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "total_tokens": input_tokens + output_tokens,
+                "tool_calls": [],
+                "messages": len(messages),
+                "streamed": True
+            },
+            (perf_counter() - start) * 1000.0
+        )
