@@ -1,8 +1,8 @@
 from typing import Any, Union
 from abc import ABC, abstractmethod
 
-from app.intelligence.messages.message_type import MessageType
-from app.intelligence.messages.message_base.message_base import MessageBase, ContentPart
+from app.intelligence.messages import MessageType
+from app.intelligence.messages import MessageBase, ContentPart
 
 
 class MessageFactoryBase(ABC):
