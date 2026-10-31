@@ -23,3 +23,4 @@ class TraceEventType(str, Enum):
     MODEL_INVOKED = "model_invoked"
     TOOL_EXECUTED = "tool_executed"
     RUN_FAILED = "run_failed"
+    ANSWER_CHUNK = "answer_chunk"
