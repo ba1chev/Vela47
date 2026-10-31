@@ -1,5 +1,5 @@
-from app.intelligence.agents.deep_agent.prompts.subagent_shared_prompt import SUBAGENT_SHARED_PROMPT
-from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent_type import OperationSubagentType
+from app.intelligence.agents import SUBAGENT_SHARED_PROMPT
+from app.intelligence.agents import OperationSubagentType
 
 
 SUBAGENT_SYSTEM_PROMPT_TEMPLATES: dict[OperationSubagentType, str] = {
