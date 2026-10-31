@@ -1,3 +1,4 @@
+import time
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from typing import Any, Callable, Iterator, Optional
@@ -28,21 +29,12 @@ class TracingServiceBase(ABC):
 
     @abstractmethod
     def subscribe(self, callback: Callable[[TraceEvent], None]) -> None:
-        """Registers a listener invoked for every subsequent event. This is what makes
-        live streaming possible — the server subscribes and forwards each event to the
-        browser as it happens, instead of waiting for the run to finish."""
         raise NotImplementedError("Must be implemented")
 
     @contextmanager
     def span(self, started: TraceEventType, finished: TraceEventType, label: str,
         payload: Optional[dict[str, Any]] = None) -> Iterator[dict[str, Any]]:
-        """Emits a started/finished pair around a block and times it. Yields a dict the
-        body may fill in; its contents are merged into the finished event's payload, so
-        a caller can report facts it only learns while doing the work. The finished
-        event is emitted even when the block raises, so a failed step still closes in
-        the UI rather than hanging as in-progress forever."""
-        import time
-
+        
         self.emit(started, label, dict(payload or {}))
         extra: dict[str, Any] = {}
         start = time.perf_counter()
