@@ -5,8 +5,8 @@ from app.intelligence.messages import MessageType
 from app.intelligence.messages import MessageTool
 from app.intelligence.messages import MessageHuman
 from app.intelligence.messages import MessageSystem
-from app.intelligence.messages import MessageBase, ContentPart
 from app.intelligence.messages import MessageFactoryBase
+from app.intelligence.messages import MessageBase, ContentPart
 
 
 class MessageFactory(MessageFactoryBase):
