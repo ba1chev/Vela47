@@ -21,9 +21,6 @@ class ToolRegistry:
         return list(self._tools.values())
 
     def schemas(self) -> list[dict]:
-        """Returns the Ollama-compatible tool schema list ready to pass as
-        the `tools` argument to ollama.chat(). Each entry contains the tool
-        name, description, and the full JSON schema of its input model."""
         return [
             {
                 "type": "function",
