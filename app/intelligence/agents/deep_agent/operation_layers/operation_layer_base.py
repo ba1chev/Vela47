@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from app.intelligence.agents.deep_agent.operation_context import OperationContext
-from app.intelligence.agents.deep_agent.operation_layers.operation_layer_type import OperationType
+from app.intelligence.agents import OperationContext
+from app.intelligence.agents import OperationType
 
 
 class OperationLayerBase(ABC):
