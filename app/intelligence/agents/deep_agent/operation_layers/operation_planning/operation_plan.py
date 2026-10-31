@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from app.intelligence.agents.deep_agent.operation_layers.operation_planning.operation_step import OperationStep
+from app.intelligence.agents import OperationStep
 
 
 class OperationPlan(BaseModel):
