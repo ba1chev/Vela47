@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from app.intelligence.agents.deep_agent.operation_layers.operation_layer_base import OperationLayerBase
-from app.intelligence.agents.deep_agent.operation_layers.operation_layers_factory.operation_layers_factory_base import OperationLayersFactoryBase
+from app.intelligence.agents import OperationLayerBase
+from app.intelligence.agents import OperationLayersFactoryBase
 
 
 class OperationPolicy(ABC):
