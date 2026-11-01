@@ -37,5 +37,5 @@ __all__ = [
     "OutputText",
     "OutputParserText",
     "OUTPUT_PARSER_REGISTRY",
-    "OutputParserFactory",
+    "OutputParserFactory"
 ]

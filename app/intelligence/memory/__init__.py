@@ -71,5 +71,5 @@ __all__ = [
     "VECTOR_DB_OPERATION_REGISTRY",
     "VectorDbOperationFactory",
     "SearchAndRefinePolicy",
-    "SemanticSearchPolicy",
+    "SemanticSearchPolicy"
 ]

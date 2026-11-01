@@ -7,5 +7,5 @@ from app.intelligence.middleware.context_window_middleware.middleware_sliding_wi
 __all__ = [
     "MiddlewareBase",
     "MiddlewareSlidingWindow",
-    "MiddlewareSummarization",
+    "MiddlewareSummarization"
 ]

@@ -13,5 +13,5 @@ __all__ = [
     "ModelEmbeddings",
     "MODEL_ROLE_MAP",
     "ModelFoundation",
-    "ModelType",
+    "ModelType"
 ]

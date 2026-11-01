@@ -26,5 +26,5 @@ __all__ = [
     "MessageHuman",
     "MessageSystem",
     "MessageTool",
-    "MessageFactory",
+    "MessageFactory"
 ]

@@ -64,5 +64,5 @@ __all__ = [
     "OperationSubagentFactory",
     "OperationPolicyFull",
     "SUBAGENT_SHARED_PROMPT",
-    "SUBAGENT_SYSTEM_PROMPT_TEMPLATES",
+    "SUBAGENT_SYSTEM_PROMPT_TEMPLATES"
 ]

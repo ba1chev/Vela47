@@ -18,5 +18,5 @@ __all__ = [
     "SandboxPoolBase",
     "CONTAINER_MOUNT_PATH",
     "SandboxPoolDocker",
-    "SandboxPoolInMemory",
+    "SandboxPoolInMemory"
 ]
