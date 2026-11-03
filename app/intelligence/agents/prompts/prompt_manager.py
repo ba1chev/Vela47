@@ -25,9 +25,6 @@ class PromptManager:
         self._prompts.pop(name, None)
 
     def build_system_messages(self) -> list[MessageSystem]:
-        """Returns every registered prompt as an ordered list of MessageSystem
-        entries, preserving registration order. Prepend the result to the
-        context window messages before calling the model."""
         return [MessageSystem(content = text) for text in self._prompts.values()]
 
     def __len__(self) -> int:
