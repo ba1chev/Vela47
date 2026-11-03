@@ -43,8 +43,6 @@ class OperationPipeline:
         )
 
     def _summarize(self, context: OperationContext) -> dict[str, Any]:
-        """Describes the run's current state from the context alone. This is what a
-        layer contributes to the UI without having to report anything itself."""
         return {
             "steps": len(context.plan.steps) if context.plan is not None else 0,
             "tasks": len(context.tasks),
@@ -53,10 +51,6 @@ class OperationPipeline:
         }
 
     def run(self, context: OperationContext) -> OperationContext:
-        """Returns the same context instance it was given, now filled in by every
-        layer. Returning the whole context rather than just context.final is what
-        lets a caller inspect the plan and the individual subagent results for
-        tracing, not only the merged answer."""
         with self._tracing_service.span(
             TraceEventType.PIPELINE_STARTED,
             TraceEventType.PIPELINE_FINISHED,
