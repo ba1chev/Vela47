@@ -8,6 +8,7 @@ from app.server.security.identity_access.identity_entities.identity_entity_admin
 from app.server.security.identity_access.identity_entities.identity_entity_guest import IdentityEntityGuest
 from app.server.security.identity_access.identity_access_roles.identity_access_role_type import IdentityAccessRoleType
 from app.server.security.identity_access.identity_entities.identity_entity_factory.identity_entity_factory import IdentityEntityFactory
+from app.server.security.identity_access.identity_entities.identity_entity_factory.identity_entity_registry import IDENTITY_ENTITY_REGISTRY
 
 
 def make_user(name = "ana"):
@@ -68,6 +69,9 @@ class TestIdentityEntities:
 
 
 class TestIdentityEntityFactory:
+    def test_every_entity_type_is_registered(self):
+        assert set(IDENTITY_ENTITY_REGISTRY) == set(IdentityEntityType)
+
     def test_it_builds_each_kind(self):
         factory = IdentityEntityFactory()
         assert factory.create(IdentityEntityType.ADMIN, name = "root", password_hash = "h").type is IdentityEntityType.ADMIN
