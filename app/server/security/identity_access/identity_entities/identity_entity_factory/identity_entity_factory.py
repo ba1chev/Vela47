@@ -2,9 +2,7 @@ from typing import Any
 
 from app.server.security.identity_access.identity_entities.identity_entity_base import IdentityEntityBase
 from app.server.security.identity_access.identity_entities.identity_entity_type import IdentityEntityType
-from app.server.security.identity_access.identity_entities.identity_entity_user import IdentityEntityUser
-from app.server.security.identity_access.identity_entities.identity_entity_admin import IdentityEntityAdmin
-from app.server.security.identity_access.identity_entities.identity_entity_guest import IdentityEntityGuest
+from app.server.security.identity_access.identity_entities.identity_entity_factory.identity_entity_registry import IDENTITY_ENTITY_REGISTRY
 from app.server.security.identity_access.identity_entities.identity_entity_factory.identity_entity_factory_base import IdentityEntityFactoryBase
 
 
@@ -20,19 +18,13 @@ class IdentityEntityFactory(IdentityEntityFactoryBase):
       USER  -> IdentityEntityUser(name=<str>, password_hash=<str>)
       GUEST -> IdentityEntityGuest(id=<str>, optional)"""
 
-    _registry: dict[IdentityEntityType, type[IdentityEntityBase]] = {
-        IdentityEntityType.ADMIN: IdentityEntityAdmin,
-        IdentityEntityType.USER: IdentityEntityUser,
-        IdentityEntityType.GUEST: IdentityEntityGuest
-    }
-
     def create(self, type: IdentityEntityType, **kwargs: Any) -> IdentityEntityBase:
-        cls = self._registry.get(type)
+        cls = IDENTITY_ENTITY_REGISTRY.get(type)
 
         if cls is None:
             raise ValueError(
                 f"No entity class registered for type '{type}'. "
-                f"Known types: {list(self._registry)}"
+                f"Known types: {list(IDENTITY_ENTITY_REGISTRY)}"
             )
 
         return cls(**kwargs)
