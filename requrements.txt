@@ -5,3 +5,4 @@ langchain-ollama
 fastapi
 uvicorn[standard]
 pytest
+PyJWT
