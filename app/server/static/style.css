@@ -1,0 +1,519 @@
+:root {
+  --bg: #141d33;
+  /* Panels are translucent so the particle field reads through them. The backdrop
+     blur is what keeps text legible through the low alpha. */
+  --panel: rgba(36, 49, 82, .52);
+  --panel-2: rgba(46, 61, 99, .42);
+  --border: rgba(133, 158, 214, .18);
+  --border-strong: rgba(133, 158, 214, .34);
+  --text: #eff3fd;
+  --muted: #b4c2de;
+  --faint: #8495b8;
+
+  /* Three accents rather than one: a single hue is what made the earlier palette
+     read as flat. Blue leads, violet and teal carry gradients and secondary state. */
+  --accent: #5b8cff;
+  --accent-2: #a46bff;
+  --accent-3: #2fd4c8;
+  --accent-soft: rgba(91, 140, 255, .16);
+  --user-bg: rgba(91, 140, 255, .2);
+
+  --ok: #3ddc97;
+  --err: #ff7f8a;
+
+  /* One hue per subagent type, so the trace carries colour that means something
+     instead of colour applied for decoration. */
+  --agent-research: #2fd4c8;
+  --agent-code: #a46bff;
+  --agent-test: #ffc24b;
+  --agent-review: #ff7eb6;
+
+  --shadow: 0 2px 6px rgba(5, 10, 24, .3), 0 18px 50px rgba(5, 10, 24, .35);
+  --shadow-sm: 0 1px 3px rgba(5, 10, 24, .3);
+
+  --radius: 16px;
+  --radius-sm: 11px;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  color: var(--text);
+  font: 15px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  /* Coloured light washes behind everything. Layered on body rather than as
+     pseudo-elements so they can never land between the canvas and the panels.
+     Deliberately static: animating background-position here shifted each gradient
+     off its tile and exposed the repeat seam as a slow-breathing rectangle. */
+  background:
+    radial-gradient(680px circle at 12% 18%, rgba(91, 140, 255, .22), transparent 62%),
+    radial-gradient(760px circle at 88% 82%, rgba(164, 107, 255, .2), transparent 62%),
+    radial-gradient(560px circle at 72% 12%, rgba(47, 212, 200, .12), transparent 60%),
+    var(--bg);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+#particles-js {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+#particles-js canvas { display: block; }
+
+.app {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  width: min(1180px, 100% - 64px);
+  margin-inline: auto;
+  height: 100dvh;
+  gap: 18px;
+  padding-block: 40px;
+}
+
+/* ---------- chat ---------- */
+
+.chat, .trace {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--panel);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  animation: lift .45s cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.trace { animation-delay: .08s; }
+.chat { min-width: 0; }
+
+@keyframes lift {
+  from { opacity: 0; transform: translateY(14px) scale(.99); }
+  to   { opacity: 1; transform: none; }
+}
+
+.chat-head, .trace-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 20px;
+  background: var(--panel-2);
+}
+
+/* A moving gradient hairline under each header — the one piece of permanent
+   motion inside the UI, so the interface itself feels awake, not just the
+   backdrop behind it. */
+.chat-head::after, .trace-head::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent, var(--accent), var(--accent-2), var(--accent-3), transparent);
+  background-size: 220% 100%;
+  animation: sweep 7s linear infinite;
+  opacity: .75;
+}
+
+@keyframes sweep {
+  from { background-position: 0 0; }
+  to   { background-position: 220% 0; }
+}
+
+.chat-head h1 {
+  margin: 0;
+  flex: 1;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -.01em;
+}
+
+.brand-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+  background: linear-gradient(135deg, var(--accent-3), var(--accent), var(--accent-2));
+  animation: breathe 2.8s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(91, 140, 255, .5); }
+  50%      { box-shadow: 0 0 0 7px rgba(91, 140, 255, 0); }
+}
+
+.status {
+  font: 600 10px/1 var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--muted);
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: rgba(133, 158, 214, .1);
+  border: 1px solid var(--border);
+}
+
+.status[data-state="running"] {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent-3), var(--accent));
+  background-size: 300% 100%;
+  animation: sweep 2.4s linear infinite;
+}
+
+.status[data-state="error"] {
+  color: var(--err);
+  background: rgba(255, 127, 138, .12);
+  border-color: currentColor;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 26px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ---------- empty state ---------- */
+
+.empty {
+  margin: auto;
+  max-width: 440px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty p { margin: 0 0 10px; font-size: 16px; }
+.empty .hint { font-size: 13.5px; color: var(--faint); margin: 0; }
+
+.orb {
+  position: relative;
+  width: 74px;
+  height: 74px;
+  margin: 0 auto 22px;
+}
+
+.orb span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  animation: ripple 3.2s ease-out infinite;
+}
+
+.orb span:nth-child(2) { border-color: var(--accent-2); animation-delay: 1.05s; }
+.orb span:nth-child(3) { border-color: var(--accent-3); animation-delay: 2.1s; }
+
+.orb::after {
+  content: "";
+  position: absolute;
+  inset: 32%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-3), var(--accent), var(--accent-2));
+  animation: breathe 2.8s ease-in-out infinite;
+}
+
+@keyframes ripple {
+  from { transform: scale(.42); opacity: .85; }
+  to   { transform: scale(1);   opacity: 0; }
+}
+
+/* ---------- messages ---------- */
+
+.msg {
+  max-width: 680px;
+  width: fit-content;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  animation: rise .28s cubic-bezier(.2, .8, .2, 1);
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.msg.user {
+  margin-left: auto;
+  background: var(--user-bg);
+  border: 1px solid rgba(91, 140, 255, .3);
+  border-bottom-right-radius: 5px;
+}
+
+.msg.ai {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 5px;
+  box-shadow: var(--shadow-sm);
+}
+
+.msg.err {
+  background: rgba(255, 127, 138, .1);
+  border: 1px solid var(--err);
+  color: var(--err);
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.thinking {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 15px 16px;
+}
+
+.thinking i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  animation: bounce 1.2s ease-in-out infinite;
+}
+
+.thinking i:nth-child(1) { background: var(--accent-3); }
+.thinking i:nth-child(2) { background: var(--accent); animation-delay: .18s; }
+.thinking i:nth-child(3) { background: var(--accent-2); animation-delay: .36s; }
+
+@keyframes bounce {
+  0%, 60%, 100% { opacity: .3; transform: translateY(0) scale(.85); }
+  30%           { opacity: 1;  transform: translateY(-5px) scale(1); }
+}
+
+/* ---------- composer ---------- */
+
+.composer {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  padding: 14px 18px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--panel-2);
+}
+
+.composer textarea {
+  flex: 1;
+  resize: none;
+  max-height: 180px;
+  padding: 12px 15px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: rgba(16, 24, 44, .5);
+  color: inherit;
+  font: inherit;
+  transition: border-color .18s, box-shadow .18s;
+}
+
+.composer textarea::placeholder { color: var(--faint); }
+
+.composer textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft), 0 0 20px rgba(91, 140, 255, .18);
+}
+
+.composer button {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+  cursor: pointer;
+  transition: transform .16s, box-shadow .16s, opacity .16s;
+}
+
+.composer button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(91, 140, 255, .4);
+}
+
+.composer button:active:not(:disabled) { transform: translateY(0); }
+.composer button:disabled { opacity: .35; cursor: default; }
+
+/* ---------- trace ---------- */
+
+.trace-head { justify-content: space-between; }
+
+.trace-head h2 {
+  margin: 0;
+  font: 650 10px/1 var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--muted);
+}
+
+.ghost {
+  border: none;
+  background: none;
+  color: var(--faint);
+  font: 11px/1 var(--mono);
+  cursor: pointer;
+  padding: 4px 7px;
+  border-radius: 6px;
+  transition: color .15s, background .15s;
+}
+
+.ghost:hover { color: var(--accent); background: var(--accent-soft); }
+
+/* Wrapper exists so the empty message can sit centred in the panel instead of
+   being pushed to the bottom by the event list. */
+.trace-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.events {
+  list-style: none;
+  margin: 0;
+  padding: 8px 0;
+  font-size: 13px;
+}
+
+.trace-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+/* The class sets display, which outranks the user-agent [hidden] rule — without
+   this the placeholder stays painted over the events once they arrive. */
+.trace-empty[hidden] { display: none; }
+
+.ev {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: baseline;
+  padding: 7px 14px;
+  border-left: 2px solid transparent;
+  animation: slide .26s cubic-bezier(.2, .8, .2, 1);
+}
+
+@keyframes slide {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.ev[data-depth="1"] { padding-left: 26px; }
+.ev[data-depth="2"] { padding-left: 40px; }
+
+.ev[data-kind="layer"] {
+  border-left-color: var(--accent);
+  background: linear-gradient(90deg, var(--accent-soft), transparent);
+}
+
+.ev[data-kind="error"] {
+  border-left-color: var(--err);
+  background: linear-gradient(90deg, rgba(255, 127, 138, .12), transparent);
+}
+
+/* Each subagent type gets its own hue, set from --agent by the stylesheet below. */
+.ev[data-agent] { border-left-color: var(--agent); }
+.ev[data-agent] .name { color: var(--agent); }
+.ev[data-agent] .dot  { background: var(--agent); }
+.ev[data-agent="RESEARCH"] { --agent: var(--agent-research); }
+.ev[data-agent="CODE"]     { --agent: var(--agent-code); }
+.ev[data-agent="TEST"]     { --agent: var(--agent-test); }
+.ev[data-agent="REVIEW"]   { --agent: var(--agent-review); }
+
+.ev .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--faint);
+  justify-self: center;
+  transform: translateY(-1px);
+}
+
+.ev[data-kind="pipeline"] .dot,
+.ev[data-kind="layer"] .dot { background: var(--accent); }
+.ev[data-kind="subagent"] .dot { background: var(--ok); }
+.ev[data-kind="error"] .dot { background: var(--err); }
+
+.ev[data-live="1"] .dot {
+  animation: glow 1.3s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 0 0 currentColor; opacity: .55; }
+  50%      { box-shadow: 0 0 0 5px transparent; opacity: 1; }
+}
+
+.ev .label { min-width: 0; }
+.ev .name { overflow-wrap: anywhere; }
+
+.ev[data-kind="pipeline"] .name,
+.ev[data-kind="layer"] .name { font-weight: 650; }
+.ev[data-kind="subagent"] .name {
+  font-weight: 700;
+  letter-spacing: .04em;
+  font-size: 12px;
+}
+
+.ev[data-kind="error"] .name { color: var(--err); }
+
+.ev .detail {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--muted);
+  font: 11px/1.55 var(--mono);
+  overflow-wrap: anywhere;
+  margin-top: 2px;
+}
+
+.ev .time {
+  color: var(--faint);
+  font: 11px/1 var(--mono);
+  white-space: nowrap;
+}
+
+/* ---------- narrow ---------- */
+
+@media (max-width: 880px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 38dvh);
+    width: min(1180px, 100% - 24px);
+    padding-block: 14px;
+    gap: 12px;
+  }
+  .messages { padding: 18px 16px; }
+  .composer { padding: 12px 14px 14px; }
+}
+
+/* ---------- reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .chat, .trace,
+  .chat-head::after, .trace-head::after,
+  .status[data-state="running"],
+  .brand-dot, .orb span, .orb::after,
+  .thinking i, .msg, .ev, .ev[data-live="1"] .dot {
+    animation: none;
+  }
+  .thinking i { opacity: .7; }
+  .orb span { opacity: .3; }
+}
