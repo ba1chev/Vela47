@@ -2,15 +2,15 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from db.database_base import DatabaseBase
-from db.tables.identity_entity_table import IdentityEntityTable
-from db.tables.identity_access_resource_policy_table import IdentityAccessResourcePolicyTable
-from app.server.security.identity_access.identity_entities.identity_entity_base import IdentityEntityBase
-from app.server.security.identity_access.identity_entities.identity_entity_type import IdentityEntityType
-from app.server.security.identity_access.identity_access_store.identity_access_store_base import IdentityAccessStoreBase
-from app.server.security.identity_access.identity_entities.identity_entity_factory.identity_entity_factory import IdentityEntityFactory
-from app.server.security.identity_access.identity_entities.identity_entity_factory.identity_entity_factory_base import IdentityEntityFactoryBase
-from app.server.security.identity_access.identity_access_policies.identity_access_resource_policy.identity_access_resource_policy import IdentityAccessResourcePolicy
+from db import DatabaseBase
+from db import IdentityEntityTable
+from db import IdentityAccessResourcePolicyTable
+from app.server.security import IdentityEntityBase
+from app.server.security import IdentityEntityType
+from app.server.security import IdentityEntityFactory
+from app.server.security import IdentityAccessStoreBase
+from app.server.security import IdentityEntityFactoryBase
+from app.server.security import IdentityAccessResourcePolicy
 
 
 class IdentityAccessStoreSql(IdentityAccessStoreBase):
