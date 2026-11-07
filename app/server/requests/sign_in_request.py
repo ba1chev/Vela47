@@ -1,7 +1,7 @@
 from typing import Optional
 from pydantic import BaseModel, Field
 
-from app.server.security.identity_access.identity_access_roles.identity_access_role_type import IdentityAccessRoleType
+from app.server.security import IdentityAccessRoleType
 
 
 class SignInRequest(BaseModel):
