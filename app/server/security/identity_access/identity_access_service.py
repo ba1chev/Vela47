@@ -1,21 +1,21 @@
 from typing import Optional
 from datetime import datetime, timedelta, timezone
 
-from app.server.security.authorization.authorization_error import AuthorizationError
-from app.server.security.identity_access.identity_access_action import IdentityAccessAction
-from app.server.security.identity_access.identity_access_request import IdentityAccessRequest
-from app.server.security.identity_access.identity_access_role_session import IdentityAccessRoleSession
-from app.server.security.identity_access.identity_entities.identity_entity_base import IdentityEntityBase
-from app.server.security.identity_access.identity_entities.identity_entity_type import IdentityEntityType
-from app.server.security.authentication.authentication_password_hasher import AuthenticationPasswordHasher
-from app.server.security.identity_access.identity_access_roles.identity_access_role_base import IdentityAccessRoleBase
-from app.server.security.identity_access.identity_access_roles.identity_access_role_type import IdentityAccessRoleType
-from app.server.security.identity_access.identity_access_store.identity_access_store_base import IdentityAccessStoreBase
-from app.server.security.identity_access.identity_access_roles.identity_access_role_registry import IDENTITY_ACCESS_ROLE_REGISTRY
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_effect import IdentityAccessPolicyEffect
-from app.server.security.identity_access.identity_entities.identity_entity_factory.identity_entity_factory import IdentityEntityFactory
-from app.server.security.identity_access.identity_entities.identity_entity_factory.identity_entity_factory_base import IdentityEntityFactoryBase
-from app.server.security.identity_access.identity_access_policies.identity_access_resource_policy.identity_access_resource_policy import IdentityAccessResourcePolicy
+from app.server.security import AuthorizationError
+from app.server.security import IdentityEntityBase
+from app.server.security import IdentityEntityType
+from app.server.security import IdentityAccessAction
+from app.server.security import IdentityAccessRequest
+from app.server.security import IdentityEntityFactory
+from app.server.security import IdentityAccessRoleBase
+from app.server.security import IdentityAccessRoleType
+from app.server.security import IdentityAccessStoreBase
+from app.server.security import IdentityAccessRoleSession
+from app.server.security import IdentityEntityFactoryBase
+from app.server.security import IdentityAccessPolicyEffect
+from app.server.security import AuthenticationPasswordHasher
+from app.server.security import IdentityAccessResourcePolicy
+from app.server.security import IDENTITY_ACCESS_ROLE_REGISTRY
 
 
 class IdentityAccessService:
