@@ -1,8 +1,8 @@
 import pathlib
 
+from db import DatabaseSqlite
+from db import DatabasePostgres
 from app.server.config import Config
-from db.database_sqlite import DatabaseSqlite
-from db.database_postgres import DatabasePostgres
 from app.server.database_builder import build_database
 from app.server.config_environment import ConfigEnvironment
 
