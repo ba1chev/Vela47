@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from pydantic import BaseModel, Field, SerializeAsAny
 
 from app.intelligence.messages import MessageBase
+from app.server.security import format_chat_session_vrn
 
 
 class ChatSession(BaseModel):
@@ -20,7 +21,11 @@ class ChatSession(BaseModel):
     string value.
 
     Frozen like the entity and policy models — a changed conversation is a new record,
-    and the store is where a change becomes durable."""
+    and the store is where a change becomes durable.
+
+    Its VRN puts the owner in the owner segment, which is what lets one statement in
+    the user role — vrn:session:${principal.id}:* — grant each caller its own
+    conversations and nothing else."""
 
     model_config = {"frozen": True}
 
@@ -53,3 +58,7 @@ class ChatSession(BaseModel):
         description = "When a message was last appended, in UTC. Equal to created_at until then, "
             "and what orders an owner's conversations newest first."
     )
+
+    @property
+    def vrn(self) -> str:
+        return format_chat_session_vrn(self.owner_id, self.id)
