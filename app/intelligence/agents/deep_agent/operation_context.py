@@ -1,8 +1,9 @@
 from uuid import uuid4
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SerializeAsAny
 
 from app.intelligence.messages import MessageAI
+from app.intelligence.messages import MessageBase
 from app.intelligence.agents import OperationPlan
 from app.intelligence.agents import OperationTask
 from app.intelligence.messages import MessageHuman
@@ -18,7 +19,10 @@ class OperationContext(BaseModel):
     layers keep access to early data: merging can weigh results against the
     original goal and the plan that requested them. Unlike the message models
     this is intentionally not frozen — mutation in place is the mechanism by
-    which layers communicate."""
+    which layers communicate.
+
+    goal and history are the input of the run and no layer ever writes them:
+    the goal is what to do now, the history is the conversation it belongs to."""
 
     run_id: str = Field(
         default_factory = lambda: uuid4().hex[:12],
@@ -30,6 +34,13 @@ class OperationContext(BaseModel):
         description = "The request that started this run, exactly as it reached the DeepAgent. "
             "Never overwritten by a layer, so it stays available as ground truth for every "
             "stage no matter how far the plan has drifted."
+    )
+    history: list[SerializeAsAny[MessageBase]] = Field(
+        default_factory = list,
+        description = "Earlier turns of the conversation, oldest first, already bounded by the "
+            "DeepAgent. Planning reads them to understand a follow-up such as 'now make it "
+            "faster', and merging reads them so the answer continues the conversation instead "
+            "of starting it over. Subagents never see them — their isolation is the point."
     )
     plan: Optional[OperationPlan] = Field(
         default = None,
