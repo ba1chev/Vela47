@@ -25,7 +25,7 @@ SUBAGENT_TOOL_FACTORIES = {
     OperationSubagentType.RESEARCH: ToolSearchFiles,
     OperationSubagentType.CODE: ToolWriteFile,
     OperationSubagentType.TEST: ToolWriteTest,
-    OperationSubagentType.REVIEW: ToolReadFile,
+    OperationSubagentType.REVIEW: ToolReadFile
 }
 
 
