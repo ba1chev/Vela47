@@ -1,16 +1,16 @@
 import pytest
 from datetime import timedelta
 
-from app.server.security.authorization.authorization_error import AuthorizationError
-from app.server.security.identity_access.identity_access_service import IdentityAccessService
-from app.server.security.identity_access.identity_access_role_session import IdentityAccessRoleSession
-from app.server.security.identity_access.identity_entities.identity_entity_type import IdentityEntityType
-from app.server.security.authentication.authentication_password_hasher import AuthenticationPasswordHasher
-from app.server.security.identity_access.identity_access_roles.identity_access_role_type import IdentityAccessRoleType
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_effect import IdentityAccessPolicyEffect
-from app.server.security.identity_access.identity_access_store.identity_access_store_in_memory import IdentityAccessStoreInMemory
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_statement import IdentityAccessPolicyStatement
-from app.server.security.identity_access.identity_access_policies.identity_access_resource_policy.identity_access_resource_policy import IdentityAccessResourcePolicy
+from app.server.security import AuthorizationError
+from app.server.security import IdentityEntityType
+from app.server.security import IdentityAccessService
+from app.server.security import IdentityAccessRoleType
+from app.server.security import IdentityAccessRoleSession
+from app.server.security import IdentityAccessPolicyEffect
+from app.server.security import IdentityAccessStoreInMemory
+from app.server.security import AuthenticationPasswordHasher
+from app.server.security import IdentityAccessResourcePolicy
+from app.server.security import IdentityAccessPolicyStatement
 
 PASSWORD = "correct-horse-battery"
 
