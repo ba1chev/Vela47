@@ -1,8 +1,8 @@
-from app.server.security.identity_access.identity_access_roles.identity_access_role_base import IdentityAccessRoleBase
-from app.server.security.identity_access.identity_access_roles.identity_access_role_type import IdentityAccessRoleType
-from app.server.security.identity_access.identity_access_roles.identity_access_role_user import IdentityAccessRoleUser
-from app.server.security.identity_access.identity_access_roles.identity_access_role_admin import IdentityAccessRoleAdmin
-from app.server.security.identity_access.identity_access_roles.identity_access_role_guest import IdentityAccessRoleGuest
+from app.server.security import IdentityAccessRoleBase
+from app.server.security import IdentityAccessRoleType
+from app.server.security import IdentityAccessRoleUser
+from app.server.security import IdentityAccessRoleAdmin
+from app.server.security import IdentityAccessRoleGuest
 
 
 IDENTITY_ACCESS_ROLE_REGISTRY: dict[IdentityAccessRoleType, type[IdentityAccessRoleBase]] = {
