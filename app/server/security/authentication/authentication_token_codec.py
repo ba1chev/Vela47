@@ -1,8 +1,8 @@
 import jwt
 from datetime import datetime, timezone
 
-from app.server.security.authentication.authentication_error import AuthenticationError
-from app.server.security.identity_access.identity_access_role_session import IdentityAccessRoleSession
+from app.server.security import AuthenticationError
+from app.server.security import IdentityAccessRoleSession
 
 
 class AuthenticationTokenCodec:
