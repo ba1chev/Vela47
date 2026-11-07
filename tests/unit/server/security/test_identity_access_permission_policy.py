@@ -1,12 +1,12 @@
 import pytest
 from pydantic import ValidationError
 
-from app.server.security.identity_access.identity_access_request import IdentityAccessRequest
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_base import IdentityAccessPolicyBase
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_type import IdentityAccessPolicyType
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_effect import IdentityAccessPolicyEffect
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_statement import IdentityAccessPolicyStatement
-from app.server.security.identity_access.identity_access_policies.identity_access_permission_policy.identity_access_permission_policy import IdentityAccessPermissionPolicy
+from app.server.security import IdentityAccessRequest
+from app.server.security import IdentityAccessPolicyBase
+from app.server.security import IdentityAccessPolicyType
+from app.server.security import IdentityAccessPolicyEffect
+from app.server.security import IdentityAccessPolicyStatement
+from app.server.security import IdentityAccessPermissionPolicy
 
 
 def make_request(action = "agent:Run", resource = "vrn:agent::deep-agent", variables = None):
