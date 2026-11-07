@@ -1,19 +1,19 @@
 import pytest
 
-from app.server.security.security_context import SecurityContext
-from app.server.security.security_pipeline import SecurityPipeline
-from app.server.security.security_service_type import SecurityServiceType
-from app.server.security.authorization.authorization_error import AuthorizationError
-from app.server.security.authentication.authentication_error import AuthenticationError
+from app.server.security import SecurityContext
+from app.server.security import SecurityPipeline
+from app.server.security import AuthorizationError
+from app.server.security import SecurityServiceType
+from app.server.security import AuthenticationError
+from app.server.security import AuthorizationService
+from app.server.security import IdentityAccessAction
+from app.server.security import AuthorizationDecision
+from app.server.security import AuthenticationService
+from app.server.security import IdentityAccessService
+from app.server.security import AuthenticationTokenCodec
+from app.server.security import IdentityAccessStoreInMemory
+from app.server.security import AuthenticationPasswordHasher
 from tests.fixtures.security.recording_security_service import RecordingSecurityService
-from app.server.security.authorization.authorization_service import AuthorizationService
-from app.server.security.authorization.authorization_decision import AuthorizationDecision
-from app.server.security.identity_access.identity_access_action import IdentityAccessAction
-from app.server.security.authentication.authentication_service import AuthenticationService
-from app.server.security.identity_access.identity_access_service import IdentityAccessService
-from app.server.security.authentication.authentication_token_codec import AuthenticationTokenCodec
-from app.server.security.authentication.authentication_password_hasher import AuthenticationPasswordHasher
-from app.server.security.identity_access.identity_access_store.identity_access_store_in_memory import IdentityAccessStoreInMemory
 
 AUTHENTICATION = SecurityServiceType.AUTHENTICATION
 AUTHORIZATION = SecurityServiceType.AUTHORIZATION
