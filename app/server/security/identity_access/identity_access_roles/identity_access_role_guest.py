@@ -7,13 +7,14 @@ from app.server.security import IdentityAccessPermissionPolicy
 
 
 class IdentityAccessRoleGuest(IdentityAccessRoleBase):
-    """What an anonymous visitor may do: run the agent and keep conversations of its
-    own, and never anything to do with identity. Trusted by guest entities only.
+    """What an anonymous visitor may do: run the agents and keep conversations and
+    documents of its own, and never anything to do with identity. Trusted by guest
+    entities only.
 
-    A guest's conversations are granted through ${principal.id} like a user's, but a
-    guest is only the principal its token names. Once the token expires the next visit
-    is a different guest, and the earlier conversations stay in the database without
-    anyone who can reach them.
+    A guest's conversations and documents are granted through ${principal.id} like a
+    user's, but a guest is only the principal its token names. Once the token expires
+    the next visit is a different guest, and what the earlier one left stays in the
+    database without anyone who can reach it.
 
     The explicit deny on iam:* is defence in depth rather than a necessity — nothing
     here allows it anyway. It is there because a deny cannot be overridden, so no
@@ -58,6 +59,12 @@ class IdentityAccessRoleGuest(IdentityAccessRoleBase):
                         effect = IdentityAccessPolicyEffect.ALLOW,
                         actions = ["session:*"],
                         resources = ["vrn:session:${principal.id}:*"]
+                    ),
+                    IdentityAccessPolicyStatement(
+                        sid = "OwnKnowledge",
+                        effect = IdentityAccessPolicyEffect.ALLOW,
+                        actions = ["knowledge:*"],
+                        resources = ["vrn:knowledge:${principal.id}:*"]
                     ),
                     IdentityAccessPolicyStatement(
                         sid = "NeverIdentity",
