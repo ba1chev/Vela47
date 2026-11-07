@@ -3,14 +3,14 @@ import pathlib
 import tempfile
 from threading import Barrier, Thread
 
-from db.database_sqlite import DatabaseSqlite
-from app.server.security.identity_access.identity_entities.identity_entity_user import IdentityEntityUser
-from app.server.security.identity_access.identity_entities.identity_entity_admin import IdentityEntityAdmin
-from app.server.security.identity_access.identity_entities.identity_entity_guest import IdentityEntityGuest
-from app.server.security.identity_access.identity_access_store.identity_access_store_sql import IdentityAccessStoreSql
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_effect import IdentityAccessPolicyEffect
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_statement import IdentityAccessPolicyStatement
-from app.server.security.identity_access.identity_access_policies.identity_access_resource_policy.identity_access_resource_policy import IdentityAccessResourcePolicy
+from db import DatabaseSqlite
+from app.server.security import IdentityEntityUser
+from app.server.security import IdentityEntityAdmin
+from app.server.security import IdentityEntityGuest
+from app.server.security import IdentityAccessStoreSql
+from app.server.security import IdentityAccessPolicyEffect
+from app.server.security import IdentityAccessResourcePolicy
+from app.server.security import IdentityAccessPolicyStatement
 
 
 def make_store(path = None):
