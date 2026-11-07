@@ -15,6 +15,10 @@ const agentSelectEl = document.getElementById("agent-select");
 
 const knowledgeFileEl = document.getElementById("knowledge-file");
 const uploadLabelEl = document.getElementById("upload-label");
+const linkToggleEl = document.getElementById("link-toggle");
+const linkFormEl = document.getElementById("link-form");
+const linkUrlEl = document.getElementById("link-url");
+const linkSubmitEl = document.getElementById("link-submit");
 const usageEl = document.getElementById("usage");
 const usageFillEl = document.getElementById("usage-fill");
 const usageTextEl = document.getElementById("usage-text");
@@ -134,6 +138,7 @@ function showGate(message) {
   sessions = [];
   currentSessionId = null;
   knowledge = { documents: [], usage: null };
+  closeLinkForm();
   appEl.hidden = true;
   gateEl.hidden = false;
   gateErrorEl.textContent = message || "";
@@ -557,53 +562,129 @@ function showKnowledgeError(text) {
   knowledgeErrorEl.hidden = !text;
 }
 
-// The file is read here and sent as text, so the server receives exactly what it will
-// index. Limits are checked first against what the server last reported, which turns
-// the common failure into an instant message instead of a refused upload; the server
-// checks them again, since it is the one that has to be right.
+// PDF and Word files cannot be read as text in the browser, so they travel as base64
+// and the server extracts their text. Everything else is read here and sent as text.
+const BINARY_EXTENSIONS = [".pdf", ".docx"];
+const PAGE_EXTENSIONS = [".html", ".htm"];
+
+function hasExtension(file, extensions) {
+  const name = file.name.toLowerCase();
+  return extensions.some((extension) => name.endsWith(extension));
+}
+
+// btoa takes a string of bytes, and spreading a whole file into one call would overflow
+// the argument limit, so the bytes are converted a slice at a time.
+function toBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let index = 0; index < bytes.length; index += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+  }
+  return btoa(binary);
+}
+
+// Shared by uploads and links: shows the document as pending while the server reads,
+// chunks and embeds it, then redraws the list from what the server now holds.
+async function addDocument(path, body, label) {
+  uploadLabelEl.dataset.busy = "1";
+  linkSubmitEl.disabled = true;
+  renderKnowledge(label);
+  const result = await api(path, { method: "POST", body });
+  delete uploadLabelEl.dataset.busy;
+  linkSubmitEl.disabled = false;
+
+  if (result.status === 401) {
+    showGate(EXPIRED);
+    return false;
+  }
+  if (!result.ok) showKnowledgeError(errorText(result, `“${label}” could not be added.`));
+  await loadKnowledge();
+  return result.ok;
+}
+
+// Limits are checked first against what the server last reported, which turns the
+// common failure into an instant message instead of a refused upload; the server checks
+// them again, since it is the one that has to be right. Only plain text can be measured
+// here — how much text a page, a PDF or a Word file holds is known once it is extracted.
 async function uploadDocument(file) {
   showKnowledgeError("");
   const usage = knowledge.usage;
 
-  let text;
+  if (usage && usage.max_upload_bytes && file.size > usage.max_upload_bytes) {
+    showKnowledgeError(`“${file.name}” is ${formatBytes(file.size)}; a file may be at most ${formatBytes(usage.max_upload_bytes)}.`);
+    return;
+  }
+
+  const binary = hasExtension(file, BINARY_EXTENSIONS);
+  const body = { title: file.name, content_type: file.type || null };
   try {
-    text = await file.text();
+    if (binary) body.content_base64 = toBase64(await file.arrayBuffer());
+    else body.content = await file.text();
   } catch {
     showKnowledgeError(`“${file.name}” could not be read.`);
     return;
   }
-  if (text.includes("\u0000")) {
-    showKnowledgeError(`“${file.name}” is not a text file. Upload plain text or Markdown.`);
+
+  if (!binary && body.content.includes("\u0000")) {
+    showKnowledgeError(`“${file.name}” is not a text file. Upload text, Markdown, HTML, PDF or Word (.docx).`);
     return;
+  }
+  if (!binary && !hasExtension(file, PAGE_EXTENSIONS)) {
+    const size = new TextEncoder().encode(body.content).length;
+    if (usage && size > usage.max_file_bytes) {
+      showKnowledgeError(`“${file.name}” is ${formatBytes(size)}; one document may be at most ${formatBytes(usage.max_file_bytes)}.`);
+      return;
+    }
+    if (usage && usage.used_bytes + size > usage.max_bytes) {
+      showKnowledgeError(`“${file.name}” does not fit in the ${formatBytes(usage.max_bytes - usage.used_bytes)} you have left.`);
+      return;
+    }
   }
 
-  const size = new TextEncoder().encode(text).length;
-  if (usage && size > usage.max_file_bytes) {
-    showKnowledgeError(`“${file.name}” is ${formatBytes(size)}; one document may be at most ${formatBytes(usage.max_file_bytes)}.`);
-    return;
-  }
-  if (usage && usage.used_bytes + size > usage.max_bytes) {
-    showKnowledgeError(`“${file.name}” does not fit in the ${formatBytes(usage.max_bytes - usage.used_bytes)} you have left.`);
-    return;
-  }
-
-  uploadLabelEl.dataset.busy = "1";
-  renderKnowledge(file.name);
-  const result = await api("/api/knowledge", { method: "POST", body: { title: file.name, content: text } });
-  delete uploadLabelEl.dataset.busy;
-
-  if (result.status === 401) {
-    showGate(EXPIRED);
-    return;
-  }
-  if (!result.ok) showKnowledgeError(errorText(result, `“${file.name}” could not be uploaded.`));
-  await loadKnowledge();
+  await addDocument("/api/knowledge", body, file.name);
 }
 
 knowledgeFileEl.addEventListener("change", () => {
   const file = knowledgeFileEl.files && knowledgeFileEl.files[0];
   knowledgeFileEl.value = "";
   if (file) uploadDocument(file);
+});
+
+function closeLinkForm() {
+  linkFormEl.hidden = true;
+  linkToggleEl.setAttribute("aria-expanded", "false");
+  linkUrlEl.value = "";
+}
+
+linkToggleEl.addEventListener("click", () => {
+  if (!linkFormEl.hidden) {
+    closeLinkForm();
+    return;
+  }
+  linkFormEl.hidden = false;
+  linkToggleEl.setAttribute("aria-expanded", "true");
+  linkUrlEl.focus();
+});
+
+// The page is fetched by the server, which only reaches public addresses, so the form
+// only checks that this is a full web address before asking.
+linkFormEl.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const url = linkUrlEl.value.trim();
+  showKnowledgeError("");
+  if (!/^https?:\/\/\S+$/i.test(url)) {
+    showKnowledgeError("Enter a full address, starting with https://.");
+    linkUrlEl.focus();
+    return;
+  }
+  if (await addDocument("/api/knowledge/url", { url }, url)) closeLinkForm();
+});
+
+linkUrlEl.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeLinkForm();
+    linkToggleEl.focus();
+  }
 });
 
 async function deleteDocument(button, id) {
