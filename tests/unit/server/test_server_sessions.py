@@ -61,9 +61,21 @@ class TestServerSessions:
         session = store_session(sign_in(client, "ana"))
         body = client.get(f"/api/sessions/{session.id}").json()
         assert body["messages"] == [
-            {"role": "human", "content": "question"},
-            {"role": "ai", "content": "answer"}
+            {"role": "human", "agent": None, "sources": [], "content": "question"},
+            {"role": "ai", "agent": None, "sources": [], "content": "answer"}
         ]
+
+    def test_an_answer_keeps_the_agent_that_wrote_it_and_its_sources(self):
+        client = make_client()
+        owner = sign_in(client, "ana")
+        sources = [{"index": 1, "title": "guide.md", "excerpt": "Error E1042"}]
+        session = ChatSession(owner_id = owner, messages = [
+            MessageHuman(content = "q"),
+            MessageAI(content = "a [1]", name = "rag", response_metadata = {"sources": sources})
+        ])
+        app.state.chat_session_store.create_session(session)
+        answer = client.get(f"/api/sessions/{session.id}").json()["messages"][1]
+        assert answer["agent"] == "rag" and answer["sources"] == sources
 
     def test_reading_someone_elses_conversation_is_403(self):
         client = make_client()
