@@ -6,20 +6,20 @@ from app.server.security.authentication.authentication_service import Authentica
 from app.server.security.identity_access.identity_access_service import IdentityAccessService
 from app.server.security.authentication.authentication_token_codec import AuthenticationTokenCodec
 from app.server.security.authentication.authentication_password_hasher import AuthenticationPasswordHasher
-from app.server.security.identity_access.identity_access_store.identity_access_store_in_memory import IdentityAccessStoreInMemory
+from app.server.security.identity_access.identity_access_store.identity_access_store_base import IdentityAccessStoreBase
 
 
-def install_security(state: State, password_hasher: AuthenticationPasswordHasher,
-    token_secret: str) -> None:
+def install_security(state: State, store: IdentityAccessStoreBase,
+    password_hasher: AuthenticationPasswordHasher, token_secret: str) -> None:
     """Assembles the security layer and hangs its three entry points on the app state:
     the identity directory, for endpoints that manage identities; the authentication
     service, for the sign-in endpoints; and the pipeline, which every protected endpoint
     runs before doing any work.
 
     Built once per process, unlike the deep agent, which is built per request. The store
-    is the only record of who exists, so rebuilding it would forget every account. The
-    hasher is passed in so tests can install the same graph at a cheap cost."""
-    identity_access_service = IdentityAccessService(IdentityAccessStoreInMemory(), password_hasher)
+    is passed in — the database-backed one when serving, an in-memory one in tests — and
+    so is the hasher, so tests can install the same graph at a cheap cost."""
+    identity_access_service = IdentityAccessService(store, password_hasher)
     authentication_service = AuthenticationService(
         identity_access_service,
         AuthenticationTokenCodec(token_secret),

@@ -1,4 +1,3 @@
-import os
 import json
 import asyncio
 import logging
@@ -14,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
+from app.server.config import Config
 from app.intelligence.tracing import TraceEvent
 from app.intelligence.messages import MessageHuman
 from app.intelligence.tracing import TraceEventType
@@ -21,8 +21,10 @@ from app.intelligence.tracing import TracingService
 from app.intelligence.sandbox import SandboxPoolBase
 from app.server.agent_builder import build_deep_agent
 from app.intelligence.sandbox import SandboxPoolDocker
+from app.server.database_builder import build_database
 from app.server.security_builder import install_security
 from app.intelligence.sandbox import SandboxPoolInMemory
+from app.server.config_environment import ConfigEnvironment
 from app.server.requests.sign_in_request import SignInRequest
 from app.server.security.security_context import SecurityContext
 from app.server.requests.create_entity_request import CreateEntityRequest
@@ -34,15 +36,13 @@ from app.server.security.identity_access.identity_access_service import Identity
 from app.server.security.identity_access.identity_access_role_session import IdentityAccessRoleSession
 from app.server.security.identity_access.identity_entities.identity_entity_type import IdentityEntityType
 from app.server.security.authentication.authentication_password_hasher import AuthenticationPasswordHasher
+from app.server.security.identity_access.identity_access_store.identity_access_store_sql import IdentityAccessStoreSql
 
 STATIC_DIR = pathlib.Path(__file__).parent / "static"
 POLL_INTERVAL_SECONDS = 0.05
 SANDBOX_POOL_SIZE = 10
 SESSION_COOKIE = "vela47_session"
 AGENT_RESOURCE = "vrn:agent::deep-agent"
-TOKEN_SECRET_VARIABLE = "VELA47_TOKEN_SECRET"
-ADMIN_USERNAME_VARIABLE = "VELA47_ADMIN_USERNAME"
-ADMIN_PASSWORD_VARIABLE = "VELA47_ADMIN_PASSWORD"
 
 logger = logging.getLogger("vela47")
 
@@ -72,53 +72,66 @@ def _build_sandbox_pool() -> SandboxPoolBase:
     return SandboxPoolInMemory(size = SANDBOX_POOL_SIZE)
 
 
-def _token_secret() -> str:
-    """The key that signs session tokens. Taken from the environment when set, so that
-    sessions survive a restart; otherwise generated fresh, which signs everyone out on
-    every restart. That is an acceptable cost while the store forgets every account on
-    restart anyway — and it is never a fallback to a fixed key anyone could read here."""
-    secret = os.environ.get(TOKEN_SECRET_VARIABLE)
-    if secret:
-        return secret
+def _token_secret(config: Config) -> str:
+    """The key that signs session tokens. PROD always has one — Config refuses to start
+    without it. In DEV it is optional, and a missing one is generated fresh, which signs
+    everyone out on every restart: harmless on a developer's machine, and never a
+    fallback to a fixed key anyone could read here."""
+    if config.token_secret is not None:
+        return config.token_secret.get_secret_value()
 
     logger.warning(
-        "%s is not set — generating a signing key for this run, so every session ends "
-        "when the server restarts.", TOKEN_SECRET_VARIABLE
+        "VELA47_TOKEN_SECRET is not set — generating a signing key for this run, so every "
+        "session ends when the server restarts."
     )
     return secrets.token_urlsafe(48)
 
 
-def _bootstrap_admin(identity_access_service: IdentityAccessService) -> None:
-    """Creates the first admin from the environment. Accounts can only be created by an
-    admin, so someone has to exist before anyone else can. Without the variables the
-    server still runs and still serves guests — there is simply nobody who can create
-    an account."""
-    name = os.environ.get(ADMIN_USERNAME_VARIABLE)
-    password = os.environ.get(ADMIN_PASSWORD_VARIABLE)
-
-    if not name or not password:
+def _bootstrap_admin(identity_access_service: IdentityAccessService, config: Config) -> None:
+    """Creates the first admin from the configuration — the environment in DEV, the
+    application secret in PROD. Accounts can only be created by an admin, so someone has
+    to exist first. Once the database holds that admin this does nothing, so the
+    credentials can be dropped from the configuration after the first start."""
+    if config.admin_username is None or config.admin_password is None:
         logger.warning(
-            "%s / %s are not set — there is no admin, so no accounts can be created. "
-            "Guests can still use the agent.", ADMIN_USERNAME_VARIABLE, ADMIN_PASSWORD_VARIABLE
+            "No admin credentials are configured, so no admin is bootstrapped on this start."
         )
         return
 
-    if identity_access_service.find_entity(name) is None:
-        identity_access_service.create_entity(IdentityEntityType.ADMIN, name, password)
-        logger.warning("Admin '%s' created from the environment.", name.strip().lower())
+    if identity_access_service.find_entity(config.admin_username) is None:
+        identity_access_service.create_entity(
+            IdentityEntityType.ADMIN,
+            config.admin_username,
+            config.admin_password.get_secret_value()
+        )
+        logger.warning("Admin '%s' created from the configuration.", config.admin_username.strip().lower())
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Containers are started once for the process and torn down on the way out.
-    Starting one costs far more than a subagent's whole turn, so paying it per
-    request would dominate every run.
+    """Everything with a lifetime longer than a request is set up here, once, in the
+    order each piece needs the previous one: configuration, then the database it
+    describes, then security on top of that database, then the sandbox containers.
+    Starting a container costs far more than a subagent's whole turn, and the database is
+    the only record of who exists, so neither could be built per request.
 
-    Security is installed first, and also once. The identity store is the only
-    record of who exists, so it has to outlive every request, and a missing or
-    malformed secret or admin password fails the start rather than the first sign-in."""
-    install_security(app.state, AuthenticationPasswordHasher(), _token_secret())
-    _bootstrap_admin(app.state.identity_access_service)
+    Configuration and the database start on worker threads — in PROD the first reads
+    Secrets Manager and the second creates the schema on RDS — and anything missing or
+    malformed fails the start rather than the first request that needs it."""
+    config = await asyncio.to_thread(Config.from_environment)
+    app.state.config = config
+
+    database = build_database(config)
+    await asyncio.to_thread(database.start)
+    app.state.database = database
+    logger.warning(
+        "Database ready: %s in %s mode", database.database_type.value, config.environment.value
+    )
+
+    install_security(
+        app.state, IdentityAccessStoreSql(database), AuthenticationPasswordHasher(), _token_secret(config)
+    )
+    _bootstrap_admin(app.state.identity_access_service, config)
 
     pool = _build_sandbox_pool()
     await asyncio.to_thread(pool.start)
@@ -130,6 +143,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     finally:
         await asyncio.to_thread(pool.shutdown)
         logger.warning("Sandbox torn down.")
+        await asyncio.to_thread(database.shutdown)
+        logger.warning("Database closed.")
 
 
 app = FastAPI(title = "Vela47", lifespan = lifespan)
@@ -174,16 +189,20 @@ def _open_session(request: Request, response: Response,
     """Hands a freshly assumed role session to the browser as a cookie, which is what
     lets EventSource carry it — EventSource cannot set an Authorization header. HttpOnly
     keeps page scripts from ever reading the token, and SameSite=Strict keeps other
-    sites from making the browser send it. Secure follows the scheme the page was served
-    over: on, behind HTTPS; off on plain-HTTP localhost, where some browsers refuse to
-    store a Secure cookie at all."""
+    sites from making the browser send it. Secure is always on in PROD, where TLS ends at
+    the load balancer and the request reaching the server is plain HTTP even though the
+    browser's was not; in DEV it follows the scheme, staying off on plain-HTTP localhost,
+    where some browsers refuse to store a Secure cookie at all."""
     response.set_cookie(
         SESSION_COOKIE,
         request.app.state.authentication_service.issue_token(session),
         max_age = max(0, int((session.expires_at - datetime.now(timezone.utc)).total_seconds())),
         httponly = True,
         samesite = "strict",
-        secure = request.url.scheme == "https",
+        secure = (
+            request.app.state.config.environment is ConfigEnvironment.PROD
+            or request.url.scheme == "https"
+        ),
         path = "/"
     )
     return _describe(request, session)
