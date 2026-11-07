@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from app.server.security.security_context import SecurityContext
-from app.server.security.security_service_type import SecurityServiceType
+from app.server.security import SecurityContext
+from app.server.security import SecurityServiceType
 
 
 class SecurityServiceBase(ABC):
