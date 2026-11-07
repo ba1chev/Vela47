@@ -4,9 +4,9 @@ from contextlib import contextmanager
 from typing import Iterator, Optional
 from sqlalchemy.orm import Session, sessionmaker
 
-from db.database_type import DatabaseType
-from db.tables.table_base import TableBase
-from db.tables.table_registry import TABLE_REGISTRY
+from db import TableBase
+from db import DatabaseType
+from db import TABLE_REGISTRY
 
 
 class DatabaseBase(ABC):
