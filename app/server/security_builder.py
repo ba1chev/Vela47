@@ -1,12 +1,12 @@
 from starlette.datastructures import State
 
-from app.server.security.security_pipeline import SecurityPipeline
-from app.server.security.authorization.authorization_service import AuthorizationService
-from app.server.security.authentication.authentication_service import AuthenticationService
-from app.server.security.identity_access.identity_access_service import IdentityAccessService
-from app.server.security.authentication.authentication_token_codec import AuthenticationTokenCodec
-from app.server.security.authentication.authentication_password_hasher import AuthenticationPasswordHasher
-from app.server.security.identity_access.identity_access_store.identity_access_store_base import IdentityAccessStoreBase
+from app.server.security import SecurityPipeline
+from app.server.security import AuthorizationService
+from app.server.security import AuthenticationService
+from app.server.security import IdentityAccessService
+from app.server.security import IdentityAccessStoreBase
+from app.server.security import AuthenticationTokenCodec
+from app.server.security import AuthenticationPasswordHasher
 
 
 def install_security(state: State, store: IdentityAccessStoreBase,
