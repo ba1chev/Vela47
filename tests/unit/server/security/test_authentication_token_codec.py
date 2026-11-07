@@ -4,11 +4,11 @@ import base64
 import pytest
 from datetime import datetime, timedelta, timezone
 
-from app.server.security.authentication.authentication_error import AuthenticationError
-from app.server.security.authentication.authentication_token_codec import AuthenticationTokenCodec
-from app.server.security.identity_access.identity_access_role_session import IdentityAccessRoleSession
-from app.server.security.identity_access.identity_entities.identity_entity_type import IdentityEntityType
-from app.server.security.identity_access.identity_access_roles.identity_access_role_type import IdentityAccessRoleType
+from app.server.security import IdentityEntityType
+from app.server.security import AuthenticationError
+from app.server.security import IdentityAccessRoleType
+from app.server.security import AuthenticationTokenCodec
+from app.server.security import IdentityAccessRoleSession
 
 SECRET = "s" * 32
 
