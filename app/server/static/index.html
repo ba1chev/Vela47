@@ -10,11 +10,79 @@
 <body>
   <div id="particles-js" aria-hidden="true"></div>
 
-  <div class="app">
-    <main class="chat">
-      <header class="chat-head">
+  <main class="gate" id="gate" hidden>
+    <form class="gate-card" id="gate-form" novalidate>
+      <header class="gate-head">
         <span class="brand-dot" aria-hidden="true"></span>
         <h1>Vela47</h1>
+      </header>
+      <p class="gate-lead">Sign in to keep your conversations.</p>
+
+      <label class="field">
+        <span>Name</span>
+        <input id="gate-name" autocomplete="username" autocapitalize="off" spellcheck="false" required>
+      </label>
+      <label class="field">
+        <span>Password</span>
+        <input id="gate-password" type="password" autocomplete="current-password" required>
+      </label>
+
+      <p class="form-error" id="gate-error" role="alert" hidden></p>
+
+      <button type="submit" class="primary" id="gate-submit">Sign in</button>
+      <button type="button" class="link" id="gate-guest">Continue as guest &rarr;</button>
+    </form>
+  </main>
+
+  <div class="app" id="app" hidden>
+    <aside class="sessions" id="sessions" aria-label="Conversations">
+      <header class="sessions-head">
+        <h2>Chats</h2>
+        <button type="button" id="new-chat" class="ghost">+ new</button>
+      </header>
+      <div class="sessions-body">
+        <ol class="session-list" id="session-list"></ol>
+        <div class="sessions-empty" id="sessions-empty">No conversations yet.</div>
+      </div>
+    </aside>
+
+    <main class="chat">
+      <header class="chat-head">
+        <button type="button" class="drawer-toggle ghost" id="drawer-toggle"
+                aria-controls="sessions" aria-expanded="false" aria-label="Show conversations">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <span class="brand-dot" aria-hidden="true"></span>
+        <h1>Vela47</h1>
+
+        <div class="account" id="account">
+          <button type="button" class="identity" id="identity"
+                  aria-haspopup="true" aria-expanded="false" aria-controls="account-menu"></button>
+          <div class="account-menu" id="account-menu" hidden>
+            <div class="account-who">
+              <span class="account-name" id="account-name"></span>
+              <span class="account-role">acting as <b id="account-role"></b></span>
+            </div>
+
+            <form class="account-switch" id="account-switch" novalidate hidden>
+              <label class="field">
+                <span>Password</span>
+                <input id="switch-password" type="password" autocomplete="current-password">
+              </label>
+              <p class="form-error" id="switch-error" role="alert" hidden></p>
+              <button type="submit" class="primary small" id="switch-submit"></button>
+            </form>
+
+            <button type="button" class="menu-item" id="menu-switch" hidden></button>
+            <button type="button" class="menu-item" id="menu-create-user" hidden>Create user&hellip;</button>
+            <button type="button" class="menu-item" id="menu-sign-in" hidden>Sign in to keep your chats</button>
+            <button type="button" class="menu-item danger" id="menu-sign-out" hidden>Sign out</button>
+          </div>
+        </div>
+
         <span class="status" id="status" data-state="idle">idle</span>
       </header>
 
@@ -48,6 +116,33 @@
       </div>
     </aside>
   </div>
+
+  <dialog class="modal" id="create-user-dialog" aria-labelledby="create-user-title">
+    <form class="modal-card" id="create-user-form" novalidate>
+      <h2 id="create-user-title">Create user</h2>
+      <label class="field">
+        <span>Name</span>
+        <input id="new-user-name" autocomplete="off" autocapitalize="off" spellcheck="false" required>
+      </label>
+      <label class="field">
+        <span>Password</span>
+        <input id="new-user-password" type="password" autocomplete="new-password" required>
+      </label>
+      <label class="field">
+        <span>Kind</span>
+        <select id="new-user-type">
+          <option value="user">user</option>
+          <option value="admin">admin</option>
+        </select>
+      </label>
+      <p class="form-error" id="create-user-error" role="alert" hidden></p>
+      <p class="form-ok" id="create-user-ok" role="status" hidden></p>
+      <div class="modal-actions">
+        <button type="button" class="ghost" id="create-user-cancel">close</button>
+        <button type="submit" class="primary small" id="create-user-submit">Create</button>
+      </div>
+    </form>
+  </dialog>
 
   <script src="/static/vendor/particles.min.js"></script>
   <script src="/static/background.js"></script>
