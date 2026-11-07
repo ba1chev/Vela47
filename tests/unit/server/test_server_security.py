@@ -1,16 +1,22 @@
 from fastapi.testclient import TestClient
 
 from app.server.server import app
+from app.server.config import Config
 from app.server.security_builder import install_security
+from app.server.config_environment import ConfigEnvironment
 from app.server.security.identity_access.identity_entities.identity_entity_type import IdentityEntityType
 from app.server.security.authentication.authentication_password_hasher import AuthenticationPasswordHasher
+from app.server.security.identity_access.identity_access_store.identity_access_store_in_memory import IdentityAccessStoreInMemory
 
 ADMIN_PASSWORD = "admin-password-long"
 USER_PASSWORD = "user-password-long"
 
 
-def make_client():
-    install_security(app.state, AuthenticationPasswordHasher(cost = 16, block_size = 1), "t" * 32)
+def make_client(config = None):
+    app.state.config = config or Config()
+    install_security(
+        app.state, IdentityAccessStoreInMemory(), AuthenticationPasswordHasher(cost = 16, block_size = 1), "t" * 32
+    )
     app.state.identity_access_service.create_entity(IdentityEntityType.ADMIN, "root", ADMIN_PASSWORD)
     app.state.identity_access_service.create_entity(IdentityEntityType.USER, "ana", USER_PASSWORD)
     return TestClient(app)
@@ -50,6 +56,10 @@ class TestServerSecurity:
 
     def test_the_cookie_is_not_marked_secure_over_plain_http(self):
         assert "secure" not in make_client().post("/api/auth/guest").headers["set-cookie"].lower()
+
+    def test_the_cookie_is_always_secure_in_prod_because_tls_ends_at_the_load_balancer(self):
+        config = Config.model_construct(environment = ConfigEnvironment.PROD)
+        assert "secure" in make_client(config).post("/api/auth/guest").headers["set-cookie"].lower()
 
     def test_the_token_is_never_in_the_response_body(self):
         response = make_client().post("/api/auth/guest")
