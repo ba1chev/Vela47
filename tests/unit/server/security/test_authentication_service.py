@@ -1,17 +1,17 @@
 import pytest
 
-from app.server.security.security_context import SecurityContext
-from app.server.security.security_service_type import SecurityServiceType
-from app.server.security.authorization.authorization_error import AuthorizationError
-from app.server.security.authentication.authentication_error import AuthenticationError
-from app.server.security.identity_access.identity_access_action import IdentityAccessAction
-from app.server.security.authentication.authentication_service import AuthenticationService
-from app.server.security.identity_access.identity_access_service import IdentityAccessService
-from app.server.security.authentication.authentication_token_codec import AuthenticationTokenCodec
-from app.server.security.identity_access.identity_entities.identity_entity_type import IdentityEntityType
-from app.server.security.authentication.authentication_password_hasher import AuthenticationPasswordHasher
-from app.server.security.identity_access.identity_access_roles.identity_access_role_type import IdentityAccessRoleType
-from app.server.security.identity_access.identity_access_store.identity_access_store_in_memory import IdentityAccessStoreInMemory
+from app.server.security import SecurityContext
+from app.server.security import AuthorizationError
+from app.server.security import IdentityEntityType
+from app.server.security import SecurityServiceType
+from app.server.security import AuthenticationError
+from app.server.security import IdentityAccessAction
+from app.server.security import AuthenticationService
+from app.server.security import IdentityAccessService
+from app.server.security import IdentityAccessRoleType
+from app.server.security import AuthenticationTokenCodec
+from app.server.security import IdentityAccessStoreInMemory
+from app.server.security import AuthenticationPasswordHasher
 
 SECRET = "s" * 32
 PASSWORD = "correct-horse-battery"
