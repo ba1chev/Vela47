@@ -19,19 +19,19 @@ ENTRIES = [
 
 class TestSearchAndRefinePolicy:
     def test_returns_two_operations(self):
-        ops = SearchAndRefinePolicy().resolve(ENTRIES, [1.0, 0.0, 0.0], top_k = 2)
+        ops = SearchAndRefinePolicy().resolve(ENTRIES, "python", [1.0, 0.0, 0.0], top_k = 2)
         assert len(ops) == 2
         assert ops[0].operation_type == VectorDbOperationType.SEARCH
         assert ops[1].operation_type == VectorDbOperationType.DEDUPLICATE
 
     def test_oversamples_before_dedup(self):
-        ops = SearchAndRefinePolicy(oversample = 3).resolve(ENTRIES, [1.0, 0.0, 0.0], top_k = 1)
+        ops = SearchAndRefinePolicy(oversample = 3).resolve(ENTRIES, "python", [1.0, 0.0, 0.0], top_k = 1)
         search_op = ops[0]
         assert search_op._top_k == 3
 
     def test_end_to_end_diverse_results(self):
         ops = SearchAndRefinePolicy(dedup_threshold = 0.99, oversample = 2).resolve(
-            ENTRIES, [1.0, 0.0, 0.0], top_k = 2
+            ENTRIES, "python", [1.0, 0.0, 0.0], top_k = 2
         )
         result = ENTRIES
         for op in ops:
