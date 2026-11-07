@@ -16,7 +16,10 @@ class VectorDbOperationFactory(VectorDbOperationBaseFactory):
       SEARCH      -> VectorDbOperationSearch(query_vector=<list[float]>, top_k=<int>)
       FILTER      -> VectorDbOperationFilter(predicate=<Callable[[VectorDbMemoryEntry], bool]>)
       RERANK      -> VectorDbOperationRerank(scorer=<Callable[[VectorDbMemoryEntry], float]>)
-      DEDUPLICATE -> VectorDbOperationDeduplicate(threshold=<float>, default 0.95)"""
+      DEDUPLICATE -> VectorDbOperationDeduplicate(threshold=<float>, default 0.95)
+      KEYWORD_SEARCH -> VectorDbOperationKeywordSearch(query=<str>, top_k=<int>)
+      HYBRID_SEARCH -> VectorDbOperationHybridSearch(query=<str>, query_vector=<list[float]>,
+                       top_k=<int>, rank_constant=<int>, default 60)"""
 
     def create(self, type: VectorDbOperationType, **kwargs: Any) -> VectorDbOperation:
         cls = VECTOR_DB_OPERATION_REGISTRY.get(type)
