@@ -20,3 +20,7 @@ class IdentityAccessAction(str, Enum):
     SESSION_READ = "session:Read"
     SESSION_WRITE = "session:Write"
     SESSION_DELETE = "session:Delete"
+    KNOWLEDGE_UPLOAD = "knowledge:Upload"
+    KNOWLEDGE_LIST = "knowledge:List"
+    KNOWLEDGE_DELETE = "knowledge:Delete"
+    KNOWLEDGE_SEARCH = "knowledge:Search"
