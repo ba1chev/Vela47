@@ -1,9 +1,9 @@
 from typing import Literal
 
-from app.server.security.identity_access.identity_access_request import IdentityAccessRequest
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_type import IdentityAccessPolicyType
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_statement import IdentityAccessPolicyStatement
-from app.server.security.identity_access.identity_access_policies.identity_access_trust_policy.identity_access_trust_policy_base import IdentityAccessTrustPolicyBase
+from app.server.security import IdentityAccessRequest
+from app.server.security import IdentityAccessPolicyType
+from app.server.security import IdentityAccessPolicyStatement
+from app.server.security import IdentityAccessTrustPolicyBase
 
 
 class IdentityAccessTrustPolicy(IdentityAccessTrustPolicyBase):
