@@ -11,6 +11,16 @@ const sessionListEl = document.getElementById("session-list");
 const sessionsEmptyEl = document.getElementById("sessions-empty");
 const newChatEl = document.getElementById("new-chat");
 const drawerToggleEl = document.getElementById("drawer-toggle");
+const agentSelectEl = document.getElementById("agent-select");
+
+const knowledgeFileEl = document.getElementById("knowledge-file");
+const uploadLabelEl = document.getElementById("upload-label");
+const usageEl = document.getElementById("usage");
+const usageFillEl = document.getElementById("usage-fill");
+const usageTextEl = document.getElementById("usage-text");
+const knowledgeErrorEl = document.getElementById("knowledge-error");
+const knowledgeListEl = document.getElementById("knowledge-list");
+const knowledgeEmptyEl = document.getElementById("knowledge-empty");
 
 const accountEl = document.getElementById("account");
 const identityEl = document.getElementById("identity");
@@ -39,12 +49,27 @@ const messagesEl = document.getElementById("messages");
 const eventsEl = document.getElementById("events");
 const traceEmptyEl = document.getElementById("trace-empty");
 const emptyEl = document.getElementById("empty");
+const emptyTitleEl = document.getElementById("empty-title");
+const emptyHintEl = document.getElementById("empty-hint");
 const statusEl = document.getElementById("status");
 const formEl = document.getElementById("composer");
 const inputEl = document.getElementById("input");
 const sendEl = document.getElementById("send");
 
 const EXPIRED = "Your session has expired — sign in again.";
+const AGENT_STORAGE_KEY = "vela47.agent";
+
+// What the empty chat says depends on who will answer it.
+const EMPTY_TEXT = {
+  deep: {
+    title: "Ask something that needs more than one step.",
+    hint: "The pipeline plans it, splits it into tasks, runs a subagent per task, then merges the results.",
+  },
+  rag: {
+    title: "Ask about your documents.",
+    hint: "The RAG agent searches them by meaning and by words, reranks what it finds, and answers with citations.",
+  },
+};
 
 // How each event type renders. Keyed by the TraceEventType values the backend sends,
 // so adding a type here is the only frontend change a new event needs.
@@ -72,6 +97,7 @@ let stream = null;
 let me = null;
 let sessions = [];
 let currentSessionId = null;
+let knowledge = { documents: [], usage: null };
 
 // ---------- server ----------
 
@@ -107,6 +133,7 @@ function showGate(message) {
   me = null;
   sessions = [];
   currentSessionId = null;
+  knowledge = { documents: [], usage: null };
   appEl.hidden = true;
   gateEl.hidden = false;
   gateErrorEl.textContent = message || "";
@@ -123,7 +150,7 @@ async function enterApp(identity) {
   appEl.hidden = false;
   renderIdentity();
   startNewChat();
-  await loadSessions();
+  await Promise.all([loadSessions(), loadKnowledge()]);
 }
 
 async function signInWith(path, body) {
@@ -389,24 +416,31 @@ async function openSession(id) {
   clearMessages();
   clearTrace();
   for (const message of result.data.messages) {
-    addMessage(message.content, message.role === "human" ? "user" : "ai");
+    const bubble = addMessage(message.content, message.role === "human" ? "user" : "ai");
+    if (message.role === "ai" && message.agent) bubble.dataset.agent = message.agent;
+    if (message.sources && message.sources.length) renderSources(message.sources);
   }
   markActive();
   closeDrawer();
   inputEl.focus();
 }
 
+// Deleting asks twice: the first click arms the button for a few seconds, the second
+// one deletes. Returns whether this click was the second.
+function confirmTwice(button) {
+  if (button.dataset.confirm === "1") return true;
+  button.dataset.confirm = "1";
+  button.textContent = "delete?";
+  setTimeout(() => {
+    if (!button.isConnected) return;
+    button.dataset.confirm = "0";
+    button.textContent = "×";
+  }, 3000);
+  return false;
+}
+
 async function deleteSession(button, id) {
-  if (button.dataset.confirm !== "1") {
-    button.dataset.confirm = "1";
-    button.textContent = "delete?";
-    setTimeout(() => {
-      if (!button.isConnected) return;
-      button.dataset.confirm = "0";
-      button.textContent = "×";
-    }, 3000);
-    return;
-  }
+  if (!confirmTwice(button)) return;
 
   const result = await api(`/api/sessions/${encodeURIComponent(id)}`, { method: "DELETE" });
   if (result.status === 401) {
@@ -418,6 +452,170 @@ async function deleteSession(button, id) {
 }
 
 newChatEl.addEventListener("click", startNewChat);
+
+// ---------- agent ----------
+
+// Remembered per browser, as a convenience only: storage can be unavailable, and then
+// the picker simply starts on the deep agent every time.
+function loadAgentChoice() {
+  try {
+    const saved = localStorage.getItem(AGENT_STORAGE_KEY);
+    if (saved && EMPTY_TEXT[saved]) agentSelectEl.value = saved;
+  } catch { /* no storage: keep the default */ }
+  renderEmptyText();
+}
+
+function renderEmptyText() {
+  const text = EMPTY_TEXT[agentSelectEl.value] || EMPTY_TEXT.deep;
+  emptyTitleEl.textContent = text.title;
+  emptyHintEl.textContent = text.hint;
+}
+
+agentSelectEl.addEventListener("change", () => {
+  try { localStorage.setItem(AGENT_STORAGE_KEY, agentSelectEl.value); } catch { /* not saved */ }
+  renderEmptyText();
+});
+
+// ---------- documents ----------
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(bytes < 10 * 1024 ? 1 : 0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// The limit is drawn from what the server reports with every listing and upload, so
+// the bar always shows the storage as it is now rather than as it was at sign-in.
+function renderUsage() {
+  const usage = knowledge.usage;
+  if (!usage) {
+    usageFillEl.style.width = "0";
+    usageTextEl.textContent = "";
+    return;
+  }
+  const share = Math.min(1, usage.used_bytes / usage.max_bytes);
+  usageFillEl.style.width = `${(share * 100).toFixed(1)}%`;
+  usageEl.dataset.level = share >= 0.85 ? "high" : "normal";
+  const count = knowledge.documents.length;
+  usageTextEl.textContent =
+    `${formatBytes(usage.used_bytes)} of ${formatBytes(usage.max_bytes)} · ` +
+    `${count} ${count === 1 ? "document" : "documents"}`;
+}
+
+function makeKnowledgeItem(doc, pending) {
+  const li = makeElement("li", "knowledge-item");
+  if (pending) li.dataset.pending = "1";
+
+  const info = makeElement("div", "knowledge-info");
+  const name = makeElement("span", "knowledge-name");
+  name.textContent = doc.title;
+  name.title = doc.title;
+  const meta = makeElement("span", "knowledge-meta");
+  meta.textContent = pending
+    ? "indexing…"
+    : `${formatBytes(doc.size_bytes)} · ${doc.chunk_count} ${doc.chunk_count === 1 ? "chunk" : "chunks"}`;
+  info.append(name, meta);
+  li.append(info);
+
+  if (!pending) {
+    const remove = makeElement("button", "ghost knowledge-delete");
+    remove.type = "button";
+    remove.textContent = "×";
+    remove.setAttribute("aria-label", `Delete “${doc.title}”`);
+    remove.addEventListener("click", () => deleteDocument(remove, doc.id));
+    li.append(remove);
+  }
+  return li;
+}
+
+function makeElement(tag, className) {
+  const element = document.createElement(tag);
+  element.className = className;
+  return element;
+}
+
+function renderKnowledge(pendingTitle) {
+  const items = knowledge.documents.map((current) => makeKnowledgeItem(current, false));
+  if (pendingTitle) items.unshift(makeKnowledgeItem({ title: pendingTitle }, true));
+  knowledgeListEl.replaceChildren(...items);
+  knowledgeEmptyEl.hidden = items.length > 0;
+  renderUsage();
+}
+
+async function loadKnowledge() {
+  const result = await api("/api/knowledge");
+  if (result.status === 401) {
+    showGate(EXPIRED);
+    return;
+  }
+  if (result.ok) knowledge = result.data;
+  renderKnowledge();
+}
+
+function showKnowledgeError(text) {
+  knowledgeErrorEl.textContent = text;
+  knowledgeErrorEl.hidden = !text;
+}
+
+// The file is read here and sent as text, so the server receives exactly what it will
+// index. Limits are checked first against what the server last reported, which turns
+// the common failure into an instant message instead of a refused upload; the server
+// checks them again, since it is the one that has to be right.
+async function uploadDocument(file) {
+  showKnowledgeError("");
+  const usage = knowledge.usage;
+
+  let text;
+  try {
+    text = await file.text();
+  } catch {
+    showKnowledgeError(`“${file.name}” could not be read.`);
+    return;
+  }
+  if (text.includes("\u0000")) {
+    showKnowledgeError(`“${file.name}” is not a text file. Upload plain text or Markdown.`);
+    return;
+  }
+
+  const size = new TextEncoder().encode(text).length;
+  if (usage && size > usage.max_file_bytes) {
+    showKnowledgeError(`“${file.name}” is ${formatBytes(size)}; one document may be at most ${formatBytes(usage.max_file_bytes)}.`);
+    return;
+  }
+  if (usage && usage.used_bytes + size > usage.max_bytes) {
+    showKnowledgeError(`“${file.name}” does not fit in the ${formatBytes(usage.max_bytes - usage.used_bytes)} you have left.`);
+    return;
+  }
+
+  uploadLabelEl.dataset.busy = "1";
+  renderKnowledge(file.name);
+  const result = await api("/api/knowledge", { method: "POST", body: { title: file.name, content: text } });
+  delete uploadLabelEl.dataset.busy;
+
+  if (result.status === 401) {
+    showGate(EXPIRED);
+    return;
+  }
+  if (!result.ok) showKnowledgeError(errorText(result, `“${file.name}” could not be uploaded.`));
+  await loadKnowledge();
+}
+
+knowledgeFileEl.addEventListener("change", () => {
+  const file = knowledgeFileEl.files && knowledgeFileEl.files[0];
+  knowledgeFileEl.value = "";
+  if (file) uploadDocument(file);
+});
+
+async function deleteDocument(button, id) {
+  if (!confirmTwice(button)) return;
+  showKnowledgeError("");
+  const result = await api(`/api/knowledge/${encodeURIComponent(id)}`, { method: "DELETE" });
+  if (result.status === 401) {
+    showGate(EXPIRED);
+    return;
+  }
+  await loadKnowledge();
+}
 
 // ---------- drawer ----------
 
@@ -584,6 +782,25 @@ function addThinking() {
   return div;
 }
 
+// The passages a RAG answer was written from, under the answer, numbered as the
+// answer cites them — so "[2]" can always be checked against what it came from.
+function renderSources(sources) {
+  const box = makeElement("div", "sources");
+  for (const source of sources) {
+    const item = makeElement("div", "source");
+    const head = makeElement("span", "source-head");
+    const score = source.score == null ? "" : ` · relevance ${source.score}/10`;
+    head.textContent = `[${source.index}] ${source.title}${score}`;
+    const excerpt = makeElement("span", "source-excerpt");
+    excerpt.textContent = source.excerpt;
+    item.append(head, excerpt);
+    box.append(item);
+  }
+  messagesEl.appendChild(box);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return box;
+}
+
 function finish(placeholder) {
   if (stream) { stream.close(); stream = null; }
   if (placeholder && placeholder.isConnected) placeholder.remove();
@@ -610,7 +827,8 @@ async function send(message) {
     return;
   }
 
-  const params = new URLSearchParams({ message });
+  const agent = agentSelectEl.value;
+  const params = new URLSearchParams({ message, agent });
   if (currentSessionId) params.set("session_id", currentSessionId);
   stream = new EventSource(`/api/chat/stream?${params}`);
 
@@ -640,21 +858,24 @@ async function send(message) {
     if (!streamed) {
       placeholder.remove();
       streamed = addMessage("", "ai");
+      streamed.dataset.agent = agent;
     }
     streamed.textContent += text;
     messagesEl.scrollTop = messagesEl.scrollHeight;
   });
 
   stream.addEventListener("answer", (e) => {
-    const { content } = JSON.parse(e.data);
+    const { content, agent: answeredBy, sources } = JSON.parse(e.data);
     // With chunks the bubble is already complete, so the final frame only has to
     // cover the case where nothing streamed at all.
     if (streamed) {
       if (!streamed.textContent) streamed.textContent = content || "(empty answer)";
     } else {
       placeholder.remove();
-      addMessage(content || "(empty answer)", "ai");
+      streamed = addMessage(content || "(empty answer)", "ai");
     }
+    streamed.dataset.agent = answeredBy || agent;
+    if (sources && sources.length) renderSources(sources);
     setStatus("idle", "idle");
     finish(null);
     loadSessions();
@@ -702,6 +923,7 @@ document.getElementById("clear").addEventListener("click", clearTrace);
 // An existing session cookie skips the gate; anything else — no cookie, an expired
 // one, a server restarted with a new signing key — lands on it.
 async function boot() {
+  loadAgentChoice();
   const result = await api("/api/auth/me");
   if (result.ok) await enterApp(result.data);
   else showGate();
