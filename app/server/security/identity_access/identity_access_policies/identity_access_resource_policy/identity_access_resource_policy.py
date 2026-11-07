@@ -1,10 +1,10 @@
 from typing import Literal, Self
 from pydantic import model_validator
 
-from app.server.security.identity_access.identity_access_request import IdentityAccessRequest
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_type import IdentityAccessPolicyType
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_statement import IdentityAccessPolicyStatement
-from app.server.security.identity_access.identity_access_policies.identity_access_resource_policy.identity_access_resource_policy_base import IdentityAccessResourcePolicyBase
+from app.server.security import IdentityAccessRequest
+from app.server.security import IdentityAccessPolicyType
+from app.server.security import IdentityAccessPolicyStatement
+from app.server.security import IdentityAccessResourcePolicyBase
 
 
 class IdentityAccessResourcePolicy(IdentityAccessResourcePolicyBase):
