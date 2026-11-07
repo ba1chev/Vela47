@@ -1,3 +1,40 @@
+const gateEl = document.getElementById("gate");
+const gateFormEl = document.getElementById("gate-form");
+const gateNameEl = document.getElementById("gate-name");
+const gatePasswordEl = document.getElementById("gate-password");
+const gateErrorEl = document.getElementById("gate-error");
+const gateSubmitEl = document.getElementById("gate-submit");
+const gateGuestEl = document.getElementById("gate-guest");
+
+const appEl = document.getElementById("app");
+const sessionListEl = document.getElementById("session-list");
+const sessionsEmptyEl = document.getElementById("sessions-empty");
+const newChatEl = document.getElementById("new-chat");
+const drawerToggleEl = document.getElementById("drawer-toggle");
+
+const accountEl = document.getElementById("account");
+const identityEl = document.getElementById("identity");
+const accountMenuEl = document.getElementById("account-menu");
+const accountNameEl = document.getElementById("account-name");
+const accountRoleEl = document.getElementById("account-role");
+const switchFormEl = document.getElementById("account-switch");
+const switchPasswordEl = document.getElementById("switch-password");
+const switchErrorEl = document.getElementById("switch-error");
+const switchSubmitEl = document.getElementById("switch-submit");
+const menuSwitchEl = document.getElementById("menu-switch");
+const menuCreateUserEl = document.getElementById("menu-create-user");
+const menuSignInEl = document.getElementById("menu-sign-in");
+const menuSignOutEl = document.getElementById("menu-sign-out");
+
+const createUserDialogEl = document.getElementById("create-user-dialog");
+const createUserFormEl = document.getElementById("create-user-form");
+const newUserNameEl = document.getElementById("new-user-name");
+const newUserPasswordEl = document.getElementById("new-user-password");
+const newUserTypeEl = document.getElementById("new-user-type");
+const createUserErrorEl = document.getElementById("create-user-error");
+const createUserOkEl = document.getElementById("create-user-ok");
+const createUserSubmitEl = document.getElementById("create-user-submit");
+
 const messagesEl = document.getElementById("messages");
 const eventsEl = document.getElementById("events");
 const traceEmptyEl = document.getElementById("trace-empty");
@@ -6,6 +43,8 @@ const statusEl = document.getElementById("status");
 const formEl = document.getElementById("composer");
 const inputEl = document.getElementById("input");
 const sendEl = document.getElementById("send");
+
+const EXPIRED = "Your session has expired — sign in again.";
 
 // How each event type renders. Keyed by the TraceEventType values the backend sends,
 // so adding a type here is the only frontend change a new event needs.
@@ -27,9 +66,394 @@ const RENDER = {
 const openRows = new Map();
 let stream = null;
 
+// Who is signed in, as /api/auth/me describes them, and the conversations they own.
+// currentSessionId is null for a chat that has not been sent yet — the server creates
+// the conversation with its first message, so an unsent chat exists only here.
+let me = null;
+let sessions = [];
+let currentSessionId = null;
+
+// ---------- server ----------
+
+// One place that talks JSON to the server, so every caller gets the same shape back
+// and can tell a 401 — sign in again — from any other failure.
+async function api(path, { method = "GET", body } = {}) {
+  const response = await fetch(path, {
+    method,
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  let data = null;
+  if (response.status !== 204) {
+    try { data = await response.json(); } catch { data = null; }
+  }
+  return { ok: response.ok, status: response.status, data };
+}
+
+// FastAPI reports its own validation failures as a list, everything else as a string.
+function errorText(result, fallback) {
+  const detail = result.data && result.data.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) return detail.map((item) => item.msg).join("; ");
+  return fallback;
+}
+
+// ---------- gate ----------
+
+function showGate(message) {
+  closeMenu();
+  closeDrawer();
+  if (createUserDialogEl.open) createUserDialogEl.close();
+  me = null;
+  sessions = [];
+  currentSessionId = null;
+  appEl.hidden = true;
+  gateEl.hidden = false;
+  gateErrorEl.textContent = message || "";
+  gateErrorEl.hidden = !message;
+  gatePasswordEl.value = "";
+  gateSubmitEl.disabled = false;
+  gateGuestEl.disabled = false;
+  gateNameEl.focus();
+}
+
+async function enterApp(identity) {
+  me = identity;
+  gateEl.hidden = true;
+  appEl.hidden = false;
+  renderIdentity();
+  startNewChat();
+  await loadSessions();
+}
+
+async function signInWith(path, body) {
+  gateSubmitEl.disabled = true;
+  gateGuestEl.disabled = true;
+  gateErrorEl.hidden = true;
+
+  const result = await api(path, { method: "POST", body });
+  if (result.ok) {
+    await enterApp(result.data);
+    return;
+  }
+
+  gateErrorEl.textContent = errorText(result, "Could not sign in.");
+  gateErrorEl.hidden = false;
+  gateSubmitEl.disabled = false;
+  gateGuestEl.disabled = false;
+  gatePasswordEl.select();
+}
+
+gateFormEl.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const name = gateNameEl.value.trim();
+  const password = gatePasswordEl.value;
+  if (!name || !password) {
+    gateErrorEl.textContent = "Enter your name and password.";
+    gateErrorEl.hidden = false;
+    return;
+  }
+  signInWith("/api/auth/login", { name, password });
+});
+
+gateGuestEl.addEventListener("click", () => signInWith("/api/auth/guest"));
+
+// ---------- account ----------
+
+function renderIdentity() {
+  const isGuest = me.entity_type === "guest";
+  identityEl.dataset.role = me.role;
+  identityEl.textContent = isGuest ? "guest" : `${me.name} · ${me.role}`;
+  accountNameEl.textContent = isGuest ? "Guest" : me.name;
+  accountRoleEl.textContent = me.role;
+
+  // Only an admin entity can hold both roles, so only an admin ever sees the switch.
+  menuSwitchEl.hidden = me.entity_type !== "admin";
+  menuSwitchEl.textContent = me.role === "admin" ? "Work as user" : "Work as admin";
+  menuCreateUserEl.hidden = me.role !== "admin";
+  menuSignInEl.hidden = !isGuest;
+  menuSignOutEl.hidden = isGuest;
+}
+
+function openMenu() {
+  accountMenuEl.hidden = false;
+  identityEl.setAttribute("aria-expanded", "true");
+}
+
+function closeMenu() {
+  accountMenuEl.hidden = true;
+  identityEl.setAttribute("aria-expanded", "false");
+  switchFormEl.hidden = true;
+  switchPasswordEl.value = "";
+  switchErrorEl.hidden = true;
+}
+
+identityEl.addEventListener("click", () => {
+  if (accountMenuEl.hidden) openMenu();
+  else closeMenu();
+});
+
+document.addEventListener("click", (e) => {
+  if (!accountMenuEl.hidden && !accountEl.contains(e.target)) closeMenu();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (!accountMenuEl.hidden) {
+    closeMenu();
+    identityEl.focus();
+  }
+  closeDrawer();
+});
+
+// Switching role is a fresh sign-in: the role is fixed inside the session token, and
+// the server asks for the password again before handing out admin rights.
+menuSwitchEl.addEventListener("click", () => {
+  switchSubmitEl.textContent = me.role === "admin" ? "Switch to user" : "Switch to admin";
+  switchFormEl.hidden = false;
+  switchErrorEl.hidden = true;
+  switchPasswordEl.focus();
+});
+
+switchFormEl.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const role = me.role === "admin" ? "user" : "admin";
+  switchSubmitEl.disabled = true;
+  const result = await api("/api/auth/login", {
+    method: "POST",
+    body: { name: me.name, password: switchPasswordEl.value, role },
+  });
+  switchSubmitEl.disabled = false;
+
+  if (!result.ok) {
+    switchErrorEl.textContent = errorText(result, "Could not switch role.");
+    switchErrorEl.hidden = false;
+    switchPasswordEl.select();
+    return;
+  }
+
+  me = result.data;
+  renderIdentity();
+  closeMenu();
+});
+
+async function signOut() {
+  if (stream) return;
+  await api("/api/auth/logout", { method: "POST" });
+  clearMessages();
+  clearTrace();
+  showGate();
+}
+
+menuSignOutEl.addEventListener("click", signOut);
+menuSignInEl.addEventListener("click", signOut);
+
+// ---------- create user ----------
+
+menuCreateUserEl.addEventListener("click", () => {
+  closeMenu();
+  createUserFormEl.reset();
+  createUserErrorEl.hidden = true;
+  createUserOkEl.hidden = true;
+  createUserDialogEl.showModal();
+  newUserNameEl.focus();
+});
+
+document.getElementById("create-user-cancel").addEventListener("click", () => {
+  createUserDialogEl.close();
+});
+
+createUserFormEl.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  createUserErrorEl.hidden = true;
+  createUserOkEl.hidden = true;
+  createUserSubmitEl.disabled = true;
+
+  const result = await api("/api/iam/entities", {
+    method: "POST",
+    body: {
+      type: newUserTypeEl.value,
+      name: newUserNameEl.value.trim(),
+      password: newUserPasswordEl.value,
+    },
+  });
+  createUserSubmitEl.disabled = false;
+
+  if (result.status === 401) {
+    showGate(EXPIRED);
+    return;
+  }
+  if (!result.ok) {
+    createUserErrorEl.textContent = errorText(result, "Could not create the user.");
+    createUserErrorEl.hidden = false;
+    return;
+  }
+
+  // The dialog stays open after success so several accounts can be made in a row.
+  createUserOkEl.textContent = `Created ${result.data.type} “${result.data.name}”.`;
+  createUserOkEl.hidden = false;
+  newUserNameEl.value = "";
+  newUserPasswordEl.value = "";
+  newUserNameEl.focus();
+});
+
+// ---------- conversations ----------
+
+function relativeTime(iso) {
+  const seconds = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (seconds < 60) return "just now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+function makeSessionItem(session) {
+  const li = document.createElement("li");
+  li.className = "session-item";
+  li.dataset.id = session.id;
+  li.dataset.active = session.id === currentSessionId ? "1" : "0";
+
+  const open = document.createElement("button");
+  open.type = "button";
+  open.className = "session-open";
+  const title = document.createElement("span");
+  title.className = "session-title";
+  title.textContent = session.title;
+  const time = document.createElement("span");
+  time.className = "session-time";
+  time.textContent = relativeTime(session.updated_at);
+  open.append(title, time);
+  open.addEventListener("click", () => openSession(session.id));
+
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.className = "ghost session-delete";
+  remove.textContent = "×";
+  remove.setAttribute("aria-label", `Delete “${session.title}”`);
+  remove.addEventListener("click", () => deleteSession(remove, session.id));
+
+  li.append(open, remove);
+  return li;
+}
+
+function renderSessions() {
+  sessionListEl.replaceChildren(...sessions.map(makeSessionItem));
+  sessionsEmptyEl.hidden = sessions.length > 0;
+}
+
+function markActive() {
+  for (const item of sessionListEl.children) {
+    item.dataset.active = item.dataset.id === currentSessionId ? "1" : "0";
+  }
+}
+
+async function loadSessions() {
+  const result = await api("/api/sessions");
+  if (result.status === 401) {
+    showGate(EXPIRED);
+    return;
+  }
+  sessions = result.ok ? result.data : [];
+  renderSessions();
+}
+
+function clearMessages() {
+  messagesEl.replaceChildren(emptyEl);
+  emptyEl.hidden = false;
+}
+
+function startNewChat() {
+  if (stream) return;
+  currentSessionId = null;
+  clearMessages();
+  clearTrace();
+  markActive();
+  closeDrawer();
+  inputEl.focus();
+}
+
+async function openSession(id) {
+  if (stream) return;
+  const result = await api(`/api/sessions/${encodeURIComponent(id)}`);
+  if (result.status === 401) {
+    showGate(EXPIRED);
+    return;
+  }
+  if (!result.ok) {
+    await loadSessions();
+    return;
+  }
+
+  currentSessionId = id;
+  clearMessages();
+  clearTrace();
+  for (const message of result.data.messages) {
+    addMessage(message.content, message.role === "human" ? "user" : "ai");
+  }
+  markActive();
+  closeDrawer();
+  inputEl.focus();
+}
+
+async function deleteSession(button, id) {
+  if (button.dataset.confirm !== "1") {
+    button.dataset.confirm = "1";
+    button.textContent = "delete?";
+    setTimeout(() => {
+      if (!button.isConnected) return;
+      button.dataset.confirm = "0";
+      button.textContent = "×";
+    }, 3000);
+    return;
+  }
+
+  const result = await api(`/api/sessions/${encodeURIComponent(id)}`, { method: "DELETE" });
+  if (result.status === 401) {
+    showGate(EXPIRED);
+    return;
+  }
+  if (id === currentSessionId) startNewChat();
+  await loadSessions();
+}
+
+newChatEl.addEventListener("click", startNewChat);
+
+// ---------- drawer ----------
+
+function openDrawer() {
+  appEl.dataset.drawer = "open";
+  drawerToggleEl.setAttribute("aria-expanded", "true");
+}
+
+function closeDrawer() {
+  delete appEl.dataset.drawer;
+  drawerToggleEl.setAttribute("aria-expanded", "false");
+}
+
+drawerToggleEl.addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (appEl.dataset.drawer === "open") closeDrawer();
+  else openDrawer();
+});
+
+document.addEventListener("click", (e) => {
+  if (appEl.dataset.drawer !== "open") return;
+  if (!document.getElementById("sessions").contains(e.target)) closeDrawer();
+});
+
+// ---------- chat ----------
+
 function setStatus(state, text) {
   statusEl.dataset.state = state;
   statusEl.textContent = text;
+}
+
+function setBusy(busy) {
+  sendEl.disabled = busy;
+  inputEl.disabled = busy;
+  if (busy) appEl.dataset.busy = "1";
+  else delete appEl.dataset.busy;
 }
 
 function detailFor(event) {
@@ -134,8 +558,14 @@ function addEvent(event) {
   eventsEl.parentElement.scrollTop = eventsEl.parentElement.scrollHeight;
 }
 
+function clearTrace() {
+  eventsEl.replaceChildren();
+  openRows.clear();
+  traceEmptyEl.hidden = false;
+}
+
 function addMessage(text, variant) {
-  if (emptyEl) emptyEl.hidden = true;
+  emptyEl.hidden = true;
   const div = document.createElement("div");
   div.className = `msg ${variant}`;
   div.textContent = text;
@@ -145,7 +575,7 @@ function addMessage(text, variant) {
 }
 
 function addThinking() {
-  if (emptyEl) emptyEl.hidden = true;
+  emptyEl.hidden = true;
   const div = document.createElement("div");
   div.className = "msg ai thinking";
   div.innerHTML = "<i></i><i></i><i></i>";
@@ -160,42 +590,46 @@ function finish(placeholder) {
   // Any step still open when the stream ends never reported a result.
   for (const row of openRows.values()) row.li.dataset.live = "0";
   openRows.clear();
-  sendEl.disabled = false;
-  inputEl.disabled = false;
+  setBusy(false);
   inputEl.focus();
-}
-
-// Every request runs as some principal, and EventSource cannot say why it failed — a
-// 401 looks exactly like a dropped connection. So a session is made sure of before each
-// stream: whoever is signed in stays signed in, and a visitor with no session, or one
-// whose session has expired, quietly becomes a guest.
-async function ensureSession() {
-  const me = await fetch("/api/auth/me");
-  if (me.ok) return;
-  const guest = await fetch("/api/auth/guest", { method: "POST" });
-  if (!guest.ok) throw new Error("Could not open a guest session.");
 }
 
 async function send(message) {
   addMessage(message, "user");
   const placeholder = addThinking();
-  sendEl.disabled = true;
-  inputEl.disabled = true;
+  setBusy(true);
   setStatus("running", "running");
 
-  try {
-    await ensureSession();
-  } catch (err) {
-    placeholder.remove();
-    addMessage(err.message, "err");
-    setStatus("error", "error");
-    finish(null);
+  // A session can expire while the page is open, and EventSource cannot tell a 401
+  // from a dropped connection — so it is checked before every stream instead.
+  const check = await api("/api/auth/me");
+  if (!check.ok) {
+    finish(placeholder);
+    setStatus("idle", "idle");
+    showGate(EXPIRED);
     return;
   }
 
-  stream = new EventSource(`/api/chat/stream?message=${encodeURIComponent(message)}`);
+  const params = new URLSearchParams({ message });
+  if (currentSessionId) params.set("session_id", currentSessionId);
+  stream = new EventSource(`/api/chat/stream?${params}`);
 
   stream.addEventListener("trace", (e) => addEvent(JSON.parse(e.data)));
+
+  // The first frame names the conversation. A new one is shown in the list straight
+  // away; the server only stores it once the answer is complete, so a failed run
+  // forgets it again.
+  let createdSessionId = null;
+  stream.addEventListener("session", (e) => {
+    const session = JSON.parse(e.data);
+    currentSessionId = session.id;
+    if (session.new) {
+      createdSessionId = session.id;
+      sessions = [{ ...session, updated_at: new Date().toISOString() }, ...sessions];
+      renderSessions();
+    }
+    markActive();
+  });
 
   // The first chunk replaces the thinking dots with a real bubble; the rest append
   // to it, so the answer is written into the page as the model produces it.
@@ -223,6 +657,7 @@ async function send(message) {
     }
     setStatus("idle", "idle");
     finish(null);
+    loadSessions();
   });
 
   stream.addEventListener("error", (e) => {
@@ -233,7 +668,9 @@ async function send(message) {
     placeholder.remove();
     addMessage(text, "err");
     setStatus("error", "error");
+    if (createdSessionId && currentSessionId === createdSessionId) currentSessionId = null;
     finish(null);
+    loadSessions();
   });
 }
 
@@ -258,10 +695,16 @@ inputEl.addEventListener("input", () => {
   inputEl.style.height = `${Math.min(inputEl.scrollHeight, 180)}px`;
 });
 
-document.getElementById("clear").addEventListener("click", () => {
-  eventsEl.replaceChildren();
-  openRows.clear();
-  traceEmptyEl.hidden = false;
-});
+document.getElementById("clear").addEventListener("click", clearTrace);
 
-inputEl.focus();
+// ---------- start ----------
+
+// An existing session cookie skips the gate; anything else — no cookie, an expired
+// one, a server restarted with a new signing key — lands on it.
+async function boot() {
+  const result = await api("/api/auth/me");
+  if (result.ok) await enterApp(result.data);
+  else showGate();
+}
+
+boot();
