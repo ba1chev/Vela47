@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 
-from app.server.security.identity_access.identity_access_vrn import format_role_vrn
-from app.server.security.identity_access.identity_access_roles.identity_access_role_type import IdentityAccessRoleType
-from app.server.security.identity_access.identity_access_policies.identity_access_trust_policy.identity_access_trust_policy import IdentityAccessTrustPolicy
-from app.server.security.identity_access.identity_access_policies.identity_access_permission_policy.identity_access_permission_policy import IdentityAccessPermissionPolicy
+from app.server.security import format_role_vrn
+from app.server.security import IdentityAccessRoleType
+from app.server.security import IdentityAccessTrustPolicy
+from app.server.security import IdentityAccessPermissionPolicy
 
 
 class IdentityAccessRoleBase(ABC):
