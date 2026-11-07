@@ -1,9 +1,9 @@
 from typing import Literal
 from pydantic import Field, SecretStr
 
-from app.server.security.identity_access.identity_entities.identity_entity_base import IdentityEntityBase
-from app.server.security.identity_access.identity_entities.identity_entity_type import IdentityEntityType
-from app.server.security.identity_access.identity_access_roles.identity_access_role_type import IdentityAccessRoleType
+from app.server.security import IdentityEntityBase
+from app.server.security import IdentityEntityType
+from app.server.security import IdentityAccessRoleType
 
 
 class IdentityEntityAdmin(IdentityEntityBase):
