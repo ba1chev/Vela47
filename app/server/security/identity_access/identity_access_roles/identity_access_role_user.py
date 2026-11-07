@@ -7,13 +7,14 @@ from app.server.security import IdentityAccessPermissionPolicy
 
 
 class IdentityAccessRoleUser(IdentityAccessRoleBase):
-    """Everyday use of the server: running the agent, and nothing to do with identity.
-    Trusted by users and by admins, so an admin can work without carrying admin rights
-    around — the role is what gets checked, not who is holding it.
+    """Everyday use of the server: running the agent and keeping one's own
+    conversations, and nothing to do with identity. Trusted by users and by admins, so
+    an admin can work without carrying admin rights around — the role is what gets
+    checked, not who is holding it.
 
-    What it may touch is meant to grow through ${principal.id}: a statement such as
-    vrn:session:${principal.id}:* grants every user their own resources and nobody
-    else's, with one statement for all of them."""
+    Conversations are granted through ${principal.id}: vrn:session:${principal.id}:*
+    gives every user their own and nobody else's, with one statement for all of them.
+    Seeing someone else's conversation would take a resource policy on it."""
 
     @property
     def role_type(self) -> IdentityAccessRoleType:
@@ -44,6 +45,12 @@ class IdentityAccessRoleUser(IdentityAccessRoleBase):
                         effect = IdentityAccessPolicyEffect.ALLOW,
                         actions = ["agent:Run"],
                         resources = ["vrn:agent::*"]
+                    ),
+                    IdentityAccessPolicyStatement(
+                        sid = "OwnSessions",
+                        effect = IdentityAccessPolicyEffect.ALLOW,
+                        actions = ["session:*"],
+                        resources = ["vrn:session:${principal.id}:*"]
                     )
                 ]
             )
