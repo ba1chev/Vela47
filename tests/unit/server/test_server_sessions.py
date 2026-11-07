@@ -5,10 +5,10 @@ from app.server.server import app
 from app.server.config import Config
 from app.intelligence.messages import MessageAI
 from app.server.chat_sessions import ChatSession
+from app.server.builders import install_security
 from app.intelligence.messages import MessageHuman
 from app.server.security import IdentityEntityType
 from app.server.chat_sessions import ChatSessionStoreSql
-from app.server.security_builder import install_security
 from app.server.security import IdentityAccessStoreInMemory
 from app.server.security import AuthenticationPasswordHasher
 
