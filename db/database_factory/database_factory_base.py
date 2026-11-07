@@ -1,8 +1,8 @@
 from typing import Any
 from abc import ABC, abstractmethod
 
-from db.database_base import DatabaseBase
-from db.database_type import DatabaseType
+from db import DatabaseBase
+from db import DatabaseType
 
 
 class DatabaseFactoryBase(ABC):
