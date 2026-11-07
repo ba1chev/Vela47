@@ -14,6 +14,14 @@ class ModelConfig(BaseModel):
             "retrieved context combined). Used to trim or summarize content before sending. "
             "None means no explicit limit beyond the model's context window."
     )
+    context_window_tokens: Optional[int] = Field(
+        default = None,
+        gt = 0,
+        description = "Size of the context window Ollama allocates for the request, in tokens "
+            "(its num_ctx). Everything the model reads — system prompt, history, retrieved "
+            "passages — has to fit inside it, and what does not is cut from the front without "
+            "an error. None leaves Ollama's default, which is small."
+    )
     max_output_tokens: Optional[int] = Field(
         default = None,
         gt = 0,
