@@ -1,14 +1,14 @@
 import pytest
 from pydantic import ValidationError
 
-from app.server.security.identity_access.identity_entities.identity_entity_base import IdentityEntityBase
-from app.server.security.identity_access.identity_entities.identity_entity_type import IdentityEntityType
-from app.server.security.identity_access.identity_entities.identity_entity_user import IdentityEntityUser
-from app.server.security.identity_access.identity_entities.identity_entity_admin import IdentityEntityAdmin
-from app.server.security.identity_access.identity_entities.identity_entity_guest import IdentityEntityGuest
-from app.server.security.identity_access.identity_access_roles.identity_access_role_type import IdentityAccessRoleType
-from app.server.security.identity_access.identity_entities.identity_entity_factory.identity_entity_factory import IdentityEntityFactory
-from app.server.security.identity_access.identity_entities.identity_entity_factory.identity_entity_registry import IDENTITY_ENTITY_REGISTRY
+from app.server.security import IdentityEntityBase
+from app.server.security import IdentityEntityType
+from app.server.security import IdentityEntityUser
+from app.server.security import IdentityEntityAdmin
+from app.server.security import IdentityEntityGuest
+from app.server.security import IdentityEntityFactory
+from app.server.security import IdentityAccessRoleType
+from app.server.security import IDENTITY_ENTITY_REGISTRY
 
 
 def make_user(name = "ana"):
