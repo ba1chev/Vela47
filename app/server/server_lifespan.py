@@ -6,6 +6,7 @@ from typing import AsyncIterator
 from contextlib import asynccontextmanager
 
 from app.server.config import Config
+from app.intelligence.web import WebFetcher
 from app.server.builders import build_database
 from app.server.builders import install_security
 from app.server.builders import build_rag_indexer
@@ -77,6 +78,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.chat_session_store = ChatSessionStoreSql(database)
     app.state.knowledge_store = KnowledgeStoreSql(database)
     app.state.rag_indexer = build_rag_indexer()
+    app.state.web_fetcher = WebFetcher()
     logger.warning(
         "Database ready: %s in %s mode", database.database_type.value, config.environment.value
     )
