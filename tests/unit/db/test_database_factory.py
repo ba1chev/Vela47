@@ -1,11 +1,11 @@
 import pytest
 
-from db.database_type import DatabaseType
-from db.database_sqlite import DatabaseSqlite
-from db.database_postgres import DatabasePostgres
-from db.database_credentials import DatabaseCredentials
-from db.database_factory.database_factory import DatabaseFactory
-from db.database_factory.database_registry import DATABASE_REGISTRY
+from db import DatabaseType
+from db import DatabaseSqlite
+from db import DatabaseFactory
+from db import DatabasePostgres
+from db import DATABASE_REGISTRY
+from db import DatabaseCredentials
 
 
 class TestDatabaseFactory:
