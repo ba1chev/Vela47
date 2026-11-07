@@ -4,8 +4,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.engine import URL, Engine
 
-from db.database_base import DatabaseBase
-from db.database_type import DatabaseType
+from db import DatabaseBase
+from db import DatabaseType
 
 
 class DatabaseSqlite(DatabaseBase):
