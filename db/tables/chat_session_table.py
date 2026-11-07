@@ -3,9 +3,9 @@ from datetime import datetime
 from sqlalchemy import Index, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from db.tables.table_base import TableBase
-from db.tables.utc_date_time import UtcDateTime
-from db.tables.json_document import JSON_DOCUMENT
+from db import TableBase
+from db import UtcDateTime
+from db import JSON_DOCUMENT
 
 
 class ChatSessionTable(TableBase):
