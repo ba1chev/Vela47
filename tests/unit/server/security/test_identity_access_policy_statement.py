@@ -1,8 +1,8 @@
 import pytest
 from pydantic import ValidationError
 
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_effect import IdentityAccessPolicyEffect
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_statement import IdentityAccessPolicyStatement
+from app.server.security import IdentityAccessPolicyEffect
+from app.server.security import IdentityAccessPolicyStatement
 
 
 def make_statement(**overrides):
