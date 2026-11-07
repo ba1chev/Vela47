@@ -1,5 +1,5 @@
-from app.server.security.identity_access.identity_entities.identity_entity_type import IdentityEntityType
-from app.server.security.identity_access.identity_access_roles.identity_access_role_type import IdentityAccessRoleType
+from app.server.security import IdentityEntityType
+from app.server.security import IdentityAccessRoleType
 
 VRN_PREFIX = "vrn"
 
