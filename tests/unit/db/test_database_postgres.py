@@ -1,6 +1,6 @@
-from db.database_type import DatabaseType
-from db.database_postgres import DatabasePostgres
-from db.database_credentials import DatabaseCredentials
+from db import DatabaseType
+from db import DatabasePostgres
+from db import DatabaseCredentials
 
 
 def make_database(calls = None):
