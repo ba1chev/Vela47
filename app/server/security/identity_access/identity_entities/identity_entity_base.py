@@ -5,9 +5,9 @@ from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from pydantic import BaseModel, Field, SecretStr, field_validator
 
-from app.server.security.identity_access.identity_access_vrn import format_entity_vrn
-from app.server.security.identity_access.identity_entities.identity_entity_type import IdentityEntityType
-from app.server.security.identity_access.identity_access_roles.identity_access_role_type import IdentityAccessRoleType
+from app.server.security import format_entity_vrn
+from app.server.security import IdentityEntityType
+from app.server.security import IdentityAccessRoleType
 
 NAME_PATTERN = re.compile(r"[a-z0-9][a-z0-9._-]{2,31}")
 
