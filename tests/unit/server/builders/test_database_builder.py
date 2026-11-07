@@ -3,7 +3,7 @@ import pathlib
 from db import DatabaseSqlite
 from db import DatabasePostgres
 from app.server.config import Config
-from app.server.database_builder import build_database
+from app.server.builders import build_database
 from app.server.config_environment import ConfigEnvironment
 
 
