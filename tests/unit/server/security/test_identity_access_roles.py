@@ -21,7 +21,10 @@ def trust_verdict(role_type, entity_vrn):
 def permission_verdicts(role_type, action, resource):
     role = make_role(role_type)
     request = IdentityAccessRequest(
-        principals = ["vrn:iam::entity/x/1", role.vrn], action = action, resource = resource
+        principals = ["vrn:iam::entity/x/1", role.vrn],
+        action = action,
+        resource = resource,
+        variables = {"principal.id": "1"}
     )
     return [current_policy.evaluate(request) for current_policy in role.permission_policies]
 
@@ -67,6 +70,22 @@ class TestIdentityAccessRoles:
 
     def test_guest_is_explicitly_denied_identity(self):
         assert DENY in permission_verdicts(IdentityAccessRoleType.GUEST, "iam:CreateEntity", "vrn:iam::entity/user")
+
+    def test_user_may_do_anything_with_their_own_conversations(self):
+        for current_action in ["session:Create", "session:List", "session:Read", "session:Write", "session:Delete"]:
+            assert ALLOW in permission_verdicts(IdentityAccessRoleType.USER, current_action, "vrn:session:1:session/a")
+        assert ALLOW in permission_verdicts(IdentityAccessRoleType.USER, "session:List", "vrn:session:1:session")
+
+    def test_user_is_silent_on_someone_elses_conversations(self):
+        verdicts = permission_verdicts(IdentityAccessRoleType.USER, "session:Read", "vrn:session:2:session/a")
+        assert ALLOW not in verdicts and DENY not in verdicts
+
+    def test_guest_keeps_conversations_of_its_own_too(self):
+        assert ALLOW in permission_verdicts(IdentityAccessRoleType.GUEST, "session:Write", "vrn:session:1:session/a")
+        assert ALLOW not in permission_verdicts(IdentityAccessRoleType.GUEST, "session:Read", "vrn:session:2:session/a")
+
+    def test_admin_may_read_anyones_conversation(self):
+        assert ALLOW in permission_verdicts(IdentityAccessRoleType.ADMIN, "session:Read", "vrn:session:2:session/a")
 
     def test_admin_sessions_are_the_shortest(self):
         lengths = {current_type: make_role(current_type).max_session_seconds for current_type in IdentityAccessRoleType}
