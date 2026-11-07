@@ -1,4 +1,4 @@
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_utils import matches_pattern
+from app.server.security import matches_pattern
 
 
 class TestMatchesPattern:
