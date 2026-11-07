@@ -5,7 +5,9 @@ from app.server.routes.auth_routes.auth_routes import auth_router
 from app.server.routes.iam_routes.iam_routes import iam_router
 from app.server.routes.session_routes.session_routes import find_chat_session, session_router
 from app.server.routes.chat_routes.chat_stream import stream_chat
+from app.server.routes.chat_routes.chat_agent_type import ChatAgentType
 from app.server.routes.chat_routes.chat_routes import chat_router
+from app.server.routes.knowledge_routes.knowledge_routes import knowledge_router
 
 __all__ = [
     "SESSION_COOKIE",
@@ -16,5 +18,7 @@ __all__ = [
     "find_chat_session",
     "session_router",
     "stream_chat",
-    "chat_router"
+    "ChatAgentType",
+    "chat_router",
+    "knowledge_router"
 ]
