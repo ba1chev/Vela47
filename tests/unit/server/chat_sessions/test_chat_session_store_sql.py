@@ -3,14 +3,14 @@ import pytest
 import pathlib
 import tempfile
 
-from db.database_sqlite import DatabaseSqlite
+from db import DatabaseSqlite
 from app.intelligence.messages import MessageAI
+from app.server.chat_sessions import ChatSession
 from app.intelligence.messages import MessageTool
 from app.intelligence.messages import MessageHuman
 from app.intelligence.messages import MessageToolCall
+from app.server.chat_sessions import ChatSessionStoreSql
 from app.intelligence.messages import MessageUsageMetadata
-from app.server.chat_sessions.chat_session import ChatSession
-from app.server.chat_sessions.chat_session_store.chat_session_store_sql import ChatSessionStoreSql
 
 
 def make_store(path = None):
