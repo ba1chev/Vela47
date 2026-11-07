@@ -1,7 +1,7 @@
 from typing import Self
 from pydantic import model_validator
 
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_base import IdentityAccessPolicyBase
+from app.server.security import IdentityAccessPolicyBase
 
 
 class IdentityAccessResourcePolicyBase(IdentityAccessPolicyBase):
