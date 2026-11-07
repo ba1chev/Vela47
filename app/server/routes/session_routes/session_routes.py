@@ -50,6 +50,8 @@ def read_chat_session(session_id: str, request: Request) -> dict[str, Any]:
         "messages": [
             {
                 "role": current_message.type.value,
+                "agent": current_message.name,
+                "sources": current_message.response_metadata.get("sources", []),
                 "content": current_message.content
                 if isinstance(current_message.content, str)
                 else str(current_message.content)
