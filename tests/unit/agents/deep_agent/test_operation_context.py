@@ -7,6 +7,7 @@ class TestOperationContext:
         context = OperationContext(goal = MessageHuman(content = "do a thing"))
         assert context.plan is None and context.final is None
         assert context.tasks == [] and context.results == []
+        assert context.history == []
 
     def test_run_id_is_generated(self):
         assert OperationContext(goal = MessageHuman(content = "x")).run_id
