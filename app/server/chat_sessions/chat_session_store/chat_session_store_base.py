@@ -1,8 +1,8 @@
 from typing import Optional
 from abc import ABC, abstractmethod
 
+from app.server.chat_sessions import ChatSession
 from app.intelligence.messages import MessageBase
-from app.server.chat_sessions.chat_session import ChatSession
 
 
 class ChatSessionStoreBase(ABC):
