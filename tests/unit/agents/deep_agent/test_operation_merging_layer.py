@@ -1,3 +1,4 @@
+from app.intelligence.messages import MessageAI
 from app.intelligence.agents import OperationPlan
 from app.intelligence.agents import OperationStep
 from app.intelligence.agents import OperationType
@@ -58,6 +59,15 @@ class TestOperationMergingLayer:
         OperationMergingLayer(FakeModel(["one two three"]), tracer).execute(make_context())
         chunks = [e for e in tracer.events() if e.type is TraceEventType.ANSWER_CHUNK]
         assert len(chunks) == 3
+
+    def test_history_comes_before_the_report(self):
+        model = FakeModel(["answer"])
+        context = make_context()
+        context.history = [MessageHuman(content = "earlier question"), MessageAI(content = "earlier answer")]
+        OperationMergingLayer(model).execute(context)
+        messages = model.calls[0][0]
+        assert [current.content for current in messages[1:3]] == ["earlier question", "earlier answer"]
+        assert "compare things" in messages[3].content
 
     def test_without_a_tracer_the_answer_is_still_complete(self):
         context = make_context()
