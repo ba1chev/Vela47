@@ -1,9 +1,9 @@
 from typing import Any
 
-from app.server.security.identity_access.identity_entities.identity_entity_base import IdentityEntityBase
-from app.server.security.identity_access.identity_entities.identity_entity_type import IdentityEntityType
-from app.server.security.identity_access.identity_entities.identity_entity_factory.identity_entity_registry import IDENTITY_ENTITY_REGISTRY
-from app.server.security.identity_access.identity_entities.identity_entity_factory.identity_entity_factory_base import IdentityEntityFactoryBase
+from app.server.security import IdentityEntityBase
+from app.server.security import IdentityEntityType
+from app.server.security import IDENTITY_ENTITY_REGISTRY
+from app.server.security import IdentityEntityFactoryBase
 
 
 class IdentityEntityFactory(IdentityEntityFactoryBase):
