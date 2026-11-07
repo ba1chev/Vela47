@@ -2,9 +2,9 @@ import re
 from typing import Optional
 from pydantic import BaseModel, Field, field_validator
 
-from app.server.security.identity_access.identity_access_vrn import VRN_PREFIX
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_utils import matches_pattern
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_effect import IdentityAccessPolicyEffect
+from app.server.security import VRN_PREFIX
+from app.server.security import matches_pattern
+from app.server.security import IdentityAccessPolicyEffect
 
 ACTION_PATTERN = re.compile(r"\*|[a-z0-9*?-]+:[A-Za-z0-9*?]+")
 
