@@ -1,9 +1,9 @@
 from typing import Optional
 from pydantic import BaseModel, Field
 
-from app.server.security.authorization.authorization_decision import AuthorizationDecision
-from app.server.security.identity_access.identity_access_action import IdentityAccessAction
-from app.server.security.identity_access.identity_access_role_session import IdentityAccessRoleSession
+from app.server.security import IdentityAccessAction
+from app.server.security import AuthorizationDecision
+from app.server.security import IdentityAccessRoleSession
 
 
 class SecurityContext(BaseModel):
