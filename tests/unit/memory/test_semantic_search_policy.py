@@ -19,11 +19,11 @@ ENTRIES = [
 
 class TestSemanticSearchPolicy:
     def test_returns_single_search_operation(self):
-        ops = SemanticSearchPolicy().resolve(ENTRIES, [1.0, 0.0, 0.0], top_k = 3)
+        ops = SemanticSearchPolicy().resolve(ENTRIES, "python", [1.0, 0.0, 0.0], top_k = 3)
         assert len(ops) == 1
         assert ops[0].operation_type == VectorDbOperationType.SEARCH
 
     def test_result_count_matches_top_k(self):
-        ops = SemanticSearchPolicy().resolve(ENTRIES, [1.0, 0.0, 0.0], top_k = 2)
+        ops = SemanticSearchPolicy().resolve(ENTRIES, "python", [1.0, 0.0, 0.0], top_k = 2)
         result = ops[0].apply(ENTRIES)
         assert len(result) == 2
