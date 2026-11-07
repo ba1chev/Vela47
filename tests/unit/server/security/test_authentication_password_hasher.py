@@ -1,6 +1,6 @@
 import pytest
 
-from app.server.security.authentication.authentication_password_hasher import AuthenticationPasswordHasher
+from app.server.security import AuthenticationPasswordHasher
 
 PASSWORD = "correct-horse-battery"
 
