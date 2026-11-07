@@ -23,7 +23,10 @@ class OperationMergingLayer(OperationLayerBase):
     was asked.
 
     Errors are passed to the model verbatim rather than filtered out, because a
-    gap the user should know about is part of an honest answer."""
+    gap the user should know about is part of an honest answer.
+
+    The conversation's earlier turns precede the report, so the answer is written
+    as the next turn of that conversation rather than as if it had just begun."""
 
     def __init__(self, model: ModelFoundation,
         tracing_service: Optional[TracingServiceBase] = None) -> None:
@@ -60,6 +63,7 @@ class OperationMergingLayer(OperationLayerBase):
         parts: list[str] = []
         for current_chunk in self._model.stream([
             MessageSystem(content = MERGING_SYSTEM_PROMPT),
+            *context.history,
             MessageHuman(content = self._build_report(context))
         ]):
             parts.append(current_chunk)
