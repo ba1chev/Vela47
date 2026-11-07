@@ -2,8 +2,8 @@ from fastapi.testclient import TestClient
 
 from app.server.server import app
 from app.server.config import Config
+from app.server.builders import install_security
 from app.server.security import IdentityEntityType
-from app.server.security_builder import install_security
 from app.server.config_environment import ConfigEnvironment
 from app.server.security import IdentityAccessStoreInMemory
 from app.server.security import AuthenticationPasswordHasher
