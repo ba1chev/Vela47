@@ -22,3 +22,11 @@ def format_chat_session_vrn(owner_id: str, session_id: str) -> str:
 
 def format_chat_session_collection_vrn(owner_id: str) -> str:
     return f"{VRN_PREFIX}:session:{owner_id}:session"
+
+
+def format_knowledge_document_vrn(owner_id: str, document_id: str) -> str:
+    return f"{format_knowledge_collection_vrn(owner_id)}/{document_id}"
+
+
+def format_knowledge_collection_vrn(owner_id: str) -> str:
+    return f"{VRN_PREFIX}:knowledge:{owner_id}:document"
