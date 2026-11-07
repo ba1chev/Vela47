@@ -2,8 +2,8 @@ from datetime import datetime
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from db.tables.table_base import TableBase
-from db.tables.utc_date_time import UtcDateTime
+from db import TableBase
+from db import UtcDateTime
 
 
 class IdentityEntityTable(TableBase):
