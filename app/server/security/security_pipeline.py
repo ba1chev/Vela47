@@ -1,6 +1,6 @@
-from app.server.security.security_context import SecurityContext
-from app.server.security.security_service_base import SecurityServiceBase
-from app.server.security.authorization.authorization_error import AuthorizationError
+from app.server.security import SecurityContext
+from app.server.security import AuthorizationError
+from app.server.security import SecurityServiceBase
 
 
 class SecurityPipeline:
