@@ -1,19 +1,26 @@
+from typing import Optional
+
 from app.intelligence.tools import ToolBase
 from app.intelligence.sandbox import SandboxEnv
 from app.intelligence.tools import ToolWriteFileInput
+from app.intelligence.tools import python_syntax_warning
 
 
 class ToolWriteFile(ToolBase[ToolWriteFileInput, str]):
-    """Writes a file into the sandbox.
+    """Writes a whole file into the sandbox, creating or replacing it.
 
-    Whole-file writes rather than patches: a small model asked to produce a diff
-    against a file it cannot see reliably produces a diff that does not apply, and
-    a failed patch is harder to recover from than a rewritten file.
+    It is the tool for new files. Changing part of an existing one is edit_file's job,
+    because a small model rewriting a whole file to change three lines tends to drop
+    something else along the way; this one says so in its description.
+
+    The result says whether the file was created or replaced — replacing a file the
+    agent did not know existed is the mistake worth noticing — and a Python file that
+    does not parse is reported on the spot.
 
     The file outlives the subagent that wrote it. Sandbox slots are leased per task
     but the directory belongs to the run, so what a CODE subagent writes here is
-    what a REVIEW subagent later reads — the only channel through which two isolated
-    subagents can collaborate."""
+    what a TEST or REVIEW subagent later reads — the only channel through which two
+    isolated subagents can collaborate."""
 
     def __init__(self, sandbox_env: SandboxEnv) -> None:
         super().__init__()
@@ -26,16 +33,32 @@ class ToolWriteFile(ToolBase[ToolWriteFileInput, str]):
     @property
     def description(self) -> str:
         return (
-            "Write a file into your workspace, creating or replacing it. Use it to "
-            "deliver the implementation your task asks for — write the real code "
-            "rather than describing what you would write."
+            "Write a whole file into your workspace, creating it or replacing it. Use it "
+            "to deliver a new file — write the real, complete code rather than describing "
+            "it. To change part of a file that already exists, use edit_file instead."
         )
 
     @property
     def input_schema(self) -> type[ToolWriteFileInput]:
         return ToolWriteFileInput
 
+    def _previous_line_count(self, path: str) -> Optional[int]:
+        try:
+            return len(self._sandbox_env.read_file(path).splitlines())
+        except FileNotFoundError:
+            return None
+        except ValueError:
+            return -1
+
     def execute(self, input: ToolWriteFileInput) -> str:
+        previous = self._previous_line_count(input.path)
         written = self._sandbox_env.write_file(input.path, input.content)
         line_count = len(input.content.splitlines())
-        return f"Wrote {written} ({line_count} lines)."
+
+        if previous is None:
+            summary = f"Created {written} ({line_count} lines)."
+        elif previous < 0:
+            summary = f"Replaced {written} ({line_count} lines)."
+        else:
+            summary = f"Replaced {written} ({line_count} lines, previously {previous})."
+        return summary + python_syntax_warning(written, input.content)
