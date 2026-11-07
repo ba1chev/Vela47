@@ -1,8 +1,8 @@
 from typing import Any
 from abc import ABC, abstractmethod
 
-from app.server.security.identity_access.identity_entities.identity_entity_base import IdentityEntityBase
-from app.server.security.identity_access.identity_entities.identity_entity_type import IdentityEntityType
+from app.server.security import IdentityEntityBase
+from app.server.security import IdentityEntityType
 
 
 class IdentityEntityFactoryBase(ABC):
