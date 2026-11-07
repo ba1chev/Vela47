@@ -5,9 +5,9 @@ import pathlib
 import secrets
 import subprocess
 from pydantic import ValidationError
-from typing import Any, AsyncIterator
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
+from typing import Any, AsyncIterator, Optional
 
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, HTTPException, Query, Request, Response
@@ -17,6 +17,8 @@ from app.server.config import Config
 from app.server.requests import SignInRequest
 from app.intelligence.tracing import TraceEvent
 from app.server.security import SecurityContext
+from app.server.chat_sessions import ChatSession
+from app.intelligence.messages import MessageBase
 from app.intelligence.messages import MessageHuman
 from app.server.security import AuthorizationError
 from app.server.security import IdentityEntityType
@@ -32,17 +34,20 @@ from app.intelligence.sandbox import SandboxPoolDocker
 from app.server.database_builder import build_database
 from app.server.security import format_entity_type_vrn
 from app.server.security import IdentityAccessStoreSql
+from app.server.chat_sessions import ChatSessionStoreSql
 from app.server.security_builder import install_security
 from app.intelligence.sandbox import SandboxPoolInMemory
 from app.server.security import IdentityAccessRoleSession
 from app.server.config_environment import ConfigEnvironment
 from app.server.security import AuthenticationPasswordHasher
+from app.server.security import format_chat_session_collection_vrn
 
 STATIC_DIR = pathlib.Path(__file__).parent / "static"
 POLL_INTERVAL_SECONDS = 0.05
 SANDBOX_POOL_SIZE = 10
 SESSION_COOKIE = "vela47_session"
 AGENT_RESOURCE = "vrn:agent::deep-agent"
+TITLE_CHARS = 60
 
 logger = logging.getLogger("vela47")
 
@@ -124,6 +129,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     database = build_database(config)
     await asyncio.to_thread(database.start)
     app.state.database = database
+    app.state.chat_session_store = ChatSessionStoreSql(database)
     logger.warning(
         "Database ready: %s in %s mode", database.database_type.value, config.environment.value
     )
@@ -171,6 +177,52 @@ def _authorize(request: Request, action: IdentityAccessAction,
         resource = resource
     ))
     return context.session
+
+
+def _caller(request: Request) -> IdentityAccessRoleSession:
+    """The verified role session of whoever sent the request. Needed before authorizing
+    anything whose resource names the caller — its own list of conversations — because
+    that resource cannot be written down until the caller is known."""
+    return request.app.state.authentication_service.verify(request.cookies.get(SESSION_COOKIE))
+
+
+def _find_chat_session(request: Request, session_id: str) -> ChatSession:
+    chat_session = request.app.state.chat_session_store.get_session(session_id)
+    if chat_session is None:
+        raise HTTPException(status_code = 404, detail = "No such conversation.")
+    return chat_session
+
+
+def _summarize(chat_session: ChatSession) -> dict[str, Any]:
+    return {
+        "id": chat_session.id,
+        "title": chat_session.title,
+        "created_at": chat_session.created_at.isoformat(),
+        "updated_at": chat_session.updated_at.isoformat(),
+        "message_count": len(chat_session.messages)
+    }
+
+
+def _title_for(message: str) -> str:
+    """A conversation is named after its first message, flattened onto one line and cut
+    short — enough to recognise it in a list, which is all a title is for."""
+    flattened = " ".join(message.split()) or "New chat"
+    if len(flattened) <= TITLE_CHARS:
+        return flattened
+    return flattened[:TITLE_CHARS - 1].rstrip() + "…"
+
+
+def _remember(chat_session: ChatSession, is_new: bool, turn: list[MessageBase]) -> None:
+    """Makes one finished exchange durable. A new conversation is written only now,
+    together with its first exchange, so a run that fails leaves no empty conversation
+    behind; an existing one has the exchange appended."""
+    store = app.state.chat_session_store
+    if is_new:
+        store.create_session(chat_session.model_copy(
+            update = {"messages": turn, "updated_at": datetime.now(timezone.utc)}
+        ))
+    else:
+        store.append_messages(chat_session.id, turn)
 
 
 def _describe(request: Request, session: IdentityAccessRoleSession) -> dict[str, Any]:
@@ -223,7 +275,13 @@ def _frame_for(event: TraceEvent) -> str:
     return _frame("trace", event.model_dump(mode = "json"))
 
 
-async def _run(message: str) -> AsyncIterator[str]:
+async def _run(message: str, chat_session: ChatSession, is_new: bool) -> AsyncIterator[str]:
+    """Streams one exchange. The first frame names the conversation, so the browser
+    knows which one a new chat became before any of the answer arrives; the agent is
+    built fresh and refilled from the stored conversation, and the exchange is stored
+    only once the answer is complete."""
+    yield _frame("session", {"id": chat_session.id, "title": chat_session.title, "new": is_new})
+
     loop = asyncio.get_running_loop()
     queue: asyncio.Queue[TraceEvent] = asyncio.Queue()
     tracing_service = TracingService()
@@ -232,9 +290,9 @@ async def _run(message: str) -> AsyncIterator[str]:
     )
 
     agent = build_deep_agent(tracing_service, app.state.sandbox_pool)
-    work = asyncio.create_task(
-        asyncio.to_thread(agent.execute, MessageHuman(content = message))
-    )
+    agent.restore(chat_session.messages)
+    human_message = MessageHuman(content = message)
+    work = asyncio.create_task(asyncio.to_thread(agent.execute, human_message))
 
     while True:
         while not queue.empty():
@@ -248,6 +306,7 @@ async def _run(message: str) -> AsyncIterator[str]:
 
     try:
         response = await work
+        await asyncio.to_thread(_remember, chat_session, is_new, [human_message, response])
         content = (
             response.content
             if isinstance(response.content, str)
@@ -307,12 +366,65 @@ def create_entity(body: CreateEntityRequest, request: Request) -> dict[str, Any]
     return {"id": entity.id, "type": entity.type.value, "name": entity.name}
 
 
+@app.get("/api/sessions")
+def list_chat_sessions(request: Request) -> list[dict[str, Any]]:
+    caller = _caller(request)
+    _authorize(
+        request, IdentityAccessAction.SESSION_LIST, format_chat_session_collection_vrn(caller.entity_id)
+    )
+    return [
+        _summarize(current_session)
+        for current_session in request.app.state.chat_session_store.list_sessions(caller.entity_id)
+    ]
+
+
+@app.get("/api/sessions/{session_id}")
+def read_chat_session(session_id: str, request: Request) -> dict[str, Any]:
+    _caller(request)
+    chat_session = _find_chat_session(request, session_id)
+    _authorize(request, IdentityAccessAction.SESSION_READ, chat_session.vrn)
+
+    return {
+        **_summarize(chat_session),
+        "messages": [
+            {
+                "role": current_message.type.value,
+                "content": current_message.content
+                if isinstance(current_message.content, str)
+                else str(current_message.content)
+            }
+            for current_message in chat_session.messages
+        ]
+    }
+
+
+@app.delete("/api/sessions/{session_id}")
+def delete_chat_session(session_id: str, request: Request) -> Response:
+    _caller(request)
+    chat_session = _find_chat_session(request, session_id)
+    _authorize(request, IdentityAccessAction.SESSION_DELETE, chat_session.vrn)
+    request.app.state.chat_session_store.delete_session(session_id)
+    return Response(status_code = 204)
+
+
 @app.get("/api/chat/stream")
-async def chat_stream(request: Request, message: str = Query(min_length = 1)) -> StreamingResponse:
-    _authorize(request, IdentityAccessAction.AGENT_RUN, AGENT_RESOURCE)
+def chat_stream(request: Request, message: str = Query(min_length = 1),
+    session_id: Optional[str] = Query(default = None)) -> StreamingResponse:
+    caller = _authorize(request, IdentityAccessAction.AGENT_RUN, AGENT_RESOURCE)
+
+    if session_id is None:
+        _authorize(
+            request,
+            IdentityAccessAction.SESSION_CREATE,
+            format_chat_session_collection_vrn(caller.entity_id)
+        )
+        chat_session = ChatSession(owner_id = caller.entity_id, title = _title_for(message))
+    else:
+        chat_session = _find_chat_session(request, session_id)
+        _authorize(request, IdentityAccessAction.SESSION_WRITE, chat_session.vrn)
 
     return StreamingResponse(
-        _run(message),
+        _run(message, chat_session, session_id is None),
         media_type = "text/event-stream",
         headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
     )
