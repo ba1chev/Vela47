@@ -2,9 +2,9 @@ import pytest
 from pydantic import ValidationError
 
 from app.intelligence.messages import MessageAI
+from app.server.chat_sessions import ChatSession
 from app.intelligence.messages import MessageHuman
 from app.intelligence.messages import MessageToolCall
-from app.server.chat_sessions.chat_session import ChatSession
 
 
 class TestChatSession:
