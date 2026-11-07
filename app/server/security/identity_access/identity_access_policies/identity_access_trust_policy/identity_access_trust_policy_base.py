@@ -1,9 +1,9 @@
 from typing import Self
 from pydantic import model_validator
 
-from app.server.security.identity_access.identity_access_action import IdentityAccessAction
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_utils import matches_pattern
-from app.server.security.identity_access.identity_access_policies.identity_access_resource_policy.identity_access_resource_policy_base import IdentityAccessResourcePolicyBase
+from app.server.security import matches_pattern
+from app.server.security import IdentityAccessAction
+from app.server.security import IdentityAccessResourcePolicyBase
 
 
 class IdentityAccessTrustPolicyBase(IdentityAccessResourcePolicyBase):
