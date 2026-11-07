@@ -36,6 +36,10 @@ class TestChatSession:
         dumped = ChatSession(owner_id = "o1", messages = [message]).model_dump()
         assert dumped["messages"][0]["tool_calls"][0]["name"] == "t"
 
+    def test_the_vrn_puts_the_owner_where_the_user_role_grants_by_principal_id(self):
+        session = ChatSession(owner_id = "o1", id = "s1")
+        assert session.vrn == "vrn:session:o1:session/s1"
+
     def test_sessions_are_frozen(self):
         with pytest.raises(ValidationError):
             ChatSession(owner_id = "o1").title = "renamed"
