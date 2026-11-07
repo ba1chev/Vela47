@@ -15,9 +15,12 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 from app.server.config import Config
 from app.server.requests import SignInRequest
+from app.server.builders import build_database
 from app.intelligence.tracing import TraceEvent
 from app.server.security import SecurityContext
 from app.server.chat_sessions import ChatSession
+from app.server.builders import build_deep_agent
+from app.server.builders import install_security
 from app.intelligence.messages import MessageBase
 from app.intelligence.messages import MessageHuman
 from app.server.security import AuthorizationError
@@ -28,14 +31,11 @@ from app.server.requests import CreateEntityRequest
 from app.server.security import AuthenticationError
 from app.intelligence.sandbox import SandboxPoolBase
 from app.server.security import IdentityAccessAction
-from app.server.agent_builder import build_deep_agent
 from app.server.security import IdentityAccessService
 from app.intelligence.sandbox import SandboxPoolDocker
-from app.server.database_builder import build_database
 from app.server.security import format_entity_type_vrn
 from app.server.security import IdentityAccessStoreSql
 from app.server.chat_sessions import ChatSessionStoreSql
-from app.server.security_builder import install_security
 from app.intelligence.sandbox import SandboxPoolInMemory
 from app.server.security import IdentityAccessRoleSession
 from app.server.config_environment import ConfigEnvironment
