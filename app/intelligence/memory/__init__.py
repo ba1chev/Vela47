@@ -25,16 +25,20 @@ from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_oper
 from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_manager import VectorDbOperationManager
 from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_policy import VectorDbOperationPolicy
 from app.intelligence.memory.vector_db_memory.vector_db_memory import VectorDbMemory
-from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_utils import cosine_similarity
+from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_utils import cosine_similarity, tokenize, reciprocal_rank_fusion
+from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_keyword_index import VectorDbKeywordIndex
 from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_deduplicate import VectorDbOperationDeduplicate
 from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_factory.vector_db_operation_base_factory import VectorDbOperationBaseFactory
 from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_filter import VectorDbOperationFilter
 from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_rerank import VectorDbOperationRerank
 from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_search import VectorDbOperationSearch
+from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_keyword_search import VectorDbOperationKeywordSearch
+from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_hybrid_search import VectorDbOperationHybridSearch
 from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_factory.vector_db_operation_registry import VECTOR_DB_OPERATION_REGISTRY
 from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_factory.vector_db_operation_factory import VectorDbOperationFactory
 from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_policy_search_and_refine import SearchAndRefinePolicy
 from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_policy_semantic_search import SemanticSearchPolicy
+from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_policy_hybrid_search import HybridSearchPolicy
 
 __all__ = [
     "MemoryBase",
@@ -63,13 +67,19 @@ __all__ = [
     "VectorDbOperationPolicy",
     "VectorDbMemory",
     "cosine_similarity",
+    "tokenize",
+    "reciprocal_rank_fusion",
+    "VectorDbKeywordIndex",
     "VectorDbOperationDeduplicate",
     "VectorDbOperationBaseFactory",
     "VectorDbOperationFilter",
     "VectorDbOperationRerank",
     "VectorDbOperationSearch",
+    "VectorDbOperationKeywordSearch",
+    "VectorDbOperationHybridSearch",
     "VECTOR_DB_OPERATION_REGISTRY",
     "VectorDbOperationFactory",
     "SearchAndRefinePolicy",
-    "SemanticSearchPolicy"
+    "SemanticSearchPolicy",
+    "HybridSearchPolicy"
 ]
