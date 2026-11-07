@@ -18,8 +18,8 @@ class OperationSubagentFactory(OperationSubagentFactoryBase):
     blueprint simply cannot run a plan that asks for CODE, and fails here with a clear
     error instead of silently substituting an agent.
 
-    Every call builds a new agent, a new tool and a new prompt. That is required, not
-    incidental — each task must start from an empty ShortTermMemory, and its tool must
+    Every call builds a new agent, new tools and a new prompt. That is required, not
+    incidental — each task must start from an empty ShortTermMemory, and its tools must
     act on the sandbox this task was given rather than one a previous task held."""
 
     def __init__(self, blueprints: dict[OperationSubagentType, OperationSubagentBlueprint],
@@ -37,15 +37,18 @@ class OperationSubagentFactory(OperationSubagentFactoryBase):
                 f"Known types: {list(self._blueprints)}"
             )
 
-        tool = blueprint.tool_factory(sandbox_env)
+        tools = [current_factory(sandbox_env) for current_factory in blueprint.tool_factories]
         prompt_manager = PromptManager()
-        prompt_manager.register("role", blueprint.prompt_template.format(tool = tool.name))
+        prompt_manager.register(
+            "role",
+            blueprint.prompt_template.format(tools = ", ".join(current_tool.name for current_tool in tools))
+        )
 
         return OperationSubagent(
             model = blueprint.model,
             prompt_manager = prompt_manager,
             max_context_window_size = blueprint.max_context_window_size,
-            tool = tool,
+            tools = tools,
             context_window_middleware = blueprint.context_window_middleware,
             max_iterations = blueprint.max_iterations,
             tracing_service = self._tracing_service

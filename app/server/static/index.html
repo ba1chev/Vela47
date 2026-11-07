@@ -58,12 +58,21 @@
       <section class="knowledge" aria-label="Documents">
         <header class="sessions-head">
           <h2>Documents</h2>
-          <label class="ghost upload" id="upload-label">
-            + upload
-            <input type="file" id="knowledge-file"
-                   accept=".txt,.md,.markdown,.text,.csv,.json,.log,.rst,.html,.xml,.yaml,.yml">
-          </label>
+          <div class="knowledge-actions">
+            <button type="button" class="ghost" id="link-toggle"
+                    aria-expanded="false" aria-controls="link-form">+ link</button>
+            <label class="ghost upload" id="upload-label">
+              + upload
+              <input type="file" id="knowledge-file"
+                     accept=".txt,.md,.markdown,.text,.csv,.tsv,.json,.jsonl,.log,.rst,.xml,.yaml,.yml,.html,.htm,.pdf,.docx">
+            </label>
+          </div>
         </header>
+        <form class="link-form" id="link-form" novalidate hidden>
+          <input id="link-url" type="url" inputmode="url" placeholder="https://… page, PDF or .docx"
+                 autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Address of a page or document">
+          <button type="submit" class="primary small" id="link-submit">Add</button>
+        </form>
         <div class="usage" id="usage">
           <div class="usage-bar"><span class="usage-fill" id="usage-fill"></span></div>
           <span class="usage-text" id="usage-text"></span>

@@ -96,6 +96,10 @@ class TestConfig:
         config = Config.from_environment({})
         assert config.knowledge_max_file_bytes == 512 * 1024 and config.knowledge_max_owner_bytes == 2 * 1024 * 1024
 
+    def test_a_file_may_be_up_to_eight_megabytes_before_its_text_is_extracted(self):
+        assert Config.from_environment({}).knowledge_max_upload_bytes == 8 * 1024 * 1024
+        assert Config.from_environment({"VELA47_KNOWLEDGE_MAX_UPLOAD_BYTES": "1024"}).knowledge_max_upload_bytes == 1024
+
     def test_document_limits_come_from_the_environment_in_both_modes(self):
         config = Config.from_environment(dict(PROD, VELA47_KNOWLEDGE_MAX_OWNER_BYTES = "4096"), make_reader())
         assert config.knowledge_max_owner_bytes == 4096

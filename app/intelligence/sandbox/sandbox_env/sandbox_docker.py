@@ -23,9 +23,14 @@ class SandboxDocker(SandboxEnv):
 
     The command string comes from a model and is passed as a single argument to a
     shell *inside* the container — never to a host shell. The blast radius of
-    anything it does is the container and the mounted run directory."""
+    anything it does is the container and the mounted run directory.
+
+    Long output loses its middle, not its end. A test runner, a compiler and a crashing
+    script all say what went wrong last, so the end is kept in full and only a short
+    head survives alongside it."""
 
     MAX_OUTPUT_CHARS = 8_000
+    KEPT_HEAD_CHARS = 2_000
 
     def __init__(self, container_name: str, host_directory: pathlib.Path,
         container_directory: str) -> None:
@@ -79,7 +84,12 @@ class SandboxDocker(SandboxEnv):
 
         output = (completed.stdout or "") + (completed.stderr or "")
         if len(output) > self.MAX_OUTPUT_CHARS:
-            output = output[:self.MAX_OUTPUT_CHARS] + "\n… output truncated."
+            kept_tail = self.MAX_OUTPUT_CHARS - self.KEPT_HEAD_CHARS
+            output = (
+                output[:self.KEPT_HEAD_CHARS]
+                + f"\n… {len(output) - self.MAX_OUTPUT_CHARS} characters of output cut …\n"
+                + output[-kept_tail:]
+            )
 
         return SandboxCommandResult(
             exit_code = completed.returncode,

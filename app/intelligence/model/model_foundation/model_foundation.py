@@ -6,6 +6,7 @@ from typing import Iterator, Optional
 from app.intelligence.model import ModelBase
 from app.intelligence.model import ModelConfig
 from app.intelligence.messages import MessageAI
+from app.intelligence.messages import MessageTool
 from app.intelligence.messages import MessageBase
 from app.intelligence.model import MODEL_ROLE_MAP
 from app.intelligence.tracing import TraceEventType
@@ -22,6 +23,11 @@ class ModelFoundation(ModelBase):
     list into Ollama's role/content dict format using _ROLE_MAP. invoke() blocks
     until the full response arrives and attaches a populated MessageUsageMetadata;
     stream() yields raw text chunks as they are produced, token by token.
+
+    An assistant turn that called tools is sent with those calls, and a tool result with
+    the name of the tool that produced it. Without them a model reading its own history
+    sees results to requests it has no record of making, and with more than one tool it
+    cannot tell which result answers which call.
 
     think is handed to Ollama as a parameter of its own, not among the sampling
     options. Ollama ignores it there, and a reasoning model then thinks on every call
@@ -41,16 +47,22 @@ class ModelFoundation(ModelBase):
             else TracingServiceNull()
         )
 
+    def _format_message(self, message: MessageBase) -> dict:
+        formatted: dict = {
+            "role": MODEL_ROLE_MAP[message.type],
+            "content": message.content if isinstance(message.content, str) else str(message.content)
+        }
+        if isinstance(message, MessageAI) and message.tool_calls:
+            formatted["tool_calls"] = [
+                {"function": {"name": current_call.name, "arguments": current_call.args}}
+                for current_call in message.tool_calls
+            ]
+        if isinstance(message, MessageTool) and message.name:
+            formatted["tool_name"] = message.name
+        return formatted
+
     def _format_messages(self, messages: list[MessageBase]) -> list[dict]:
-        return [
-            {
-                "role": MODEL_ROLE_MAP[current_message.type],
-                "content": current_message.content 
-                if isinstance(current_message.content, str) 
-                else str(current_message.content)
-            }
-            for current_message in messages
-        ]
+        return [self._format_message(current_message) for current_message in messages]
 
     def _build_options(self) -> dict:
         options: dict = {

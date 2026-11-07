@@ -69,3 +69,7 @@ class TestToolExecutor:
         call = MessageToolCall(name = "add", args = {"a": 1, "b": 2}, id = None)
         result = self.executor.execute(call)
         assert result.tool_call_id == ""
+
+    def test_the_result_carries_the_name_of_the_tool_that_produced_it(self):
+        assert self.executor.execute(self._call("multiply", {"x": 1.0, "y": 2.0})).name == "multiply"
+        assert self.executor.execute(self._call("fail", {"a": 1, "b": 2})).name == "fail"

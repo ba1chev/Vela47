@@ -43,3 +43,7 @@ class TestToolWriteTest:
         tool = make_tool()
         tool.execute(ToolWriteTestInput(path = "test_a.py", content = "assert True\n"))
         assert tool._sandbox_env.read_file("tests/test_a.py") == "assert True\n"
+
+    def test_a_test_that_does_not_parse_is_flagged(self):
+        result = make_tool().execute(ToolWriteTestInput(path = "test_a.py", content = "def test_x(:\n"))
+        assert "tests/test_a.py is not valid Python" in result

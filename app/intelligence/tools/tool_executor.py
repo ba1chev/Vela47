@@ -50,6 +50,7 @@ class ToolExecutor:
         if tool is None:
             return self._report(tool_call, MessageTool(
                 tool_call_id = tool_call.id or "",
+                name = tool_call.name,
                 content = f"Unknown tool '{tool_call.name}'.",
                 status = "error"
             ))
@@ -59,6 +60,7 @@ class ToolExecutor:
             result = tool.execute(parsed_input)
             return self._report(tool_call, MessageTool(
                 tool_call_id = tool_call.id or "",
+                name = tool_call.name,
                 content = str(result),
                 artifact = result,
                 status = "success"
@@ -66,6 +68,7 @@ class ToolExecutor:
         except Exception as e:
             return self._report(tool_call, MessageTool(
                 tool_call_id = tool_call.id or "",
+                name = tool_call.name,
                 content = str(e),
                 status = "error"
             ))
