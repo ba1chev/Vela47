@@ -11,7 +11,7 @@ from app.server.security.identity_access.identity_access_policies.identity_acces
 from app.server.security.identity_access.identity_access_request import IdentityAccessRequest
 from app.server.security.identity_access.identity_access_roles.identity_access_role_type import IdentityAccessRoleType
 from app.server.security.identity_access.identity_entities.identity_entity_type import IdentityEntityType
-from app.server.security.identity_access.identity_access_vrn import VRN_PREFIX, format_entity_vrn, format_entity_type_vrn, format_role_vrn, format_chat_session_vrn, format_chat_session_collection_vrn
+from app.server.security.identity_access.identity_access_vrn import VRN_PREFIX, format_entity_vrn, format_entity_type_vrn, format_role_vrn, format_chat_session_vrn, format_chat_session_collection_vrn, format_knowledge_document_vrn, format_knowledge_collection_vrn
 from app.server.security.identity_access.identity_access_policies.identity_access_policy_statement import IdentityAccessPolicyStatement
 from app.server.security.identity_access.identity_access_policies.identity_access_policy_base import IdentityAccessPolicyBase
 from app.server.security.identity_access.identity_access_policies.identity_access_permission_policy.identity_access_permission_policy import IdentityAccessPermissionPolicy
@@ -62,6 +62,8 @@ __all__ = [
     "format_role_vrn",
     "format_chat_session_vrn",
     "format_chat_session_collection_vrn",
+    "format_knowledge_document_vrn",
+    "format_knowledge_collection_vrn",
     "IdentityAccessPolicyStatement",
     "IdentityAccessPolicyBase",
     "IdentityAccessPermissionPolicy",

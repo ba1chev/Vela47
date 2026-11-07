@@ -15,6 +15,8 @@ from app.intelligence.model import ModelFoundation
 from app.intelligence.memory import ShortTermMemory
 from app.intelligence.tracing import TracingServiceNull
 from app.intelligence.tracing import TracingServiceBase
+from app.intelligence.memory import ContextWindowOperationShrink
+from app.intelligence.memory import ContextWindowOperationTruncate
 
 
 class AgentBase(ABC):
@@ -24,7 +26,16 @@ class AgentBase(ABC):
     Concrete subclasses implement execute() and define the inference loop — how
     human messages turn into AI responses, whether tools are invoked, and how the
     context window is updated between turns. The vector_db_memory and tool_registry
-    are optional: agents that do not need long-term retrieval or tool use omit them."""
+    are optional: agents that do not need long-term retrieval or tool use omit them.
+
+    A conversational agent hands its earlier turns to whatever answers for it, and
+    _history() is that bounded view: the last max_context_window_size messages, each
+    cut to HISTORY_MESSAGE_CHARS, because a small model's context also has to hold the
+    prompts of the agent's own stages. restore() refills the memory from a stored
+    conversation, which is how an agent built for one request resumes a chat that
+    began in an earlier one."""
+
+    HISTORY_MESSAGE_CHARS = 1200
 
     def __init__(self, model: ModelFoundation, prompt_manager: PromptManager,
         max_context_window_size: int, tool_registry: Optional[ToolRegistry] = None,
@@ -48,6 +59,12 @@ class AgentBase(ABC):
             if tool_registry is not None else None
         )
         self._vector_db_memory: Optional[VectorDbMemory] = vector_db_memory
+        self._history_shrink: ContextWindowOperationShrink = ContextWindowOperationShrink(
+            n = max_context_window_size
+        )
+        self._history_truncate: ContextWindowOperationTruncate = ContextWindowOperationTruncate(
+            max_chars = self.HISTORY_MESSAGE_CHARS
+        )
 
     def _append_human(self, message: MessageHuman) -> None:
         self._short_term_memory.append_message(message.content, MessageType.HUMAN_MESSAGE)
@@ -62,6 +79,15 @@ class AgentBase(ABC):
             tool_call_id = message.tool_call_id,
             status = message.status
         )
+
+    def _history(self) -> list[MessageBase]:
+        return self._history_truncate.apply(
+            self._history_shrink.apply(self._short_term_memory.get_all())
+        )
+
+    def restore(self, messages: list[MessageBase]) -> None:
+        for current_message in messages:
+            self._short_term_memory.append_message(current_message.content, current_message.type)
 
     def _compose_messages(self) -> list[MessageBase]:
         system_messages = self._prompt_manager.build_system_messages()

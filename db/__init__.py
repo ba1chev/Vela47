@@ -8,6 +8,9 @@ from db.tables.identity_access_resource_policy_table import IdentityAccessResour
 from db.tables.utc_date_time import UtcDateTime
 from db.tables.chat_session_table import ChatSessionTable
 from db.tables.identity_entity_table import IdentityEntityTable
+from db.tables.float32_vector import Float32Vector
+from db.tables.knowledge_document_table import KnowledgeDocumentTable
+from db.tables.knowledge_chunk_table import KnowledgeChunkTable
 from db.tables.table_registry import TABLE_REGISTRY
 from db.database_base import DatabaseBase
 from db.database_factory.database_factory_base import DatabaseFactoryBase
@@ -25,6 +28,9 @@ __all__ = [
     "UtcDateTime",
     "ChatSessionTable",
     "IdentityEntityTable",
+    "Float32Vector",
+    "KnowledgeDocumentTable",
+    "KnowledgeChunkTable",
     "TABLE_REGISTRY",
     "DatabaseBase",
     "DatabaseFactoryBase",

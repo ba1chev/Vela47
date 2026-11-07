@@ -84,6 +84,16 @@ class TestIdentityAccessRoles:
         assert ALLOW in permission_verdicts(IdentityAccessRoleType.GUEST, "session:Write", "vrn:session:1:session/a")
         assert ALLOW not in permission_verdicts(IdentityAccessRoleType.GUEST, "session:Read", "vrn:session:2:session/a")
 
+    def test_users_and_guests_own_their_documents_and_nobody_elses(self):
+        for current_role in [IdentityAccessRoleType.USER, IdentityAccessRoleType.GUEST]:
+            for current_action in ["knowledge:Upload", "knowledge:List", "knowledge:Delete", "knowledge:Search"]:
+                assert ALLOW in permission_verdicts(current_role, current_action, "vrn:knowledge:1:document/d")
+            assert ALLOW not in permission_verdicts(current_role, "knowledge:Delete", "vrn:knowledge:2:document/d")
+
+    def test_both_agents_may_be_run_by_users_and_guests(self):
+        for current_role in [IdentityAccessRoleType.USER, IdentityAccessRoleType.GUEST]:
+            assert ALLOW in permission_verdicts(current_role, "agent:Run", "vrn:agent::rag-agent")
+
     def test_admin_may_read_anyones_conversation(self):
         assert ALLOW in permission_verdicts(IdentityAccessRoleType.ADMIN, "session:Read", "vrn:session:2:session/a")
 

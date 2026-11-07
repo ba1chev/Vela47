@@ -35,7 +35,17 @@
   </main>
 
   <div class="app" id="app" hidden>
-    <aside class="sessions" id="sessions" aria-label="Conversations">
+    <aside class="sessions" id="sessions" aria-label="Agent, conversations and documents">
+      <div class="agent-picker">
+        <label class="field">
+          <span>Agent</span>
+          <select id="agent-select">
+            <option value="deep">Deep agent</option>
+            <option value="rag">RAG agent</option>
+          </select>
+        </label>
+      </div>
+
       <header class="sessions-head">
         <h2>Chats</h2>
         <button type="button" id="new-chat" class="ghost">+ new</button>
@@ -44,6 +54,26 @@
         <ol class="session-list" id="session-list"></ol>
         <div class="sessions-empty" id="sessions-empty">No conversations yet.</div>
       </div>
+
+      <section class="knowledge" aria-label="Documents">
+        <header class="sessions-head">
+          <h2>Documents</h2>
+          <label class="ghost upload" id="upload-label">
+            + upload
+            <input type="file" id="knowledge-file"
+                   accept=".txt,.md,.markdown,.text,.csv,.json,.log,.rst,.html,.xml,.yaml,.yml">
+          </label>
+        </header>
+        <div class="usage" id="usage">
+          <div class="usage-bar"><span class="usage-fill" id="usage-fill"></span></div>
+          <span class="usage-text" id="usage-text"></span>
+        </div>
+        <p class="form-error knowledge-error" id="knowledge-error" role="alert" hidden></p>
+        <div class="knowledge-body">
+          <ol class="knowledge-list" id="knowledge-list"></ol>
+          <div class="knowledge-empty" id="knowledge-empty">No documents yet.</div>
+        </div>
+      </section>
     </aside>
 
     <main class="chat">
@@ -89,8 +119,8 @@
       <div class="messages" id="messages">
         <div class="empty" id="empty">
           <div class="orb" aria-hidden="true"><span></span><span></span><span></span></div>
-          <p>Ask something that needs more than one step.</p>
-          <p class="hint">The pipeline plans it, splits it into tasks, runs a subagent per task, then merges the results.</p>
+          <p id="empty-title">Ask something that needs more than one step.</p>
+          <p class="hint" id="empty-hint">The pipeline plans it, splits it into tasks, runs a subagent per task, then merges the results.</p>
         </div>
       </div>
 

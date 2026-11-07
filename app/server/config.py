@@ -71,6 +71,21 @@ class Config(BaseModel):
         description = "PROD only, required. Region of the secrets — VELA47_AWS_REGION, falling back "
             "to AWS_REGION and AWS_DEFAULT_REGION."
     )
+    knowledge_max_file_bytes: int = Field(
+        default = 512 * 1024,
+        gt = 0,
+        description = "Largest document one upload may be, in UTF-8 bytes — "
+            "VELA47_KNOWLEDGE_MAX_FILE_BYTES. Every chunk of an upload is embedded before the "
+            "request returns, so this also bounds how long an upload can take."
+    )
+    knowledge_max_owner_bytes: int = Field(
+        default = 2 * 1024 * 1024,
+        gt = 0,
+        description = "Total size of the documents one owner may keep, in UTF-8 bytes — "
+            "VELA47_KNOWLEDGE_MAX_OWNER_BYTES. All of an owner's chunks are loaded for every "
+            "question the RAG agent answers, so this bounds the cost of a search as well as "
+            "the size of the database."
+    )
     token_secret: Optional[SecretStr] = Field(
         default = None,
         description = "Key that signs session tokens, at least 32 bytes. PROD: 'token_secret' in the "
@@ -118,7 +133,9 @@ class Config(BaseModel):
             "database_name": environ.get("VELA47_DATABASE_NAME", "vela47"),
             "database_ssl_mode": environ.get("VELA47_DATABASE_SSL_MODE", "require"),
             "database_secret_id": environ.get("VELA47_DATABASE_SECRET_ID"),
-            "aws_region": region
+            "aws_region": region,
+            "knowledge_max_file_bytes": int(environ.get("VELA47_KNOWLEDGE_MAX_FILE_BYTES", 512 * 1024)),
+            "knowledge_max_owner_bytes": int(environ.get("VELA47_KNOWLEDGE_MAX_OWNER_BYTES", 2 * 1024 * 1024))
         }
         if environ.get("VELA47_SQLITE_PATH"):
             values["sqlite_path"] = environ["VELA47_SQLITE_PATH"]

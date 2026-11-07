@@ -12,9 +12,10 @@ class IdentityAccessRoleUser(IdentityAccessRoleBase):
     an admin can work without carrying admin rights around — the role is what gets
     checked, not who is holding it.
 
-    Conversations are granted through ${principal.id}: vrn:session:${principal.id}:*
-    gives every user their own and nobody else's, with one statement for all of them.
-    Seeing someone else's conversation would take a resource policy on it."""
+    Conversations and uploaded documents are granted through ${principal.id}:
+    vrn:session:${principal.id}:* and vrn:knowledge:${principal.id}:* give every user
+    their own and nobody else's, with one statement each for all of them. Seeing
+    someone else's would take a resource policy on it."""
 
     @property
     def role_type(self) -> IdentityAccessRoleType:
@@ -51,6 +52,12 @@ class IdentityAccessRoleUser(IdentityAccessRoleBase):
                         effect = IdentityAccessPolicyEffect.ALLOW,
                         actions = ["session:*"],
                         resources = ["vrn:session:${principal.id}:*"]
+                    ),
+                    IdentityAccessPolicyStatement(
+                        sid = "OwnKnowledge",
+                        effect = IdentityAccessPolicyEffect.ALLOW,
+                        actions = ["knowledge:*"],
+                        resources = ["vrn:knowledge:${principal.id}:*"]
                     )
                 ]
             )

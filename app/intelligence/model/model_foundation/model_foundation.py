@@ -23,6 +23,11 @@ class ModelFoundation(ModelBase):
     until the full response arrives and attaches a populated MessageUsageMetadata;
     stream() yields raw text chunks as they are produced, token by token.
 
+    think is handed to Ollama as a parameter of its own, not among the sampling
+    options. Ollama ignores it there, and a reasoning model then thinks on every call
+    whatever the config says — dozens of times slower for a one-line reply, with the
+    reasoning sometimes leaking into the answer.
+
     Every invoke() is reported to the injected tracer, which is where a run's token
     accounting comes from — the model is the only component that sees usage, so if
     it stays silent no layer above it can report cost."""
@@ -52,13 +57,14 @@ class ModelFoundation(ModelBase):
             "temperature": self._config.temperature,
             "top_p": self._config.top_p,
             "top_k": self._config.top_k,
-            "repeat_penalty": self._config.repeat_penalty,
-            "think": self._config.think
+            "repeat_penalty": self._config.repeat_penalty
         }
         if self._config.seed is not None:
             options["seed"] = self._config.seed
         if self._config.stop is not None:
             options["stop"] = self._config.stop
+        if self._config.context_window_tokens is not None:
+            options["num_ctx"] = self._config.context_window_tokens
         if self._config.max_output_tokens is not None:
             options["num_predict"] = self._config.max_output_tokens
         return options
@@ -81,7 +87,8 @@ class ModelFoundation(ModelBase):
             messages = self._format_messages(messages),
             options = self._build_options(),
             keep_alive = self._config.keep_alive,
-            tools = tools
+            tools = tools,
+            think = self._config.think
         )
         input_tokens = response.get("prompt_eval_count", 0)
         output_tokens = response.get("eval_count", 0)
@@ -120,7 +127,8 @@ class ModelFoundation(ModelBase):
             messages = self._format_messages(messages),
             options = self._build_options(),
             keep_alive = self._config.keep_alive,
-            stream = True
+            stream = True,
+            think = self._config.think
         ):
             input_tokens = chunk.get("prompt_eval_count", 0) or input_tokens
             output_tokens = chunk.get("eval_count", 0) or output_tokens

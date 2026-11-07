@@ -17,10 +17,20 @@ class VectorDbMemory(MemoryBase):
     filter, rerank, deduplicate — executed by the VectorDbOperationManager.
     Satisfies the MemoryBase contract so it can substitute for any memory
     implementation, while exposing an additional search() method for
-    semantic retrieval."""
+    semantic retrieval.
 
-    def __init__(self, embeddings: ModelEmbeddings) -> None:
+    Entries whose vectors were computed earlier — read back from a database — are
+    loaded with add_entries() and never embedded twice. search_entries() returns the
+    entries themselves, vectors included, for a caller that goes on to rerank them.
+
+    query_template exists because some embedding models are asymmetric: they expect a
+    query to carry an instruction that a stored passage does not. Only the query
+    vector is built from the template; the query text itself reaches keyword-matching
+    operations unchanged, since an instruction's words would match every passage."""
+
+    def __init__(self, embeddings: ModelEmbeddings, query_template: str = "{query}") -> None:
         self._embeddings: ModelEmbeddings = embeddings
+        self._query_template: str = query_template
         self._messages_factory: MessageFactoryBase = MessageFactory()
         self._operation_manager: VectorDbOperationManager = VectorDbOperationManager()
         self._entries: list[VectorDbMemoryEntry] = []
@@ -30,17 +40,26 @@ class VectorDbMemory(MemoryBase):
         vector = self._embeddings.embed(message)
         self._entries.append(VectorDbMemoryEntry(message = msg, vector = vector))
 
+    def add_entries(self, entries: list[VectorDbMemoryEntry]) -> None:
+        self._entries.extend(entries)
+
     def get_message(self, index: int) -> MessageBase:
         if index < 0 or index >= len(self._entries):
             raise IndexError(f"Index {index} is out of range for store of size {len(self._entries)}")
         return self._entries[index].message
 
+    def search_entries(self, query: str, top_k: int,
+        policy: VectorDbOperationPolicy) -> list[VectorDbMemoryEntry]:
+        if not self._entries:
+            return []
+
+        query_vector = self._embeddings.embed(self._query_template.format(query = query))
+        operations = policy.resolve(self._entries, query, query_vector, top_k)
+        return self._operation_manager.apply(operations, self._entries)
+
     def search(self, query: str, top_k: int,
         policy: VectorDbOperationPolicy) -> list[MessageBase]:
-        query_vector = self._embeddings.embed(query)
-        operations = policy.resolve(self._entries, query_vector, top_k)
-        results = self._operation_manager.apply(operations, self._entries)
-        return [entry.message for entry in results]
+        return [entry.message for entry in self.search_entries(query, top_k, policy)]
 
     def __len__(self) -> int:
         return len(self._entries)

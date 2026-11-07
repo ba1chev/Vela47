@@ -8,7 +8,9 @@ from contextlib import asynccontextmanager
 from app.server.config import Config
 from app.server.builders import build_database
 from app.server.builders import install_security
+from app.server.builders import build_rag_indexer
 from app.server.builders import build_sandbox_pool
+from app.server.knowledge import KnowledgeStoreSql
 from app.server.security import IdentityEntityType
 from app.server.security import IdentityAccessService
 from app.server.security import IdentityAccessStoreSql
@@ -73,6 +75,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await asyncio.to_thread(database.start)
     app.state.database = database
     app.state.chat_session_store = ChatSessionStoreSql(database)
+    app.state.knowledge_store = KnowledgeStoreSql(database)
+    app.state.rag_indexer = build_rag_indexer()
     logger.warning(
         "Database ready: %s in %s mode", database.database_type.value, config.environment.value
     )

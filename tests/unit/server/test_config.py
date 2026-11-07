@@ -92,6 +92,14 @@ class TestConfig:
         with pytest.raises(ValidationError):
             Config.from_environment(PROD, make_reader({"admin_username": "root"}))
 
+    def test_document_limits_default_to_half_a_megabyte_and_two_megabytes(self):
+        config = Config.from_environment({})
+        assert config.knowledge_max_file_bytes == 512 * 1024 and config.knowledge_max_owner_bytes == 2 * 1024 * 1024
+
+    def test_document_limits_come_from_the_environment_in_both_modes(self):
+        config = Config.from_environment(dict(PROD, VELA47_KNOWLEDGE_MAX_OWNER_BYTES = "4096"), make_reader())
+        assert config.knowledge_max_owner_bytes == 4096
+
     def test_secrets_never_show_in_a_repr(self):
         config = Config.from_environment({"VELA47_TOKEN_SECRET": "s" * 32, "VELA47_ADMIN_PASSWORD": "admin-password-long"})
         assert "s" * 32 not in repr(config) and "admin-password-long" not in repr(config)
