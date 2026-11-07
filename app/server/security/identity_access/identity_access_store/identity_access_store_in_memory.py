@@ -1,9 +1,9 @@
 from threading import Lock
 from typing import Optional
 
-from app.server.security.identity_access.identity_entities.identity_entity_base import IdentityEntityBase
-from app.server.security.identity_access.identity_access_store.identity_access_store_base import IdentityAccessStoreBase
-from app.server.security.identity_access.identity_access_policies.identity_access_resource_policy.identity_access_resource_policy import IdentityAccessResourcePolicy
+from app.server.security import IdentityEntityBase
+from app.server.security import IdentityAccessStoreBase
+from app.server.security import IdentityAccessResourcePolicy
 
 
 class IdentityAccessStoreInMemory(IdentityAccessStoreBase):
