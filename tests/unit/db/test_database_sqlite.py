@@ -4,10 +4,10 @@ import tempfile
 from sqlalchemy import inspect
 from datetime import datetime, timezone
 
-from db.database_type import DatabaseType
-from db.database_sqlite import DatabaseSqlite
-from db.tables.table_registry import TABLE_REGISTRY
-from db.tables.identity_entity_table import IdentityEntityTable
+from db import DatabaseType
+from db import DatabaseSqlite
+from db import TABLE_REGISTRY
+from db import IdentityEntityTable
 
 
 def make_row(id = "a" * 32, name = "ana"):
