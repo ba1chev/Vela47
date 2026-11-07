@@ -1,20 +1,20 @@
-from app.intelligence.model import ModelConfig
 from app.intelligence.agents import DeepAgent
-from app.intelligence.agents import PromptManager
-from app.intelligence.tracing import TracingServiceBase
-from app.intelligence.model import ModelFoundation
+from app.intelligence.model import ModelConfig
 from app.intelligence.tools import ToolReadFile
 from app.intelligence.tools import ToolWriteFile
 from app.intelligence.tools import ToolWriteTest
+from app.intelligence.agents import PromptManager
+from app.intelligence.model import ModelFoundation
 from app.intelligence.tools import ToolSearchFiles
-from app.intelligence.middleware import MiddlewareSlidingWindow
-from app.intelligence.agents import OperationPipeline
-from app.intelligence.agents import SUBAGENT_SYSTEM_PROMPT_TEMPLATES
-from app.intelligence.agents import OperationPolicyFull
 from app.intelligence.sandbox import SandboxPoolBase
+from app.intelligence.agents import OperationPipeline
+from app.intelligence.tracing import TracingServiceBase
+from app.intelligence.agents import OperationPolicyFull
 from app.intelligence.agents import OperationSubagentType
-from app.intelligence.agents import OperationSubagentBlueprint
 from app.intelligence.agents import OperationSubagentFactory
+from app.intelligence.agents import OperationSubagentBlueprint
+from app.intelligence.middleware import MiddlewareSlidingWindow
+from app.intelligence.agents import SUBAGENT_SYSTEM_PROMPT_TEMPLATES
 
 MODEL_NAME = "qwen3:1.7b"
 
@@ -41,6 +41,10 @@ def build_deep_agent(tracing_service: TracingServiceBase,
     The sandbox pool is the exception and is passed in. Its containers are started
     once for the whole process, so rebuilding it per request would mean paying tens
     of seconds of container startup on every message.
+
+    The DeepAgent keeps the last eight messages of a conversation as history. A small
+    model's context has to hold the planning schema as well, and a long chat would
+    otherwise push that out of it.
 
     The three models are separate instances on purpose. Planning is pinned to a low
     temperature because its output must satisfy a JSON schema, while merging is left
@@ -80,7 +84,7 @@ def build_deep_agent(tracing_service: TracingServiceBase,
     return DeepAgent(
         model = merging_model,
         prompt_manager = PromptManager(),
-        max_context_window_size = 40,
+        max_context_window_size = 8,
         operation_pipeline = OperationPipeline(policy, tracing_service),
         tracing_service = tracing_service
     )
