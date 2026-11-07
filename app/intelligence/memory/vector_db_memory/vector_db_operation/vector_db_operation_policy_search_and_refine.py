@@ -20,7 +20,7 @@ class SearchAndRefinePolicy(VectorDbOperationPolicy):
         self._dedup_threshold = dedup_threshold
         self._oversample = oversample
 
-    def resolve(self, entries: list[VectorDbMemoryEntry],
+    def resolve(self, entries: list[VectorDbMemoryEntry], query: str,
         query_vector: list[float], top_k: int) -> list[VectorDbOperation]:
         return [
             VectorDbOperationSearch(query_vector = query_vector, top_k = top_k * self._oversample),
