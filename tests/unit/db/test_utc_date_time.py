@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime, timedelta, timezone
 
-from db.tables.utc_date_time import UtcDateTime
+from db import UtcDateTime
 
 PLUS_TWO = timezone(timedelta(hours = 2))
 
