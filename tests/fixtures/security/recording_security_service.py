@@ -1,4 +1,4 @@
-from app.server.security.security_service_base import SecurityServiceBase
+from app.server.security import SecurityServiceBase
 
 
 class RecordingSecurityService(SecurityServiceBase):
