@@ -1,7 +1,7 @@
-from app.server.security.identity_access.identity_access_request import IdentityAccessRequest
-from app.server.security.identity_access.identity_access_roles.identity_access_role_type import IdentityAccessRoleType
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_effect import IdentityAccessPolicyEffect
-from app.server.security.identity_access.identity_access_roles.identity_access_role_registry import IDENTITY_ACCESS_ROLE_REGISTRY
+from app.server.security import IdentityAccessRequest
+from app.server.security import IdentityAccessRoleType
+from app.server.security import IdentityAccessPolicyEffect
+from app.server.security import IDENTITY_ACCESS_ROLE_REGISTRY
 
 ALLOW = IdentityAccessPolicyEffect.ALLOW
 DENY = IdentityAccessPolicyEffect.DENY
