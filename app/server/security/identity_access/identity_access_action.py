@@ -15,3 +15,8 @@ class IdentityAccessAction(str, Enum):
     AGENT_RUN = "agent:Run"
     IAM_ASSUME_ROLE = "iam:AssumeRole"
     IAM_CREATE_ENTITY = "iam:CreateEntity"
+    SESSION_CREATE = "session:Create"
+    SESSION_LIST = "session:List"
+    SESSION_READ = "session:Read"
+    SESSION_WRITE = "session:Write"
+    SESSION_DELETE = "session:Delete"
