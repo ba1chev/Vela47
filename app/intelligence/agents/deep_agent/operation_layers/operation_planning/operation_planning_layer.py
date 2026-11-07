@@ -20,7 +20,11 @@ class OperationPlanningLayer(OperationLayerBase):
 
     Parsing is delegated to OutputParserStructured, which means a malformed plan
     raises a ValidationError here rather than surfacing as a confusing failure
-    three layers later."""
+    three layers later.
+
+    The conversation's earlier turns sit between the system prompt and the goal, in
+    the order they happened, so a goal like 'now add tests for it' can be planned
+    against what 'it' was."""
 
     def __init__(self, model: ModelFoundation) -> None:
         self._model: ModelFoundation = model
@@ -41,5 +45,5 @@ class OperationPlanningLayer(OperationLayerBase):
         )
 
     def execute(self, context: OperationContext) -> None:
-        response = self._model.invoke([self._build_system_message(), context.goal])
+        response = self._model.invoke([self._build_system_message(), *context.history, context.goal])
         context.plan = self._parser.parse(response).data
