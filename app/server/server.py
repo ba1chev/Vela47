@@ -14,29 +14,29 @@ from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 from app.server.config import Config
+from app.server.requests import SignInRequest
 from app.intelligence.tracing import TraceEvent
+from app.server.security import SecurityContext
 from app.intelligence.messages import MessageHuman
+from app.server.security import AuthorizationError
+from app.server.security import IdentityEntityType
 from app.intelligence.tracing import TraceEventType
 from app.intelligence.tracing import TracingService
+from app.server.requests import CreateEntityRequest
+from app.server.security import AuthenticationError
 from app.intelligence.sandbox import SandboxPoolBase
+from app.server.security import IdentityAccessAction
 from app.server.agent_builder import build_deep_agent
+from app.server.security import IdentityAccessService
 from app.intelligence.sandbox import SandboxPoolDocker
 from app.server.database_builder import build_database
+from app.server.security import format_entity_type_vrn
+from app.server.security import IdentityAccessStoreSql
 from app.server.security_builder import install_security
 from app.intelligence.sandbox import SandboxPoolInMemory
+from app.server.security import IdentityAccessRoleSession
 from app.server.config_environment import ConfigEnvironment
-from app.server.requests.sign_in_request import SignInRequest
-from app.server.security.security_context import SecurityContext
-from app.server.requests.create_entity_request import CreateEntityRequest
-from app.server.security.authorization.authorization_error import AuthorizationError
-from app.server.security.authentication.authentication_error import AuthenticationError
-from app.server.security.identity_access.identity_access_vrn import format_entity_type_vrn
-from app.server.security.identity_access.identity_access_action import IdentityAccessAction
-from app.server.security.identity_access.identity_access_service import IdentityAccessService
-from app.server.security.identity_access.identity_access_role_session import IdentityAccessRoleSession
-from app.server.security.identity_access.identity_entities.identity_entity_type import IdentityEntityType
-from app.server.security.authentication.authentication_password_hasher import AuthenticationPasswordHasher
-from app.server.security.identity_access.identity_access_store.identity_access_store_sql import IdentityAccessStoreSql
+from app.server.security import AuthenticationPasswordHasher
 
 STATIC_DIR = pathlib.Path(__file__).parent / "static"
 POLL_INTERVAL_SECONDS = 0.05
