@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from app.server.security.identity_access.identity_entities.identity_entity_type import IdentityEntityType
+from app.server.security import IdentityEntityType
 
 
 class CreateEntityRequest(BaseModel):
