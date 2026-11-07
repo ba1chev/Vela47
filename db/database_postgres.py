@@ -2,9 +2,9 @@ from typing import Any, Callable
 from sqlalchemy.engine import URL, Engine
 from sqlalchemy import create_engine, event
 
-from db.database_base import DatabaseBase
-from db.database_type import DatabaseType
-from db.database_credentials import DatabaseCredentials
+from db import DatabaseBase
+from db import DatabaseType
+from db import DatabaseCredentials
 
 
 class DatabasePostgres(DatabaseBase):
