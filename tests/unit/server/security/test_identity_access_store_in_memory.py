@@ -1,11 +1,11 @@
 import pytest
 from threading import Barrier, Thread
 
-from app.server.security.identity_access.identity_entities.identity_entity_user import IdentityEntityUser
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_effect import IdentityAccessPolicyEffect
-from app.server.security.identity_access.identity_access_store.identity_access_store_in_memory import IdentityAccessStoreInMemory
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_statement import IdentityAccessPolicyStatement
-from app.server.security.identity_access.identity_access_policies.identity_access_resource_policy.identity_access_resource_policy import IdentityAccessResourcePolicy
+from app.server.security import IdentityEntityUser
+from app.server.security import IdentityAccessPolicyEffect
+from app.server.security import IdentityAccessStoreInMemory
+from app.server.security import IdentityAccessResourcePolicy
+from app.server.security import IdentityAccessPolicyStatement
 
 
 def make_user(name = "ana"):
