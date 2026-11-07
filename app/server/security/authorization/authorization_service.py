@@ -1,14 +1,14 @@
-from app.server.security.security_context import SecurityContext
-from app.server.security.security_service_base import SecurityServiceBase
-from app.server.security.security_service_type import SecurityServiceType
-from app.server.security.authorization.authorization_error import AuthorizationError
-from app.server.security.authorization.authorization_decision import AuthorizationDecision
-from app.server.security.identity_access.identity_access_action import IdentityAccessAction
-from app.server.security.identity_access.identity_access_request import IdentityAccessRequest
-from app.server.security.identity_access.identity_access_service import IdentityAccessService
-from app.server.security.identity_access.identity_access_role_session import IdentityAccessRoleSession
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_base import IdentityAccessPolicyBase
-from app.server.security.identity_access.identity_access_policies.identity_access_policy_effect import IdentityAccessPolicyEffect
+from app.server.security import SecurityContext
+from app.server.security import AuthorizationError
+from app.server.security import SecurityServiceBase
+from app.server.security import SecurityServiceType
+from app.server.security import IdentityAccessAction
+from app.server.security import AuthorizationDecision
+from app.server.security import IdentityAccessRequest
+from app.server.security import IdentityAccessService
+from app.server.security import IdentityAccessPolicyBase
+from app.server.security import IdentityAccessRoleSession
+from app.server.security import IdentityAccessPolicyEffect
 
 
 class AuthorizationService(SecurityServiceBase):
