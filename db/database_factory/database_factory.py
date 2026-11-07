@@ -1,9 +1,9 @@
 from typing import Any
 
-from db.database_base import DatabaseBase
-from db.database_type import DatabaseType
-from db.database_factory.database_registry import DATABASE_REGISTRY
-from db.database_factory.database_factory_base import DatabaseFactoryBase
+from db import DatabaseBase
+from db import DatabaseType
+from db import DATABASE_REGISTRY
+from db import DatabaseFactoryBase
 
 
 class DatabaseFactory(DatabaseFactoryBase):
