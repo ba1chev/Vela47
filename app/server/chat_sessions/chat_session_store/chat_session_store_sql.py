@@ -3,14 +3,14 @@ from typing import Any, Optional
 from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
-from db.database_base import DatabaseBase
+from db import DatabaseBase
+from db import ChatSessionTable
+from app.server.chat_sessions import ChatSession
 from app.intelligence.messages import MessageBase
 from app.intelligence.messages import MessageType
 from app.intelligence.messages import MessageFactory
 from app.intelligence.messages import MessageFactoryBase
-from db.tables.chat_session_table import ChatSessionTable
-from app.server.chat_sessions.chat_session import ChatSession
-from app.server.chat_sessions.chat_session_store.chat_session_store_base import ChatSessionStoreBase
+from app.server.chat_sessions import ChatSessionStoreBase
 
 
 class ChatSessionStoreSql(ChatSessionStoreBase):
