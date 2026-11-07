@@ -14,3 +14,11 @@ def format_entity_type_vrn(entity_type: IdentityEntityType) -> str:
 
 def format_role_vrn(role_type: IdentityAccessRoleType) -> str:
     return f"{VRN_PREFIX}:iam::role/{role_type.value}"
+
+
+def format_chat_session_vrn(owner_id: str, session_id: str) -> str:
+    return f"{format_chat_session_collection_vrn(owner_id)}/{session_id}"
+
+
+def format_chat_session_collection_vrn(owner_id: str) -> str:
+    return f"{VRN_PREFIX}:session:{owner_id}:session"
