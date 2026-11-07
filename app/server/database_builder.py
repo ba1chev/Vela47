@@ -1,12 +1,12 @@
 from typing import Callable
 
+from db import DatabaseBase
+from db import DatabaseType
+from db import DatabaseFactory
+from db import DatabaseCredentials
 from app.server.config import Config
-from db.database_base import DatabaseBase
-from db.database_type import DatabaseType
 from app.server.config_secrets import read_secret
-from db.database_credentials import DatabaseCredentials
 from app.server.config_environment import ConfigEnvironment
-from db.database_factory.database_factory import DatabaseFactory
 
 
 def build_database(config: Config,
