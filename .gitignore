@@ -3,3 +3,4 @@ __pycache__
 main.py
 .pytest_cache
 *.sqlite3
+tests/evals/results
