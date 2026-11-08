@@ -2,6 +2,7 @@ from app.intelligence.messages import MessageAI
 from app.intelligence.agents import OperationPlan
 from app.intelligence.agents import OperationStep
 from app.intelligence.agents import OperationType
+from app.intelligence.agents import OperationTask
 from app.intelligence.messages import MessageHuman
 from app.intelligence.tracing import TracingService
 from app.intelligence.tracing import TraceEventType
@@ -73,3 +74,16 @@ class TestOperationMergingLayer:
         context = make_context()
         OperationMergingLayer(FakeModel(["one two three"])).execute(context)
         assert context.final.content.strip() == "one two three"
+
+    def test_each_report_is_written_under_the_step_that_produced_it(self):
+        model = FakeModel(["answer"])
+        context = make_context()
+        context.tasks = [
+            OperationTask(id = "t1", step_index = 0, subagent_type = OperationSubagentType.RESEARCH, instruction = "find the prices"),
+            OperationTask(id = "t2", step_index = 1, subagent_type = OperationSubagentType.REVIEW, instruction = "check prices.py")
+        ]
+        OperationMergingLayer(model).execute(context)
+        report = model.calls[0][0][1].content
+        assert "Step 1 (RESEARCH): find the prices\nReport (success): found this" in report
+        assert "Step 2 (REVIEW): check prices.py\nReport (error): it broke" in report
+        assert report.endswith("Write your answer to the user's request now.")

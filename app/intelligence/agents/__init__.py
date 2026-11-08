@@ -18,6 +18,7 @@ from app.intelligence.agents.deep_agent.prompts.planning_system_prompt import PL
 from app.intelligence.agents.deep_agent.prompts.subagent_capabilities import SUBAGENT_CAPABILITIES, format_subagent_capabilities
 from app.intelligence.agents.deep_agent.operation_layers.operation_planning.operation_planning_layer import OperationPlanningLayer
 from app.intelligence.agents.deep_agent.prompts.subagent_act_prompt import SUBAGENT_ACT_PROMPT
+from app.intelligence.agents.deep_agent.prompts.subagent_report_prompt import SUBAGENT_REPORT_PROMPT
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent import OperationSubagent
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagents_factory.operation_subagent_factory_base import OperationSubagentFactoryBase
 from app.intelligence.agents.deep_agent.prompts.subagent_task_template import SUBAGENT_TASK_TEMPLATE
@@ -82,6 +83,7 @@ __all__ = [
     "format_subagent_capabilities",
     "OperationPlanningLayer",
     "SUBAGENT_ACT_PROMPT",
+    "SUBAGENT_REPORT_PROMPT",
     "OperationSubagent",
     "OperationSubagentFactoryBase",
     "SUBAGENT_TASK_TEMPLATE",

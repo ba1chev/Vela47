@@ -11,6 +11,7 @@ from app.intelligence.sandbox import SandboxEnvLocal
 from app.intelligence.messages import MessageToolCall
 from app.intelligence.agents import OperationSubagent
 from app.intelligence.agents import SUBAGENT_ACT_PROMPT
+from app.intelligence.agents import SUBAGENT_REPORT_PROMPT
 from app.intelligence.middleware import MiddlewareSlidingWindow
 from tests.fixtures.model.scripted_tool_model import ScriptedToolModel
 
@@ -101,3 +102,20 @@ class TestOperationSubagent:
         subagent, model, _ = make_subagent([call("read_file", {"path": "a.py"}, "c1"), MessageAI(content = "a.py is missing.")])
         assert subagent.execute(MessageHuman(content = "read a.py")).content == "a.py is missing."
         assert len(model.calls) == 2
+
+    def test_the_last_turn_is_told_that_no_tools_are_left(self):
+        subagent, model, _ = make_subagent([call("read_file", {"path": "a.py"}, "c1"), MessageAI(content = "a.py is missing.")], max_iterations = 1)
+        subagent.execute(MessageHuman(content = "read a.py"))
+        assert model.calls[-1][0][-1].content == SUBAGENT_REPORT_PROMPT and model.calls[-1][1] is None
+
+    def test_a_tool_call_written_as_text_is_replaced_by_the_last_real_result(self):
+        written = MessageAI(content = '<tool_call>\n{"name": "read_file", "arguments": {"path": "a.py"}}\n</tool_call>')
+        subagent, _, _ = make_subagent([call("read_file", {"path": "a.py"}, "c1"), written], max_iterations = 1)
+        report = subagent.execute(MessageHuman(content = "read a.py")).content
+        assert report.startswith("This step ran out of turns") and "read_file" in report and "does not exist" in report
+        assert "<tool_call>" not in report
+
+    def test_text_around_a_tool_call_written_as_text_is_kept(self):
+        written = MessageAI(content = 'a.py is missing.\n<tool_call>\n{"name": "read_file"}\n</tool_call>')
+        subagent, _, _ = make_subagent([call("read_file", {"path": "a.py"}, "c1"), written])
+        assert subagent.execute(MessageHuman(content = "read a.py")).content == "a.py is missing."

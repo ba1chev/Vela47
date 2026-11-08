@@ -19,6 +19,11 @@ class RagGenerationLayer(RagLayerBase):
     reporting every chunk as an ANSWER_CHUNK event exactly as the DeepAgent's merging
     layer does, so the browser renders both agents' answers the same way.
 
+    The sources come first and the question last, each source under its number and the
+    title of its document. What a small model reads last weighs most in what it writes,
+    and it is the question it must answer — with the question first, the passages
+    after it are what the answer drifts toward.
+
     Sources are numbered in the order reranking left them, and the same numbers travel
     with the answer in response_metadata — document, chunk, score and an excerpt — so a
     citation such as [2] can always be traced back to the passage it came from, even
@@ -50,10 +55,12 @@ class RagGenerationLayer(RagLayerBase):
         return content if isinstance(content, str) else str(content)
 
     def _build_prompt(self, context: RagContext) -> str:
-        lines = [f"QUESTION: {self._text_of(context.goal.content)}", "", "SOURCES:"]
+        lines = ["SOURCES:"]
         for number, current_entry in enumerate(context.passages, start = 1):
-            lines.append(f"[{number}] ({current_entry.message.name}) {self._text_of(current_entry.message.content)}")
+            lines.append(f"[{number}] {current_entry.message.name}")
+            lines.append(self._text_of(current_entry.message.content))
             lines.append("")
+        lines.append(f"QUESTION: {self._text_of(context.goal.content)}")
         return "\n".join(lines)
 
     def _sources(self, context: RagContext) -> list[dict[str, Any]]:
