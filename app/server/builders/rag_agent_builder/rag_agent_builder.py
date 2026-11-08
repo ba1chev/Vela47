@@ -10,7 +10,7 @@ from app.intelligence.memory import HybridSearchPolicy
 from app.intelligence.memory import VectorDbMemoryEntry
 from app.intelligence.tracing import TracingServiceBase
 
-RAG_MODEL_NAME = "qwen3:1.7b"
+RAG_MODEL_NAME = "qwen3.5:9b"
 EMBEDDING_MODEL_NAME = "qwen3-embedding:0.6b"
 EMBEDDING_QUERY_TEMPLATE = (
     "Instruct: Given a question, retrieve passages from the user's documents that answer it\n"
