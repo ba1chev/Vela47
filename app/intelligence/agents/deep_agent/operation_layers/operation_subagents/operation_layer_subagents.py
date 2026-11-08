@@ -32,7 +32,11 @@ class OperationSubagentsLayer(OperationLayerBase):
 
     A subagent is handed its instruction together with the user's goal, through
     SUBAGENT_TASK_TEMPLATE, so a step that says 'the hackathon' can be done for the
-    hackathon the user meant. The plan and the other tasks stay out of view."""
+    hackathon the user meant. The plan and the other tasks stay out of view.
+
+    The result carries the subagent's report and, beside it, the evidence its probes
+    gathered on the same step. A step that failed carries none: there is nothing the
+    system could vouch for."""
 
     def __init__(self, subagent_factory: OperationSubagentFactoryBase,
         sandbox_pool: SandboxPoolBase,
@@ -72,6 +76,7 @@ class OperationSubagentsLayer(OperationLayerBase):
                     sandbox_env = self._sandbox_pool.env_for(slot, run_id)
                     subagent = self._subagent_factory.create(task.subagent_type, sandbox_env)
                     response = subagent.execute(self._message(task))
+                    evidence = subagent.evidence
                     content = (
                         response.content
                         if isinstance(response.content, str)
@@ -80,13 +85,16 @@ class OperationSubagentsLayer(OperationLayerBase):
                     status = "success"
                 except Exception as e:
                     content = str(e)
+                    evidence = []
                     status = "error"
                 span["status"] = status
                 span["result"] = content
+                span["evidence"] = evidence
             return OperationSubagentResult(
                 task_id = task.id,
                 subagent_type = task.subagent_type,
                 content = content,
+                evidence = evidence,
                 status = status
             )
         finally:
