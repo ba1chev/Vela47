@@ -27,7 +27,9 @@ class OperationMergingLayer(OperationLayerBase):
     third result with the third step itself, and a report read without the question
     it answers is easily attributed to the wrong part of the request. The report is
     phrased in plain sentences and ends by asking for the answer: laid out under
-    capitalised labels, it was copied label by label into the answer instead.
+    capitalised labels, it was copied label by label into the answer instead. Under a
+    report come the facts the system checked on that step, each on a line of its own
+    marked as checked by the system, so the model can tell them from the report.
 
     Errors are passed to the model verbatim rather than filtered out, because a
     gap the user should know about is part of an honest answer.
@@ -66,7 +68,8 @@ class OperationMergingLayer(OperationLayerBase):
             lines.extend([
                 "",
                 f"Step {position + 1} ({current_result.subagent_type.name}): {self._instruction(context, position, current_result.task_id)}",
-                f"Report ({current_result.status}): {current_result.content}"
+                f"Report ({current_result.status}): {current_result.content}",
+                *(f"Checked by the system: {current_fact}" for current_fact in current_result.evidence)
             ])
         lines.extend(["", "Write your answer to the user's request now."])
         return "\n".join(lines)

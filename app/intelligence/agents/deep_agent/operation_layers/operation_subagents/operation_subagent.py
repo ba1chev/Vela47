@@ -14,6 +14,7 @@ from app.intelligence.middleware import MiddlewareBase
 from app.intelligence.tracing import TracingServiceBase
 from app.intelligence.agents import SUBAGENT_ACT_PROMPT
 from app.intelligence.agents import SUBAGENT_REPORT_PROMPT
+from app.intelligence.agents import OperationSubagentProbeBase
 
 
 class OperationSubagent(AgentBase):
@@ -47,7 +48,12 @@ class OperationSubagent(AgentBase):
     <tool_call> block became the step's report — which the merging layer then turned
     into test results nobody ran. Any tool call written as text is removed from the
     report; if nothing is left, the report says the step ran out of turns and passes
-    on the last tool result, which is real, instead of nothing."""
+    on the last tool result, which is real, instead of nothing.
+
+    Around the loop run the probes of its type: before() as the task starts, after() once
+    the report is written, with every message of the run. What they find is kept as
+    evidence, beside the report rather than inside it, so the merging layer can tell the
+    model's account of the step from what the system checked."""
 
     TOOL_CALL_TEXT = re.compile(r"<tool_call>.*?(</tool_call>|$)", re.DOTALL)
     LAST_RESULT_CHARS = 1200
@@ -56,7 +62,8 @@ class OperationSubagent(AgentBase):
         max_context_window_size: int, tools: list[ToolBase],
         context_window_middleware: MiddlewareBase[ContextWindow],
         max_iterations: int = 6,
-        tracing_service: Optional[TracingServiceBase] = None) -> None:
+        tracing_service: Optional[TracingServiceBase] = None,
+        probes: Optional[list[OperationSubagentProbeBase]] = None) -> None:
         tool_registry = ToolRegistry()
         for current_tool in tools:
             tool_registry.register(current_tool)
@@ -69,8 +76,24 @@ class OperationSubagent(AgentBase):
         )
         self._context_window_middleware = context_window_middleware
         self._max_iterations = max_iterations
+        self._probes: list[OperationSubagentProbeBase] = list(probes or [])
+        self._evidence: list[str] = []
+
+    @property
+    def evidence(self) -> list[str]:
+        return list(self._evidence)
 
     def execute(self, human_message: MessageHuman) -> MessageAI:
+        for current_probe in self._probes:
+            current_probe.before()
+        response = self._react(human_message)
+        messages = self._short_term_memory.get_all()
+        self._evidence = [
+            current_fact for current_probe in self._probes for current_fact in current_probe.after(messages)
+        ]
+        return response
+
+    def _react(self, human_message: MessageHuman) -> MessageAI:
         self._append_human(human_message)
         response = MessageAI(content = "")
         used_tools = False

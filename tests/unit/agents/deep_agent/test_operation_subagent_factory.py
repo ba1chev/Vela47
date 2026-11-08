@@ -10,11 +10,13 @@ from app.intelligence.agents import OperationSubagentType
 from app.intelligence.agents import OperationSubagentFactory
 from app.intelligence.agents import OperationSubagentBlueprint
 from app.intelligence.middleware import MiddlewareSlidingWindow
+from tests.fixtures.agents.recording_probe import RecordingProbe
 
 
-def make_factory(prompt = "You write code. Your tools are {tools}."):
+def make_factory(prompt = "You write code. Your tools are {tools}.", probe_factories = None):
     blueprint = OperationSubagentBlueprint(
         tool_factories = [ToolReadFile, ToolWriteFile],
+        probe_factories = probe_factories,
         prompt_template = prompt,
         model = FakeModel(),
         max_context_window_size = 8,
@@ -69,3 +71,9 @@ class TestOperationSubagentFactory:
         factory = make_factory()
         assert OperationSubagentType.CODE in factory
         assert OperationSubagentType.TEST not in factory
+
+    def test_each_task_gets_probes_bound_to_its_own_sandbox(self):
+        factory = make_factory(probe_factories = [RecordingProbe])
+        first, second = make_env(), SandboxEnvLocal(pathlib.Path(tempfile.mkdtemp()) / "run", identifier = "other")
+        assert factory.create(OperationSubagentType.CODE, first)._probes[0]._sandbox_env is first
+        assert factory.create(OperationSubagentType.CODE, second)._probes[0]._sandbox_env is second

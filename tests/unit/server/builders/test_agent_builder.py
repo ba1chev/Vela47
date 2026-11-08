@@ -10,6 +10,7 @@ from app.intelligence.sandbox import SandboxEnvLocal
 from app.intelligence.tracing import TracingServiceNull
 from app.server.builders import subagent_tool_factories
 from app.intelligence.sandbox import SandboxPoolInMemory
+from app.server.builders import SUBAGENT_PROBE_FACTORIES
 from app.intelligence.agents import OperationSubagentType
 from tests.fixtures.model.fake_embeddings import FakeEmbeddings
 from app.intelligence.agents import SUBAGENT_SYSTEM_PROMPT_TEMPLATES
@@ -66,3 +67,12 @@ class TestAgentBuilder:
     def test_the_deep_agent_is_assembled_without_contacting_anything(self):
         agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), [])
         assert isinstance(agent, DeepAgent)
+
+    def test_each_type_is_checked_by_the_probes_its_work_calls_for(self):
+        names = {current_type: [current.__name__ for current in SUBAGENT_PROBE_FACTORIES[current_type]] for current_type in OperationSubagentType}
+        assert names == {
+            OperationSubagentType.RESEARCH: ["OperationSubagentProbeSources"],
+            OperationSubagentType.CODE: ["OperationSubagentProbeWorkspace"],
+            OperationSubagentType.TEST: ["OperationSubagentProbeWorkspace", "OperationSubagentProbeTests"],
+            OperationSubagentType.REVIEW: []
+        }

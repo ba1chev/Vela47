@@ -17,7 +17,8 @@ class EvalsRecordDeepAgent(EvalsRecordBase):
         description = "The plan as it ran: each step's subagent type and the instruction it was given."
     )
     reports: list[dict[str, str]] = Field(
-        description = "What each subagent reported back, with the status its step ended in."
+        description = "What each subagent reported back, with the status its step ended in and the "
+            "evidence the system's probes gathered on the step, one fact per line."
     )
     final: str = Field(
         description = "The answer the user would have received."
@@ -46,6 +47,21 @@ class EvalsRecordDeepAgent(EvalsRecordBase):
     )
     echoes_report: bool = Field(
         description = "Whether the final answer repeated the report it was given instead of answering."
+    )
+    own_tests_passed: Optional[bool] = Field(
+        default = None,
+        description = "Whether the tests the agent wrote itself pass, run by the eval after the run. None "
+            "when the case writes no code or the run crashed; false when the agent wrote no test."
+    )
+    claims_tests_passed: bool = Field(
+        default = False,
+        description = "Whether the final answer says the tests passed — it mentions tests and passing, and "
+            "no failure, error or tests that did not run."
+    )
+    false_test_claim: bool = Field(
+        default = False,
+        description = "Whether the answer says the tests passed when the agent's own tests do not. Only "
+            "counted for cases that write code."
     )
     hidden_test_passed: Optional[bool] = Field(
         default = None,
