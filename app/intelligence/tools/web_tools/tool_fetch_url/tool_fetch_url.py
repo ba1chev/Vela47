@@ -2,6 +2,7 @@ from typing import Optional
 
 from app.intelligence.tools import ToolBase
 from app.intelligence.web import WebFetcher
+from app.intelligence.loaders import LoaderType
 from app.intelligence.loaders import LoadersFactory
 from app.intelligence.loaders import LoaderDocument
 from app.intelligence.tools import ToolFetchUrlInput
@@ -22,7 +23,12 @@ class ToolFetchUrl(ToolBase[ToolFetchUrlInput, str]):
     A page is fetched once per tool, which is once per subagent task, and kept in
     memory while the agent pages through it: asking for characters 4000 to 8000 should
     not download the page again, and should not risk the second download differing from
-    the first."""
+    the first.
+
+    A page with no text is said to be one, and an HTML page with none is most often an
+    application drawn by JavaScript, which a fetch does not run. The result says so and
+    points to another source, since the useful next move is a different search result,
+    not the same URL again."""
 
     def __init__(self, web_fetcher: WebFetcher,
         loaders_factory: Optional[LoadersFactoryBase] = None) -> None:
@@ -69,7 +75,12 @@ class ToolFetchUrl(ToolBase[ToolFetchUrlInput, str]):
         final_url, document, truncated = self._load(input.url.strip())
         text = document.text
         if not text:
-            return f"{final_url} was fetched but holds no readable text."
+            reason = (
+                " It is probably built by JavaScript, which is not run here."
+                if document.loader_type is LoaderType.HTML
+                else ""
+            )
+            return f"{final_url} was fetched but holds no readable text.{reason} Try another source for the same information."
         if input.start_index >= len(text):
             return (
                 f"{final_url} has {len(text)} characters of text, so there is nothing from "
