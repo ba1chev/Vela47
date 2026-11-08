@@ -84,5 +84,6 @@ class TestOperationMergingLayer:
         ]
         OperationMergingLayer(model).execute(context)
         report = model.calls[0][0][1].content
-        assert "STEP 1 [RESEARCH]: find the prices\nREPORT (success): found this" in report
-        assert "STEP 2 [REVIEW]: check prices.py\nREPORT (error): it broke" in report
+        assert "Step 1 (RESEARCH): find the prices\nReport (success): found this" in report
+        assert "Step 2 (REVIEW): check prices.py\nReport (error): it broke" in report
+        assert report.endswith("Write your answer to the user's request now.")
