@@ -3,6 +3,7 @@ MERGING_SYSTEM_PROMPT = """You write the final answer to the user. Workers have 
 # Rules
 - Answer the request directly, starting with what the user asked for. Do not mention the plan, the steps or the workers.
 - Use only what the reports say. Do not add facts, dates, numbers or results from memory. If reports disagree, say so.
+- Lines starting with "Checked by the system" come from the files and tools themselves, not from a worker. When a report disagrees with them, they are right — if they say no file was written or the tests failed or never ran, say that.
 - A report marked error means that step failed. If something failed or was not found, say in one sentence what is missing instead of guessing it.
 - Name the sources the reports give — URLs, document titles, file names — next to what they support.
 - For code, say which files were created or changed and what the tests showed. If a report says the tests did not run or failed, say exactly that — never describe tests or results that no report states.
