@@ -27,10 +27,18 @@ class SandboxDocker(SandboxEnv):
 
     Long output loses its middle, not its end. A test runner, a compiler and a crashing
     script all say what went wrong last, so the end is kept in full and only a short
-    head survives alongside it."""
+    head survives alongside it.
+
+    Nothing a command starts outlives it. A timeout on `docker exec` stops only the CLI
+    on the host — the process inside the container keeps running — and a test can leave
+    a child behind when it ends, so after every command each process in the container
+    except its keep-alive is killed. The container is leased to one subagent at a time,
+    so nothing of anyone else's is running there; without the sweep, one infinite loop
+    would take the container's single CPU from every task leased this slot afterwards."""
 
     MAX_OUTPUT_CHARS = 8_000
     KEPT_HEAD_CHARS = 2_000
+    SWEEP_TIMEOUT_SECONDS = 10
 
     def __init__(self, container_name: str, host_directory: pathlib.Path,
         container_directory: str) -> None:
@@ -58,6 +66,17 @@ class SandboxDocker(SandboxEnv):
     def list_files(self) -> list[str]:
         return self._files.list_files()
 
+    def _sweep(self) -> None:
+        try:
+            subprocess.run(
+                ["docker", "exec", self._container_name, "sh", "-c", "kill -9 -1"],
+                capture_output = True,
+                timeout = self.SWEEP_TIMEOUT_SECONDS,
+                check = False
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return
+
     def run(self, command: str, timeout_seconds: int = 60) -> SandboxCommandResult:
         try:
             completed = subprocess.run(
@@ -81,6 +100,8 @@ class SandboxDocker(SandboxEnv):
                 exit_code = -1,
                 output = "The docker CLI is not available on this host."
             )
+        finally:
+            self._sweep()
 
         output = (completed.stdout or "") + (completed.stderr or "")
         if len(output) > self.MAX_OUTPUT_CHARS:
