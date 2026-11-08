@@ -7,6 +7,7 @@ from app.intelligence.sandbox import SandboxEnvLocal
 from app.intelligence.tools import ToolEditFileInput
 
 SOURCE = "def area(width, height):\n    return width * height\n\n\ndef perimeter(width, height):\n    return 2 * (width + height)\n"
+CLASS_SOURCE = "class Shape:\n    def area(self):\n        return self.width * self.height\n\n    def perimeter(self):\n        return 2 * (self.width + self.height)\n"
 
 
 def make_tool(content = SOURCE):
@@ -55,6 +56,31 @@ class TestToolEditFile:
         tool = make_tool()
         edit(tool, "return width * height", "    product = width * height\n    return product")
         assert tool._sandbox_env.read_file("shapes.py").splitlines()[1:3] == ["    product = width * height", "    return product"]
+
+    def test_a_first_line_copied_without_its_indentation_leaves_the_rest_at_their_depth(self):
+        tool = make_tool(CLASS_SOURCE)
+        edit(tool, "def area(self):\n        return self.width * self.height", "def area(self):\n        return round(self.width * self.height, 2)")
+        lines = tool._sandbox_env.read_file("shapes.py").splitlines()
+        assert lines[1:3] == ["    def area(self):", "        return round(self.width * self.height, 2)"]
+
+    def test_a_method_added_after_a_first_line_without_indentation_stays_a_sibling(self):
+        tool = make_tool(CLASS_SOURCE)
+        edit(
+            tool,
+            "def area(self):\n        return self.width * self.height",
+            "def area(self):\n        return self.width * self.height\n\n    def is_square(self):\n        return self.width == self.height"
+        )
+        lines = tool._sandbox_env.read_file("shapes.py").splitlines()
+        assert lines[1:6] == [
+            "    def area(self):", "        return self.width * self.height", "",
+            "    def is_square(self):", "        return self.width == self.height"
+        ]
+
+    def test_a_block_copied_without_any_indentation_is_shifted_as_a_whole(self):
+        tool = make_tool(CLASS_SOURCE)
+        edit(tool, "def area(self):\nreturn self.width * self.height", "def area(self):\n    return abs(self.width * self.height)")
+        lines = tool._sandbox_env.read_file("shapes.py").splitlines()
+        assert lines[1:3] == ["    def area(self):", "        return abs(self.width * self.height)"]
 
     def test_part_of_a_line_is_matched_exactly(self):
         tool = make_tool()
