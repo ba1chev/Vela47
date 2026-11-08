@@ -51,7 +51,8 @@ class OperationSubagentFactory(OperationSubagentFactoryBase):
             tools = tools,
             context_window_middleware = blueprint.context_window_middleware,
             max_iterations = blueprint.max_iterations,
-            tracing_service = self._tracing_service
+            tracing_service = self._tracing_service,
+            probes = [current_factory(sandbox_env) for current_factory in blueprint.probe_factories]
         )
 
     def __contains__(self, type: OperationSubagentType) -> bool:
