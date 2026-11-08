@@ -20,8 +20,8 @@ class ToolRunTests(ToolBase[ToolRunTestsInput, str]):
 
     The command is built here, never by the model: the path and keyword are confined to
     the workspace and shell-quoted, so the only thing the agent chooses is which tests.
-    Bytecode and pytest's cache are switched off, since they would otherwise be written
-    into the run directory the other subagents read.
+    Bytecode and pytest's cache are switched off: the tests run on a copy of the
+    workspace that is deleted when they finish, so writing either would only cost time.
 
     pytest's exit code says more than its output does at a glance, so the result leads
     with what the code means — failures, a broken import, nothing collected — then the
