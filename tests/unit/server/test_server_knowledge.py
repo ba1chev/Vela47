@@ -165,6 +165,13 @@ class TestServerKnowledge:
         response = upload_file(client, "scan.pdf", PdfBuilder().build([""]), "application/pdf")
         assert response.status_code == 400 and "no text layer" in response.json()["detail"]
 
+    def test_a_damaged_pdf_is_400_not_a_server_error(self):
+        client = make_client()
+        sign_in(client, "ana")
+        damaged = PdfBuilder().build(["x"]).replace(b"/Size 6 /Root 1 0 R", b"/Size /Six /Root 9 0 R")
+        response = upload_file(client, "broken.pdf", damaged, "application/pdf")
+        assert response.status_code == 400 and "not a readable PDF" in response.json()["detail"]
+
     def test_content_that_is_not_base64_is_400(self):
         client = make_client()
         sign_in(client, "ana")
