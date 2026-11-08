@@ -34,6 +34,11 @@ class ModelFoundation(ModelBase):
     whatever the config says — dozens of times slower for a one-line reply, with the
     reasoning sometimes leaking into the answer.
 
+    An output_schema is handed to Ollama as format, which constrains decoding to JSON
+    that matches it. Describing a schema in the prompt is not enough for a small model:
+    asked for a plan, qwen3:1.7b answers some goals with the schema itself, every time,
+    and that reply can never be parsed. Constrained, it cannot produce anything else.
+
     Every invoke() is reported to the injected tracer, which is where a run's token
     accounting comes from — the model is the only component that sees usage, so if
     it stays silent no layer above it can report cost."""
@@ -91,8 +96,8 @@ class ModelFoundation(ModelBase):
             for current_call in (message.get("tool_calls") or [])
         ]
 
-    def invoke(self, messages: list[MessageBase],
-        tools: Optional[list[dict]] = None) -> MessageAI:
+    def invoke(self, messages: list[MessageBase], tools: Optional[list[dict]] = None,
+        output_schema: Optional[dict] = None) -> MessageAI:
         start = perf_counter()
         response = ollama.chat(
             model = self._config.model_name,
@@ -100,7 +105,8 @@ class ModelFoundation(ModelBase):
             options = self._build_options(),
             keep_alive = self._config.keep_alive,
             tools = tools,
-            think = self._config.think
+            think = self._config.think,
+            format = output_schema
         )
         input_tokens = response.get("prompt_eval_count", 0)
         output_tokens = response.get("eval_count", 0)
