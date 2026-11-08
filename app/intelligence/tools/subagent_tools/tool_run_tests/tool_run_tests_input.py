@@ -10,6 +10,6 @@ class ToolRunTestsInput(BaseModel):
     )
     keyword: Optional[str] = Field(
         default = None,
-        description = "Only run tests whose name matches this pytest -k expression — for "
-            "example 'empty_list'. Leave it out to run them all."
+        description = "Only run the tests whose name matches this pytest -k expression. Leave "
+            "it out — the usual case — to run every test."
     )

@@ -1,4 +1,5 @@
 from typing import Any, Optional
+from pydantic import ValidationError
 
 from app.intelligence.agents import RagContext
 from app.intelligence.messages import MessageAI
@@ -8,6 +9,7 @@ from app.intelligence.model import ModelFoundation
 from app.intelligence.messages import MessageHuman
 from app.intelligence.messages import MessageSystem
 from app.intelligence.tracing import TraceEventType
+from app.intelligence.agents import RagNoSourcesReply
 from app.intelligence.tracing import TracingServiceNull
 from app.intelligence.tracing import TracingServiceBase
 from app.intelligence.agents import RAG_NO_SOURCES_PROMPT
@@ -34,7 +36,12 @@ class RagGenerationLayer(RagLayerBase):
     only quoted inside that instruction — never as a message of its own, nor beside an
     empty list of sources — because handed anything that reads as a question to
     answer, a small model answers it from what it happens to know and cites a source
-    it was never given, which reads exactly like a grounded answer."""
+    it was never given, which reads exactly like a grounded answer. That reply is
+    written as a RagNoSourcesReply, through output_schema: the model names the
+    language of the question before it writes the reply. Asked only to answer in the
+    question's language, it answered Bulgarian questions in English; naming the
+    language first, it followed it every time. The reply is not streamed — it arrives
+    whole, as one chunk, once the JSON around it is read."""
 
     EXCERPT_CHARS = 240
 
@@ -76,19 +83,29 @@ class RagGenerationLayer(RagLayerBase):
             for number, current_entry in enumerate(context.passages, start = 1)
         ]
 
-    def execute(self, context: RagContext) -> None:
-        messages = (
-            [
-                MessageSystem(content = RAG_GENERATION_SYSTEM_PROMPT),
-                *context.history,
-                MessageHuman(content = self._build_prompt(context))
-            ]
-            if context.passages
-            else [MessageHuman(content = RAG_NO_SOURCES_PROMPT.format(
-                question = self._text_of(context.goal.content)
-            ))]
+    def _no_sources_reply(self, context: RagContext) -> str:
+        response = self._model.invoke(
+            [MessageHuman(content = RAG_NO_SOURCES_PROMPT.format(question = self._text_of(context.goal.content)))],
+            output_schema = RagNoSourcesReply.model_json_schema()
         )
+        content = self._text_of(response.content)
+        try:
+            return RagNoSourcesReply.model_validate_json(content).reply.strip() or content
+        except ValidationError:
+            return content
 
+    def execute(self, context: RagContext) -> None:
+        if not context.passages:
+            reply = self._no_sources_reply(context)
+            self._tracing_service.emit(TraceEventType.ANSWER_CHUNK, "answer", {"text": reply})
+            context.final = MessageAI(content = reply, response_metadata = {"sources": []})
+            return
+
+        messages = [
+            MessageSystem(content = RAG_GENERATION_SYSTEM_PROMPT),
+            *context.history,
+            MessageHuman(content = self._build_prompt(context))
+        ]
         parts: list[str] = []
         for current_chunk in self._model.stream(messages):
             parts.append(current_chunk)
