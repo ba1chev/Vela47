@@ -3,24 +3,23 @@ from app.intelligence.agents import OperationSubagentType
 
 SUBAGENT_CAPABILITIES: dict[OperationSubagentType, str] = {
     OperationSubagentType.RESEARCH:
-        "can search the user's uploaded documents, the workspace and the web, and read web "
-        "pages. It cannot create or change anything.",
+        "finds information. It searches the web — and the user's documents and workspace "
+        "when there are any — reads pages and reports facts with their sources. It cannot "
+        "create or change files.",
     OperationSubagentType.CODE:
-        "can read the workspace and create or edit implementation files. "
-        "Use it for any step whose output is working code.",
+        "writes code. It reads the workspace and creates or edits files. Use it for every "
+        "step that creates or changes a file.",
     OperationSubagentType.TEST:
-        "can write test files and run them. "
-        "Use it for any step that asks for tests or for checking that code works — never "
-        "assign tests to REVIEW.",
+        "tests code. It writes pytest tests for code in the workspace and runs them. Use it "
+        "for every step about tests or about checking that code works.",
     OperationSubagentType.REVIEW:
-        "can read and search existing files and judge them. "
-        "It cannot write or run anything, so only assign it a step that inspects work "
-        "another step already produced.",
+        "reviews code. It reads existing files and reports problems. It cannot write or run "
+        "anything, so use it only to inspect files another step creates or that already exist.",
 }
 
 
 def format_subagent_capabilities() -> str:
     return "\n".join(
-        f"- {current_type.name}: {SUBAGENT_CAPABILITIES[current_type]}"
+        f"- {current_type.name} {SUBAGENT_CAPABILITIES[current_type]}"
         for current_type in OperationSubagentType
     )
