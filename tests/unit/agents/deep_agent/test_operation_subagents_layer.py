@@ -99,3 +99,13 @@ class TestOperationSubagentsLayer:
         context = make_context(1)
         OperationSubagentsLayer(StubSubagentFactory(), make_pool()).execute(context)
         assert context.results[0].content == "did task 0"
+
+    def test_the_evidence_of_a_step_travels_with_its_result(self):
+        context = make_context(1)
+        OperationSubagentsLayer(StubSubagentFactory(), make_pool()).execute(context)
+        assert context.results[0].evidence == ["checked by a stub"]
+
+    def test_a_failed_step_carries_no_evidence(self):
+        context = make_context(1)
+        OperationSubagentsLayer(StubSubagentFactory(fail = True), make_pool()).execute(context)
+        assert context.results[0].evidence == []
