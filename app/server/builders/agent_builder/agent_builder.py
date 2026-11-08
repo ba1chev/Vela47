@@ -30,10 +30,19 @@ from app.intelligence.agents import OperationSubagentType
 from app.intelligence.agents import OperationSubagentFactory
 from app.intelligence.agents import OperationSubagentBlueprint
 from app.intelligence.middleware import MiddlewareSlidingWindow
+from app.intelligence.agents import OperationSubagentProbeTests
+from app.intelligence.agents import OperationSubagentProbeSources
+from app.intelligence.agents import OperationSubagentProbeWorkspace
 from app.intelligence.agents import SUBAGENT_SYSTEM_PROMPT_TEMPLATES
 
 MODEL_NAME = "qwen3:1.7b"
 SUBAGENT_MAX_ITERATIONS = 6
+SUBAGENT_PROBE_FACTORIES = {
+    OperationSubagentType.RESEARCH: [OperationSubagentProbeSources],
+    OperationSubagentType.CODE: [OperationSubagentProbeWorkspace],
+    OperationSubagentType.TEST: [OperationSubagentProbeWorkspace, OperationSubagentProbeTests],
+    OperationSubagentType.REVIEW: []
+}
 
 
 def subagent_tool_factories(knowledge_memory: VectorDbMemory,
@@ -93,6 +102,11 @@ def build_deep_agent(tracing_service: TracingServiceBase, sandbox_pool: SandboxP
     hold a whole task — the instruction and every turn of its loop — because a sliding
     window that overflowed would drop the instruction first.
 
+    Every subagent type also gets the probes in SUBAGENT_PROBE_FACTORIES — what the
+    system checks for itself after a step. CODE and TEST have the workspace compared
+    before and after them, TEST has its tests run once more, RESEARCH has the pages and
+    documents it really read listed. REVIEW only reads, so there is nothing to check.
+
     The planning model is pinned to a low temperature because its output must satisfy a
     JSON schema, while merging is left free to write prose."""
     planning_model = ModelFoundation(
@@ -117,7 +131,8 @@ def build_deep_agent(tracing_service: TracingServiceBase, sandbox_pool: SandboxP
             ),
             max_context_window_size = 4 * SUBAGENT_MAX_ITERATIONS,
             context_window_middleware = MiddlewareSlidingWindow(step = 2),
-            max_iterations = SUBAGENT_MAX_ITERATIONS
+            max_iterations = SUBAGENT_MAX_ITERATIONS,
+            probe_factories = SUBAGENT_PROBE_FACTORIES[current_type]
         )
         for current_type in OperationSubagentType
     }
