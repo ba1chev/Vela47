@@ -1,5 +1,9 @@
+import io
+import shlex
 import pathlib
+import tarfile
 import subprocess
+from typing import Optional
 
 from app.intelligence.sandbox import SandboxEnv
 from app.intelligence.sandbox import SandboxEnvLocal
@@ -7,14 +11,23 @@ from app.intelligence.sandbox import SandboxCommandResult
 
 
 class SandboxDocker(SandboxEnv):
-    """A container that a subagent's commands run inside, over a directory shared
-    with the host.
+    """A container that a subagent's commands run inside, over a copy of its run's
+    directory.
 
-    File operations do not go through the daemon. The run directory is bind mounted
-    into the container, so writing on the host is the same bytes the container reads
-    — which avoids a round trip per file, sidesteps escaping content through `docker
-    cp`, and leaves the artefacts browsable after the run. Only run() needs Docker,
-    and that is the one operation that genuinely requires containment.
+    File operations do not go through the daemon. The run's files live in a directory
+    on the host and are written and read there directly — which avoids a round trip per
+    file and leaves the artefacts browsable after the run. Only run() needs Docker, and
+    that is the one operation that genuinely requires containment.
+
+    A container holds one run's files, and only while a command runs. Before each
+    command the run's directory is copied into the container's workspace, and after it
+    the workspace is deleted. The containers are shared by every user's runs, so
+    mounting the directory that holds all of them would let code written for one user
+    read what was written for every other; a copy made for one command cannot. The copy
+    travels as a tar archive on the exec's stdin — one call to the daemon, no temporary
+    file — and the workspace is emptied first, so nothing a failed clean-up left behind
+    reaches the next run. What a command writes stays in the copy and goes with it: a
+    test run leaves the workspace exactly as the agents left it.
 
     The container is leased, the directory is not. Containers are leased per task so
     several can work at once; the directory belongs to the whole run, so a file one
@@ -23,7 +36,7 @@ class SandboxDocker(SandboxEnv):
 
     The command string comes from a model and is passed as a single argument to a
     shell *inside* the container — never to a host shell. The blast radius of
-    anything it does is the container and the mounted run directory.
+    anything it does is the container and a throwaway copy of the run's directory.
 
     Long output loses its middle, not its end. A test runner, a compiler and a crashing
     script all say what went wrong last, so the end is kept in full and only a short
@@ -32,12 +45,14 @@ class SandboxDocker(SandboxEnv):
     Nothing a command starts outlives it. A timeout on `docker exec` stops only the CLI
     on the host — the process inside the container keeps running — and a test can leave
     a child behind when it ends, so after every command each process in the container
-    except its keep-alive is killed. The container is leased to one subagent at a time,
-    so nothing of anyone else's is running there; without the sweep, one infinite loop
-    would take the container's single CPU from every task leased this slot afterwards."""
+    except its keep-alive is killed, and the workspace is deleted with them. The
+    container is leased to one subagent at a time, so nothing of anyone else's is
+    running there; without the sweep, one infinite loop would take the container's
+    single CPU from every task leased this slot afterwards."""
 
     MAX_OUTPUT_CHARS = 8_000
     KEPT_HEAD_CHARS = 2_000
+    COPY_TIMEOUT_SECONDS = 30
     SWEEP_TIMEOUT_SECONDS = 10
 
     def __init__(self, container_name: str, host_directory: pathlib.Path,
@@ -66,10 +81,37 @@ class SandboxDocker(SandboxEnv):
     def list_files(self) -> list[str]:
         return self._files.list_files()
 
+    def _archive(self) -> bytes:
+        buffer = io.BytesIO()
+        with tarfile.open(fileobj = buffer, mode = "w") as archive:
+            archive.add(self._files.root, arcname = ".")
+        return buffer.getvalue()
+
+    def _copy_in(self) -> Optional[str]:
+        workspace = shlex.quote(self._container_directory)
+        try:
+            copied = subprocess.run(
+                [
+                    "docker", "exec", "-i", self._container_name, "sh", "-c",
+                    f"rm -rf {workspace} && mkdir -p {workspace} && tar -x -C {workspace}"
+                ],
+                input = self._archive(),
+                capture_output = True,
+                timeout = self.COPY_TIMEOUT_SECONDS,
+                check = False
+            )
+        except subprocess.TimeoutExpired:
+            return f"the copy took longer than {self.COPY_TIMEOUT_SECONDS}s"
+
+        if copied.returncode != 0:
+            return copied.stderr.decode("utf-8", errors = "replace").strip() or f"exit code {copied.returncode}"
+        return None
+
     def _sweep(self) -> None:
+        workspace = shlex.quote(self._container_directory)
         try:
             subprocess.run(
-                ["docker", "exec", self._container_name, "sh", "-c", "kill -9 -1"],
+                ["docker", "exec", self._container_name, "sh", "-c", f"kill -9 -1; rm -rf {workspace}"],
                 capture_output = True,
                 timeout = self.SWEEP_TIMEOUT_SECONDS,
                 check = False
@@ -79,6 +121,13 @@ class SandboxDocker(SandboxEnv):
 
     def run(self, command: str, timeout_seconds: int = 60) -> SandboxCommandResult:
         try:
+            refusal = self._copy_in()
+            if refusal is not None:
+                return SandboxCommandResult(
+                    exit_code = -1,
+                    output = f"The workspace could not be copied into the container: {refusal}"
+                )
+
             completed = subprocess.run(
                 [
                     "docker", "exec", "-w", self._container_directory,
