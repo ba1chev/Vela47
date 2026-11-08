@@ -54,6 +54,7 @@ from app.intelligence.agents.rag_agent.rag_layers.rag_reranking.rag_relevance im
 from app.intelligence.agents.rag_agent.rag_layers.rag_query.rag_query_layer import RagQueryLayer
 from app.intelligence.agents.rag_agent.rag_layers.rag_retrieval.rag_retrieval_layer import RagRetrievalLayer
 from app.intelligence.agents.rag_agent.rag_layers.rag_reranking.rag_reranking_layer import RagRerankingLayer
+from app.intelligence.agents.rag_agent.rag_layers.rag_generation.rag_no_sources_reply import RagNoSourcesReply
 from app.intelligence.agents.rag_agent.rag_layers.rag_generation.rag_generation_layer import RagGenerationLayer
 from app.intelligence.agents.rag_agent.rag_layers.rag_layers_factory.rag_layers_registry import RAG_LAYERS_REGISTRY
 from app.intelligence.agents.rag_agent.rag_layers.rag_layers_factory.rag_layers_factory_base import RagLayersFactoryBase
@@ -119,6 +120,7 @@ __all__ = [
     "RagQueryLayer",
     "RagRetrievalLayer",
     "RagRerankingLayer",
+    "RagNoSourcesReply",
     "RagGenerationLayer",
     "RAG_LAYERS_REGISTRY",
     "RagLayersFactoryBase",
