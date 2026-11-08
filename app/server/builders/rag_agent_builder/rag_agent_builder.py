@@ -10,13 +10,14 @@ from app.intelligence.memory import HybridSearchPolicy
 from app.intelligence.memory import VectorDbMemoryEntry
 from app.intelligence.tracing import TracingServiceBase
 
-RAG_MODEL_NAME = "qwen3:1.7b"
+RAG_MODEL_NAME = "qwen3.5:9b"
 EMBEDDING_MODEL_NAME = "qwen3-embedding:0.6b"
 EMBEDDING_QUERY_TEMPLATE = (
     "Instruct: Given a question, retrieve passages from the user's documents that answer it\n"
     "Query: {query}"
 )
 CONTEXT_WINDOW_TOKENS = 8192
+RERANKING_MAX_OUTPUT_TOKENS = 512
 
 
 def build_knowledge_memory(tracing_service: TracingServiceBase,
@@ -40,13 +41,14 @@ def build_rag_agent(tracing_service: TracingServiceBase,
     The entries arrive already embedded, loaded from the database by the route, and go
     into the memory build_knowledge_memory makes, searched through HybridSearchPolicy.
 
-    The three models differ in one setting that matters. Rewriting the query and writing
-    the answer run without reasoning, which keeps them to a second or two. Reranking runs
-    with it: it is the one stage that has to judge whether a passage answers a question,
-    and measured on a Bulgarian question against English documents, reasoning was the
-    difference between keeping the right passage and discarding every one. Every model
-    gets a larger context than Ollama's default, since the answer has to fit the
-    passages and the conversation at once."""
+    None of the three models reasons. On qwen3:1.7b reranking needed reasoning to match a
+    Bulgarian question to English passages; qwen3.5:9b scores them right without it, in
+    about four seconds, while with reasoning on it once thought for over four thousand
+    tokens — almost six minutes — on a single rerank. The reranker's reply is capped at
+    RERANKING_MAX_OUTPUT_TOKENS, far more than one score per passage needs, so a reply
+    that runs away is cut off and falls back to retrieval order instead of holding up
+    the answer. Every model gets a larger context than Ollama's default, since the
+    answer has to fit the passages and the conversation at once."""
     vector_db_memory = build_knowledge_memory(tracing_service, entries)
 
     query_model = ModelFoundation(
@@ -54,7 +56,10 @@ def build_rag_agent(tracing_service: TracingServiceBase,
         tracing_service
     )
     reranking_model = ModelFoundation(
-        ModelConfig(model_name = RAG_MODEL_NAME, temperature = 0.1, think = True, context_window_tokens = CONTEXT_WINDOW_TOKENS),
+        ModelConfig(
+            model_name = RAG_MODEL_NAME, temperature = 0.1, context_window_tokens = CONTEXT_WINDOW_TOKENS,
+            max_output_tokens = RERANKING_MAX_OUTPUT_TOKENS
+        ),
         tracing_service
     )
     generation_model = ModelFoundation(
