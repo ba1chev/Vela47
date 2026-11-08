@@ -27,3 +27,8 @@ class TestLoaderPdf:
     def test_bytes_that_are_not_a_pdf_are_refused(self):
         with pytest.raises(ValueError, match = "not a readable PDF"):
             LoaderPdf().load(b"plain text pretending")
+
+    def test_a_damaged_pdf_that_breaks_pypdf_itself_is_refused_as_unreadable(self):
+        damaged = PdfBuilder().build(["x"]).replace(b"/Size 6 /Root 1 0 R", b"/Size /Six /Root 9 0 R")
+        with pytest.raises(ValueError, match = "not a readable PDF"):
+            LoaderPdf().load(damaged)
