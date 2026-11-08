@@ -10,6 +10,7 @@ from app.intelligence.messages import MessageHuman
 from app.intelligence.sandbox import SandboxEnvLocal
 from app.intelligence.messages import MessageToolCall
 from app.intelligence.agents import OperationSubagent
+from app.intelligence.agents import SUBAGENT_ACT_PROMPT
 from app.intelligence.middleware import MiddlewareSlidingWindow
 from tests.fixtures.model.scripted_tool_model import ScriptedToolModel
 
@@ -80,3 +81,23 @@ class TestOperationSubagent:
             any(isinstance(current, MessageHuman) and current.content == "the task" for current in current_call[0])
             for current_call in model.calls
         )
+
+    def test_an_announcement_before_any_tool_is_sent_back_to_act(self):
+        subagent, model, _ = make_subagent([
+            MessageAI(content = "I will first read a.py."),
+            call("read_file", {"path": "a.py"}, "c1"),
+            MessageAI(content = "a.py does not exist yet.")
+        ])
+        response = subagent.execute(MessageHuman(content = "read a.py"))
+        assert response.content == "a.py does not exist yet." and len(model.calls) == 3
+        assert model.calls[1][0][-1].content == SUBAGENT_ACT_PROMPT
+
+    def test_a_second_reply_without_a_tool_is_accepted(self):
+        subagent, model, _ = make_subagent([MessageAI(content = "Nothing to do."), MessageAI(content = "There is nothing to do.")])
+        assert subagent.execute(MessageHuman(content = "task")).content == "There is nothing to do."
+        assert len(model.calls) == 2
+
+    def test_a_reply_without_a_tool_after_using_one_is_the_answer(self):
+        subagent, model, _ = make_subagent([call("read_file", {"path": "a.py"}, "c1"), MessageAI(content = "a.py is missing.")])
+        assert subagent.execute(MessageHuman(content = "read a.py")).content == "a.py is missing."
+        assert len(model.calls) == 2

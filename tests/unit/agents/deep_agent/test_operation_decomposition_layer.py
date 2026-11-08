@@ -52,3 +52,8 @@ class TestOperationDecompositionLayer:
         context = OperationContext(goal = MessageHuman(content = "goal"))
         OperationDecompositionLayer().execute(context)
         assert context.tasks == []
+
+    def test_every_task_carries_the_users_goal(self):
+        context = make_context(OperationSubagentType.RESEARCH, OperationSubagentType.CODE)
+        OperationDecompositionLayer().execute(context)
+        assert [current.goal for current in context.tasks] == ["goal", "goal"]

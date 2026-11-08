@@ -11,8 +11,9 @@ class OperationDecompositionLayer(OperationLayerBase):
     Deliberately deterministic — no model call. The planning layer already decided
     what the work is; asking a model to restate that decision would add latency
     and a second chance to hallucinate without adding information. This layer's
-    job is to assign stable identities so results can be correlated back, and to
-    freeze the instruction each subagent will receive verbatim.
+    job is to assign stable identities so results can be correlated back, to
+    freeze the instruction each subagent will receive verbatim, and to attach the
+    user's goal every task is a step of.
 
     Running with no plan leaves tasks empty rather than raising, so a pipeline
     configured without a planning stage degrades to doing nothing here instead
@@ -26,12 +27,14 @@ class OperationDecompositionLayer(OperationLayerBase):
         if context.plan is None:
             return
 
+        goal = context.goal.content if isinstance(context.goal.content, str) else str(context.goal.content)
         context.tasks = [
             OperationTask(
                 id = str(uuid4()),
                 step_index = current_step.index,
                 subagent_type = current_step.subagent_type,
-                instruction = current_step.description
+                instruction = current_step.description,
+                goal = goal
             )
             for current_step in context.plan.steps
         ]

@@ -45,14 +45,19 @@ def subagent_tool_factories(knowledge_memory: VectorDbMemory,
     there. CODE looks before it writes and edits rather than rewrites. TEST writes tests
     and runs them in the sandbox, so it learns whether they pass. REVIEW only reads.
 
+    search_documents is offered only when the user has documents to search. Over an
+    empty store its only answer is that there is nothing there, and a small model
+    reports that as its finding instead of moving on to the web.
+
     Every value is a factory, because a tool acts on the sandbox its agent is leased
     and that lease does not exist until a task is dispatched. The tools that need
     something else — the owner's documents, the web — are closures over it that ignore
     the sandbox they are handed."""
     web_search = WebSearchDuckDuckGo(web_fetcher)
+    document_search = [lambda sandbox_env: ToolSearchDocuments(knowledge_memory)] if len(knowledge_memory) > 0 else []
     return {
         OperationSubagentType.RESEARCH: [
-            lambda sandbox_env: ToolSearchDocuments(knowledge_memory),
+            *document_search,
             ToolSearchFiles,
             lambda sandbox_env: ToolWebSearch(web_search),
             lambda sandbox_env: ToolFetchUrl(web_fetcher)

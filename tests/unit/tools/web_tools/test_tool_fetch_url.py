@@ -58,3 +58,9 @@ class TestToolFetchUrl:
         with pytest.raises(WebAccessError):
             tool.execute(ToolFetchUrlInput(url = "http://169.254.169.254/latest/meta-data/"))
         assert server.requests == []
+
+    def test_a_page_drawn_by_javascript_points_to_another_source(self):
+        shell = "<html><head><title>Hackathon</title></head><body><div id=\"root\"></div><script>render()</script></body></html>"
+        tool, _ = make_tool({"https://app.example.org/": FakeWebServer.page(shell)})
+        output = tool.execute(ToolFetchUrlInput(url = "https://app.example.org/"))
+        assert "no readable text" in output and "JavaScript" in output and "another source" in output

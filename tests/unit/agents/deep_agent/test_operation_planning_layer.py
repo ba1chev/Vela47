@@ -5,6 +5,7 @@ from pydantic import ValidationError
 from app.intelligence.messages import MessageAI
 from app.intelligence.agents import OperationType
 from app.intelligence.messages import MessageType
+from app.intelligence.agents import OperationPlan
 from app.intelligence.messages import MessageHuman
 from app.intelligence.agents import OperationContext
 from tests.fixtures.model.fake_model import FakeModel
@@ -42,6 +43,11 @@ class TestOperationPlanningLayer:
         assert [current.content for current in model.calls[0][0][1:]] == [
             "write a sort", "here is sort.py", "now add tests for it"
         ]
+
+    def test_the_plan_schema_constrains_the_models_reply(self):
+        model = FakeModel([PLAN])
+        OperationPlanningLayer(model).execute(OperationContext(goal = MessageHuman(content = "add tests")))
+        assert model.output_schemas == [OperationPlan.model_json_schema()]
 
     def test_the_prompt_tells_the_planner_what_history_is_for(self):
         model = FakeModel([PLAN])

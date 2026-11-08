@@ -11,6 +11,6 @@ class ScriptedToolModel:
         self._replies = list(replies or [])
         self.calls = []
 
-    def invoke(self, messages, tools = None):
+    def invoke(self, messages, tools = None, output_schema = None):
         self.calls.append((list(messages), tools))
         return self._replies.pop(0) if self._replies else MessageAI(content = "done")
