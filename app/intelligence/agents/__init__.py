@@ -17,6 +17,10 @@ from app.intelligence.agents.deep_agent.operation_layers.operation_merging.opera
 from app.intelligence.agents.deep_agent.prompts.planning_system_prompt import PLANNING_SYSTEM_PROMPT
 from app.intelligence.agents.deep_agent.prompts.subagent_capabilities import SUBAGENT_CAPABILITIES, format_subagent_capabilities
 from app.intelligence.agents.deep_agent.operation_layers.operation_planning.operation_planning_layer import OperationPlanningLayer
+from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent_probes.operation_subagent_probe_base import OperationSubagentProbeBase
+from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent_probes.operation_subagent_probe_workspace import OperationSubagentProbeWorkspace
+from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent_probes.operation_subagent_probe_tests import OperationSubagentProbeTests
+from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent_probes.operation_subagent_probe_sources import OperationSubagentProbeSources
 from app.intelligence.agents.deep_agent.prompts.subagent_act_prompt import SUBAGENT_ACT_PROMPT
 from app.intelligence.agents.deep_agent.prompts.subagent_report_prompt import SUBAGENT_REPORT_PROMPT
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent import OperationSubagent
@@ -83,6 +87,10 @@ __all__ = [
     "SUBAGENT_CAPABILITIES",
     "format_subagent_capabilities",
     "OperationPlanningLayer",
+    "OperationSubagentProbeBase",
+    "OperationSubagentProbeWorkspace",
+    "OperationSubagentProbeTests",
+    "OperationSubagentProbeSources",
     "SUBAGENT_ACT_PROMPT",
     "SUBAGENT_REPORT_PROMPT",
     "OperationSubagent",
