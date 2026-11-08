@@ -1,10 +1,11 @@
-from typing import Callable
+from typing import Callable, Optional
 
 from app.intelligence.tools import ToolBase
 from app.intelligence.sandbox import SandboxEnv
 from app.intelligence.memory import ContextWindow
 from app.intelligence.model import ModelFoundation
 from app.intelligence.middleware import MiddlewareBase
+from app.intelligence.agents import OperationSubagentProbeBase
 
 
 class OperationSubagentBlueprint:
@@ -26,13 +27,20 @@ class OperationSubagentBlueprint:
     Keeping the recipe in a blueprint rather than hard-coding it in the factory is
     what lets a RESEARCH agent run a small fast model with a sliding window while a
     REVIEW agent runs a reasoning model with summarisation, without either being a
-    separate class."""
+    separate class.
+
+    Probes arrive as factories for the same reason tools do: a probe checks the sandbox of
+    one task. They are what the system verifies about a step after the subagent is done —
+    the workspace it changed, the tests as they really run — and a type with none is
+    reported on its own word alone."""
 
     def __init__(self, tool_factories: list[Callable[[SandboxEnv], ToolBase]],
         prompt_template: str, model: ModelFoundation, max_context_window_size: int,
         context_window_middleware: MiddlewareBase[ContextWindow],
-        max_iterations: int = 6) -> None:
+        max_iterations: int = 6,
+        probe_factories: Optional[list[Callable[[SandboxEnv], OperationSubagentProbeBase]]] = None) -> None:
         self.tool_factories: list[Callable[[SandboxEnv], ToolBase]] = list(tool_factories)
+        self.probe_factories: list[Callable[[SandboxEnv], OperationSubagentProbeBase]] = list(probe_factories or [])
         self.prompt_template: str = prompt_template
         self.model: ModelFoundation = model
         self.max_context_window_size: int = max_context_window_size
