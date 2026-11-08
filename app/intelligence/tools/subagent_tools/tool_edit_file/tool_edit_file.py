@@ -21,8 +21,15 @@ class ToolEditFile(ToolBase[ToolEditFileInput, str]):
     re-indented to where it lands. Small models reproduce code reliably but not its
     whitespace — they drop the leading indentation of the first line, or of all of them
     — and an otherwise correct edit failing over a tab, or landing with its second line
-    at the wrong depth, is the commonest way this tool would be useless. Text that is
-    only part of a line is matched exactly instead.
+    at the wrong depth, is the commonest way this tool would be useless. How far old_text
+    was off is measured against the lines it matched. When every line but the first
+    already sits at the file's depth, only the first was copied without its indentation,
+    so only new_text's first line is moved — moving the whole block by the first line's
+    error would push every line after it one level too deep, and turn a method added
+    after it into one nested inside it. Otherwise the whole of new_text is moved by the
+    first line's error, keeping its own relative indentation. A new_text whose first
+    line already sits at the file's depth is left as written. Text that is only part of
+    a line is matched exactly instead.
 
     Nothing is written unless the edit applies. The diff shows the agent what it really
     changed — the only reliable check that an edit did what was intended."""
@@ -51,15 +58,34 @@ class ToolEditFile(ToolBase[ToolEditFileInput, str]):
     def _indentation(self, line: str) -> str:
         return line[:len(line) - len(line.lstrip())]
 
-    def _reindent(self, new_lines: list[str], old_indent: str, file_indent: str) -> list[str]:
-        first = next((current_line for current_line in new_lines if current_line.strip()), "")
-        if self._indentation(first) == file_indent:
+    def _offset(self, written_line: str, file_line: str) -> int:
+        return len(self._indentation(file_line)) - len(self._indentation(written_line))
+
+    def _shift(self, line: str, offset: int, unit: str) -> str:
+        if not line.strip() or offset == 0:
+            return line
+        if offset > 0:
+            return unit * offset + line
+        return line[min(-offset, len(self._indentation(line))):]
+
+    def _reindent(self, new_lines: list[str], old_lines: list[str], matched_lines: list[str]) -> list[str]:
+        pairs = [
+            (current_old, current_matched)
+            for current_old, current_matched in zip(old_lines, matched_lines)
+            if current_old.strip()
+        ]
+        first = next((index for index, current_line in enumerate(new_lines) if current_line.strip()), None)
+        if not pairs or first is None or self._indentation(new_lines[first]) == self._indentation(pairs[0][1]):
             return new_lines
+
+        offset = self._offset(*pairs[0])
+        only_first_was_off = len(pairs) > 1 and all(self._offset(*current_pair) == 0 for current_pair in pairs[1:])
+        unit = "\t" if any(self._indentation(current_matched).startswith("\t") for _, current_matched in pairs) else " "
         return [
-            file_indent + current_line[len(old_indent):]
-            if current_line.strip() and current_line.startswith(old_indent)
+            self._shift(current_line, offset, unit)
+            if index == first or not only_first_was_off
             else current_line
-            for current_line in new_lines
+            for index, current_line in enumerate(new_lines)
         ]
 
     def _replace_lines(self, content: str, old_text: str, new_text: str) -> tuple[Optional[str], int]:
@@ -75,8 +101,9 @@ class ToolEditFile(ToolBase[ToolEditFileInput, str]):
             return None, len(starts)
 
         start = starts[0]
+        matched_lines = lines[start:start + len(wanted)]
         new_lines = new_text.strip("\n").split("\n") if new_text.strip("\n") else []
-        replacement = self._reindent(new_lines, self._indentation(old_lines[0]), self._indentation(lines[start]))
+        replacement = self._reindent(new_lines, old_lines, matched_lines)
         return "\n".join(lines[:start] + replacement + lines[start + len(wanted):]), 1
 
     def _apply(self, content: str, input: ToolEditFileInput) -> tuple[Optional[str], str]:
