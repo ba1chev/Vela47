@@ -19,5 +19,7 @@ class StubSubagentFactory(OperationSubagentFactoryBase):
 
 
 class _ImmediateAgent:
+    evidence = ["checked by a stub"]
+
     def execute(self, message) -> MessageAI:
         return MessageAI(content = f"did {message.content}")
