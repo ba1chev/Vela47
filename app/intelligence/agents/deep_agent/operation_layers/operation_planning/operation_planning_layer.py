@@ -1,5 +1,3 @@
-import json
-
 from app.intelligence.agents import OperationType
 from app.intelligence.agents import OperationPlan
 from app.intelligence.model import ModelFoundation
@@ -13,16 +11,17 @@ from app.intelligence.agents import format_subagent_capabilities
 
 class OperationPlanningLayer(OperationLayerBase):
     """Turns the user's goal into a structured OperationPlan. The JSON schema the
-    model is asked to produce is generated from OperationPlan itself and injected
-    into the prompt, so the contract the model is held to and the contract the
-    pipeline parses can never drift apart — adding a field to the plan updates
-    the prompt automatically.
+    model must produce is generated from OperationPlan itself and passed to the model
+    as output_schema, so its decoding is held to the same contract the pipeline
+    parses — adding a field to the plan changes what the model can write without
+    anyone touching the prompt.
 
-    The same schema is passed to the model as output_schema, so its decoding is held to
-    it as well. A small model shown a schema in its prompt sometimes copies the schema
-    back instead of filling it in — for some goals every time — and that reply can never
-    become a plan. The prompt keeps the schema anyway, because the field descriptions in
-    it are what tell the model what to write.
+    The schema is not pasted into the prompt. It describes the plan to developers —
+    its descriptions name factories and layers — and a small model given three
+    thousand characters of it, with the subagent types as bare numbers, planned
+    worse and at times copied the schema back instead of filling it in. The prompt
+    shows the shape through two short example plans instead, and a test keeps every
+    field of the schema named in it.
 
     Parsing is delegated to OutputParserStructured, which means a malformed plan
     raises a ValidationError here rather than surfacing as a confusing failure
@@ -45,10 +44,7 @@ class OperationPlanningLayer(OperationLayerBase):
 
     def _build_system_message(self) -> MessageSystem:
         return MessageSystem(
-            content = PLANNING_SYSTEM_PROMPT.format(
-                subagent_types = format_subagent_capabilities(),
-                schema = json.dumps(self._schema, indent = 2)
-            )
+            content = PLANNING_SYSTEM_PROMPT.format(subagent_types = format_subagent_capabilities())
         )
 
     def execute(self, context: OperationContext) -> None:
