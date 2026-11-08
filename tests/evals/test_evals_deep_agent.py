@@ -11,7 +11,7 @@ pytestmark = pytest.mark.evals
 
 RUNNER = EvalsRunnersFactory().create(EvalsRunnersType.DEEP_AGENT)
 SUMMARY_FIELDS = [
-    "plan_ok", "within_max_steps", "names_kept", "hidden_test_passed", "echoes_report",
+    "plan_ok", "within_max_steps", "names_kept", "own_tests_passed", "false_test_claim", "hidden_test_passed", "echoes_report",
     "raw_tool_call_reports", "tool_calls", "tool_errors", "elapsed"
 ]
 
