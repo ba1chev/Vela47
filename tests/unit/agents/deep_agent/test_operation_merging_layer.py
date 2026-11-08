@@ -87,3 +87,11 @@ class TestOperationMergingLayer:
         assert "Step 1 (RESEARCH): find the prices\nReport (success): found this" in report
         assert "Step 2 (REVIEW): check prices.py\nReport (error): it broke" in report
         assert report.endswith("Write your answer to the user's request now.")
+
+    def test_facts_the_system_checked_are_listed_under_their_report(self):
+        model = FakeModel(["answer"])
+        context = make_context()
+        context.results[0] = context.results[0].model_copy(update = {"evidence": ["Pages read: https://a.org."]})
+        OperationMergingLayer(model).execute(context)
+        report = model.calls[0][0][1].content
+        assert "Report (success): found this\nChecked by the system: Pages read: https://a.org." in report
