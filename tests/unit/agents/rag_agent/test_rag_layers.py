@@ -134,6 +134,13 @@ class TestRagRerankingLayer:
         RagRerankingLayer(FakeModel(["I think passage two is best."]), top_n = 2).execute(context)
         assert context.passages == entries[:2] and context.relevance == {}
 
+    def test_the_reply_is_constrained_to_one_score_per_candidate(self):
+        context = make_context(candidates = make_entries())
+        model = FakeModel([self.scores((1, 9), (2, 9), (3, 9))])
+        RagRerankingLayer(model).execute(context)
+        schema = model.output_schemas[0]
+        assert schema["minItems"] == schema["maxItems"] == len(context.candidates)
+
     def test_no_candidates_costs_no_model_call(self):
         model = FakeModel()
         context = make_context(candidates = [])
@@ -155,7 +162,13 @@ class TestRagGenerationLayer:
         model = FakeModel(["answer"])
         RagGenerationLayer(model).execute(make_context(passages = make_entries()[:2]))
         prompt = model.calls[0][0][-1].content
-        assert "[1] (guide.md) Error E1042" in prompt and "[2] (guide.md) Backups" in prompt
+        assert "[1] guide.md\nError E1042" in prompt and "[2] guide.md\nBackups" in prompt
+
+    def test_the_question_comes_after_the_sources(self):
+        model = FakeModel(["answer"])
+        RagGenerationLayer(model).execute(make_context(passages = make_entries()[:2]))
+        prompt = model.calls[0][0][-1].content
+        assert prompt.startswith("SOURCES:") and prompt.rstrip().endswith("QUESTION: What does E1042 mean?")
 
     def test_the_answer_carries_its_sources_by_the_same_numbers(self):
         entries = make_entries()
