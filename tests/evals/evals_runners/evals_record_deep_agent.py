@@ -17,7 +17,8 @@ class EvalsRecordDeepAgent(EvalsRecordBase):
         description = "The plan as it ran: each step's subagent type and the instruction it was given."
     )
     reports: list[dict[str, str]] = Field(
-        description = "What each subagent reported back, with the status its step ended in."
+        description = "What each subagent reported back, with the status its step ended in and the "
+            "evidence the system's probes gathered on the step, one fact per line."
     )
     final: str = Field(
         description = "The answer the user would have received."
