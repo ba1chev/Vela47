@@ -13,6 +13,7 @@ from app.intelligence.agents import OperationSubagent
 from app.intelligence.agents import SUBAGENT_ACT_PROMPT
 from app.intelligence.agents import SUBAGENT_REPORT_PROMPT
 from app.intelligence.middleware import MiddlewareSlidingWindow
+from tests.fixtures.agents.recording_probe import RecordingProbe
 from tests.fixtures.model.scripted_tool_model import ScriptedToolModel
 
 
@@ -20,7 +21,7 @@ def call(name, args, id):
     return MessageAI(content = "", tool_calls = [MessageToolCall(name = name, args = args, id = id)])
 
 
-def make_subagent(replies, max_iterations = 6):
+def make_subagent(replies, max_iterations = 6, probes = None):
     env = SandboxEnvLocal(pathlib.Path(tempfile.mkdtemp()) / "run")
     model = ScriptedToolModel(replies)
     subagent = OperationSubagent(
@@ -29,7 +30,8 @@ def make_subagent(replies, max_iterations = 6):
         max_context_window_size = 24,
         tools = [ToolWriteFile(env), ToolReadFile(env)],
         context_window_middleware = MiddlewareSlidingWindow(step = 2),
-        max_iterations = max_iterations
+        max_iterations = max_iterations,
+        probes = probes
     )
     return subagent, model, env
 
@@ -119,3 +121,16 @@ class TestOperationSubagent:
         written = MessageAI(content = 'a.py is missing.\n<tool_call>\n{"name": "read_file"}\n</tool_call>')
         subagent, _, _ = make_subagent([call("read_file", {"path": "a.py"}, "c1"), written])
         assert subagent.execute(MessageHuman(content = "read a.py")).content == "a.py is missing."
+
+    def test_probes_check_the_step_around_the_loop_and_their_facts_become_evidence(self):
+        env = SandboxEnvLocal(pathlib.Path(tempfile.mkdtemp()) / "probed")
+        probe = RecordingProbe(env)
+        subagent, _, _ = make_subagent([MessageAI(content = "Nothing to do."), MessageAI(content = "Done.")], probes = [probe])
+        subagent.execute(MessageHuman(content = "task"))
+        assert probe.log == ["before", "after"] and subagent.evidence == ["checked local"]
+        assert probe.seen[-1].content == "Done."
+
+    def test_without_probes_there_is_no_evidence(self):
+        subagent, _, _ = make_subagent([MessageAI(content = "Done.")])
+        subagent.execute(MessageHuman(content = "task"))
+        assert subagent.evidence == []
