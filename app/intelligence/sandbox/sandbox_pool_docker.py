@@ -1,6 +1,7 @@
 import hashlib
 import pathlib
 import tempfile
+import threading
 import subprocess
 from typing import Optional
 
@@ -9,7 +10,7 @@ from app.intelligence.sandbox import SandboxSlot
 from app.intelligence.sandbox import SandboxDocker
 from app.intelligence.sandbox import SandboxPoolBase
 
-CONTAINER_MOUNT_PATH = "/runs"
+CONTAINER_WORKSPACE_PATH = "/workspace"
 SANDBOX_IMAGE_DIRECTORY = pathlib.Path(__file__).resolve().parent / "sandbox_image"
 
 
@@ -21,10 +22,16 @@ class SandboxPoolDocker(SandboxPoolBase):
     far more than a subagent's whole turn. They sit idle on `sleep infinity` and are
     entered with `docker exec` when work arrives, so leasing a slot is free.
 
-    One host directory is mounted into every container. Each run works in its own
-    subdirectory of it, which is what lets a slot be leased per task while the files
-    stay with the run — a container's mount cannot be changed after it starts, so
-    mounting the parent and addressing a child is the only way to get both.
+    No host directory is mounted. Each run's files live in its own subdirectory of
+    base_directory on the host, and a container is handed a copy of one of them for the
+    length of a command, at CONTAINER_WORKSPACE_PATH — see SandboxDocker. A mount is
+    fixed when a container starts, so reaching every run's files through one would mean
+    mounting their parent into every container, and then code written for one user
+    could read every other user's runs.
+
+    Leasing is guarded by a lock. Requests are served on several threads at once, and
+    two of them taking the same slot would put two runs in one container at the same
+    time — each able to read the other's copy.
 
     Containers are named deterministically, which makes an orphan from a crashed
     process findable: start() removes any container of the same name before creating
@@ -63,6 +70,7 @@ class SandboxPoolDocker(SandboxPoolBase):
         )
         self._slots: list[SandboxSlot] = []
         self._busy: set[int] = set()
+        self._lock: threading.Lock = threading.Lock()
 
     @property
     def base_directory(self) -> pathlib.Path:
@@ -107,8 +115,6 @@ class SandboxPoolDocker(SandboxPoolBase):
                 "--memory", self._memory_limit,
                 "--cpus", self._cpu_limit,
                 "--pids-limit", "256",
-                "-v", f"{self._base_directory}:{CONTAINER_MOUNT_PATH}",
-                "-w", CONTAINER_MOUNT_PATH,
                 self._image,
                 "sleep", "infinity"
             )
@@ -150,30 +156,32 @@ class SandboxPoolDocker(SandboxPoolBase):
         self._busy = set()
 
     def acquire(self) -> SandboxSlot:
-        if not self._slots:
+        with self._lock:
+            if not self._slots:
+                raise RuntimeError(
+                    "The Docker sandbox pool has no containers — start() was not called "
+                    "or failed."
+                )
+
+            for current_slot in self._slots:
+                if current_slot.id not in self._busy:
+                    self._busy.add(current_slot.id)
+                    return current_slot
+
             raise RuntimeError(
-                "The Docker sandbox pool has no containers — start() was not called "
-                "or failed."
+                f"No sandbox slot available — all {len(self._slots)} containers are in use. "
+                f"Increase the pool size or reduce how many subagents run at once."
             )
 
-        for current_slot in self._slots:
-            if current_slot.id not in self._busy:
-                self._busy.add(current_slot.id)
-                return current_slot
-
-        raise RuntimeError(
-            f"No sandbox slot available — all {len(self._slots)} containers are in use. "
-            f"Increase the pool size or reduce how many subagents run at once."
-        )
-
     def release(self, slot: SandboxSlot) -> None:
-        self._busy.discard(slot.id)
+        with self._lock:
+            self._busy.discard(slot.id)
 
     def env_for(self, slot: SandboxSlot, run_id: str) -> SandboxEnv:
         return SandboxDocker(
             container_name = self._container_name(slot.id),
             host_directory = self._base_directory / run_id,
-            container_directory = f"{CONTAINER_MOUNT_PATH}/{run_id}"
+            container_directory = CONTAINER_WORKSPACE_PATH
         )
 
     @property
