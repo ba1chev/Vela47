@@ -84,3 +84,18 @@ class TestOperationSubagentsLayer:
         OperationSubagentsLayer(StubSubagentFactory(), make_pool(), tracer).execute(make_context(2))
         started = [e for e in tracer.events() if e.type is TraceEventType.SUBAGENT_STARTED]
         assert [e.label for e in started] == ["CODE", "CODE"]
+
+    def test_the_subagent_is_told_the_users_goal_with_its_instruction(self):
+        context = OperationContext(
+            goal = MessageHuman(content = "plan the Amusnet hackathon"),
+            tasks = [OperationTask(id = "t0", step_index = 0, subagent_type = OperationSubagentType.RESEARCH,
+                instruction = "find the dates of the hackathon", goal = "plan the Amusnet hackathon")]
+        )
+        OperationSubagentsLayer(StubSubagentFactory(), make_pool()).execute(context)
+        content = context.results[0].content
+        assert content.startswith("did find the dates of the hackathon") and "plan the Amusnet hackathon" in content
+
+    def test_a_task_without_a_goal_is_handed_its_instruction_alone(self):
+        context = make_context(1)
+        OperationSubagentsLayer(StubSubagentFactory(), make_pool()).execute(context)
+        assert context.results[0].content == "did task 0"
