@@ -93,7 +93,7 @@ class TestOperationSubagentsLayer:
         )
         OperationSubagentsLayer(StubSubagentFactory(), make_pool()).execute(context)
         content = context.results[0].content
-        assert content.startswith("did find the dates of the hackathon") and "plan the Amusnet hackathon" in content
+        assert "Your task: find the dates of the hackathon" in content and "plan the Amusnet hackathon" in content
 
     def test_a_task_without_a_goal_is_handed_its_instruction_alone(self):
         context = make_context(1)
