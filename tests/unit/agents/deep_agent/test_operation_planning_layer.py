@@ -57,3 +57,20 @@ class TestOperationPlanningLayer:
     def test_a_malformed_plan_raises_here_rather_than_later(self):
         with pytest.raises(ValidationError):
             OperationPlanningLayer(FakeModel(["not json"])).execute(OperationContext(goal = MessageHuman(content = "x")))
+
+    def test_the_prompt_names_every_field_and_type_the_plan_schema_allows(self):
+        model = FakeModel([PLAN])
+        OperationPlanningLayer(model).execute(OperationContext(goal = MessageHuman(content = "x")))
+        prompt = model.calls[0][0][0].content
+        fields = {"goal", "steps", *OperationPlan.model_json_schema()["$defs"]["OperationStep"]["properties"]}
+        assert all(f'"{current}"' in prompt for current in fields)
+        assert all(current.name in prompt for current in OperationSubagentType)
+
+    def test_the_schema_constrains_the_reply_but_is_not_pasted_into_the_prompt(self):
+        model = FakeModel([PLAN])
+        OperationPlanningLayer(model).execute(OperationContext(goal = MessageHuman(content = "x")))
+        assert "$defs" not in model.calls[0][0][0].content and "$defs" in model.output_schemas[0]
+
+    def test_subagent_types_are_written_by_name(self):
+        allowed = OperationPlan.model_json_schema()["$defs"]["OperationSubagentType"]["enum"]
+        assert allowed == ["RESEARCH", "CODE", "TEST", "REVIEW"]
