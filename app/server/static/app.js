@@ -584,14 +584,22 @@ function toBase64(buffer) {
 }
 
 // Shared by uploads and links: shows the document as pending while the server reads,
-// chunks and embeds it, then redraws the list from what the server now holds.
+// chunks and embeds it, then redraws the list from what the server now holds. A
+// request that never gets an answer — the server restarting mid-upload — is reported
+// like a refusal, so the buttons are always given back.
 async function addDocument(path, body, label) {
   uploadLabelEl.dataset.busy = "1";
   linkSubmitEl.disabled = true;
   renderKnowledge(label);
-  const result = await api(path, { method: "POST", body });
-  delete uploadLabelEl.dataset.busy;
-  linkSubmitEl.disabled = false;
+  let result;
+  try {
+    result = await api(path, { method: "POST", body });
+  } catch {
+    result = { ok: false, status: 0, data: null };
+  } finally {
+    delete uploadLabelEl.dataset.busy;
+    linkSubmitEl.disabled = false;
+  }
 
   if (result.status === 401) {
     showGate(EXPIRED);
