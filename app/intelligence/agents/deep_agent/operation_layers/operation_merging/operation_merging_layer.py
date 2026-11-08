@@ -25,7 +25,9 @@ class OperationMergingLayer(OperationLayerBase):
     Each report is written under the step that produced it — the step's instruction,
     then the report with its status. Listed apart, a small model had to pair the
     third result with the third step itself, and a report read without the question
-    it answers is easily attributed to the wrong part of the request.
+    it answers is easily attributed to the wrong part of the request. The report is
+    phrased in plain sentences and ends by asking for the answer: laid out under
+    capitalised labels, it was copied label by label into the answer instead.
 
     Errors are passed to the model verbatim rather than filtered out, because a
     gap the user should know about is part of an honest answer.
@@ -55,13 +57,18 @@ class OperationMergingLayer(OperationLayerBase):
         return ""
 
     def _build_report(self, context: OperationContext) -> str:
-        lines: list[str] = [f"REQUEST: {context.goal.content}"]
+        lines: list[str] = [
+            f"The user's request: {context.goal.content}",
+            "",
+            "The workers' reports, each under the step it answers:"
+        ]
         for position, current_result in enumerate(context.results):
             lines.extend([
                 "",
-                f"STEP {position + 1} [{current_result.subagent_type.name}]: {self._instruction(context, position, current_result.task_id)}",
-                f"REPORT ({current_result.status}): {current_result.content}"
+                f"Step {position + 1} ({current_result.subagent_type.name}): {self._instruction(context, position, current_result.task_id)}",
+                f"Report ({current_result.status}): {current_result.content}"
             ])
+        lines.extend(["", "Write your answer to the user's request now."])
         return "\n".join(lines)
 
     def execute(self, context: OperationContext) -> None:
