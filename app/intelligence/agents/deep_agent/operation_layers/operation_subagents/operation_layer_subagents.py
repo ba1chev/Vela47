@@ -9,6 +9,7 @@ from app.intelligence.agents import OperationContext
 from app.intelligence.agents import OperationLayerBase
 from app.intelligence.tracing import TracingServiceNull
 from app.intelligence.tracing import TracingServiceBase
+from app.intelligence.agents import SUBAGENT_TASK_TEMPLATE
 from app.intelligence.agents import OperationSubagentResult
 from app.intelligence.agents import OperationSubagentFactoryBase
 
@@ -27,7 +28,11 @@ class OperationSubagentsLayer(OperationLayerBase):
     One subagent that cannot complete its step should not discard the work of
     the others; the merging layer sees the failure and decides how to report
     the gap. Slot release happens in a finally block so a crash inside a
-    subagent cannot leak a slot and starve the rest of the run."""
+    subagent cannot leak a slot and starve the rest of the run.
+
+    A subagent is handed its instruction together with the user's goal, through
+    SUBAGENT_TASK_TEMPLATE, so a step that says 'the hackathon' can be done for the
+    hackathon the user meant. The plan and the other tasks stay out of view."""
 
     def __init__(self, subagent_factory: OperationSubagentFactoryBase,
         sandbox_pool: SandboxPoolBase,
@@ -43,6 +48,11 @@ class OperationSubagentsLayer(OperationLayerBase):
     @property
     def operation_type(self) -> OperationType:
         return OperationType.SUBAGENTS
+
+    def _message(self, task: OperationTask) -> MessageHuman:
+        if not task.goal:
+            return MessageHuman(content = task.instruction)
+        return MessageHuman(content = SUBAGENT_TASK_TEMPLATE.format(instruction = task.instruction, goal = task.goal))
 
     def _run_task(self, task: OperationTask, run_id: str) -> OperationSubagentResult:
         slot = self._sandbox_pool.acquire()
@@ -61,7 +71,7 @@ class OperationSubagentsLayer(OperationLayerBase):
                 try:
                     sandbox_env = self._sandbox_pool.env_for(slot, run_id)
                     subagent = self._subagent_factory.create(task.subagent_type, sandbox_env)
-                    response = subagent.execute(MessageHuman(content = task.instruction))
+                    response = subagent.execute(self._message(task))
                     content = (
                         response.content
                         if isinstance(response.content, str)
