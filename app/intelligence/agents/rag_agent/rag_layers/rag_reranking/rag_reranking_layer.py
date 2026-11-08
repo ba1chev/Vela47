@@ -1,4 +1,3 @@
-import json
 from pydantic import ValidationError
 
 from app.intelligence.agents import RagContext
@@ -32,6 +31,12 @@ class RagRerankingLayer(RagLayerBase):
     rewrite beside it only to say what words like 'it' refer to — the rewrite helps the
     reranker read a follow-up, but it is never trusted to replace the question.
 
+    The schema also constrains the model's decoding, passed as output_schema with as
+    many entries required as there are passages. Without the count, a reasoning model
+    held to the schema took its shortest valid path and answered with an empty list;
+    with it, the grammar itself asks for a score for every passage. The prompt shows
+    the shape in one line rather than pasting the schema.
+
     A reply that cannot be parsed does not fail the run. Reranking refines retrieval, it
     does not replace it — so the candidates are kept in retrieval order, and relevance
     stays empty, which is how the trace shows that reranking was skipped."""
@@ -53,6 +58,11 @@ class RagRerankingLayer(RagLayerBase):
         content = entry.message.content if isinstance(entry.message.content, str) else str(entry.message.content)
         return content[:self.PASSAGE_CHARS]
 
+    def _output_schema(self, count: int) -> dict:
+        schema = RagRelevance.model_json_schema()
+        schema["minItems"] = schema["maxItems"] = count
+        return schema
+
     def _build_report(self, context: RagContext) -> str:
         goal = context.goal.content if isinstance(context.goal.content, str) else str(context.goal.content)
         lines = [f"QUERY: {goal}"]
@@ -69,12 +79,10 @@ class RagRerankingLayer(RagLayerBase):
             context.passages = []
             return
 
-        response = self._model.invoke([
-            MessageSystem(content = RAG_RERANKING_SYSTEM_PROMPT.format(
-                schema = json.dumps(RagRelevance.model_json_schema(), indent = 2)
-            )),
-            MessageHuman(content = self._build_report(context))
-        ])
+        response = self._model.invoke(
+            [MessageSystem(content = RAG_RERANKING_SYSTEM_PROMPT), MessageHuman(content = self._build_report(context))],
+            output_schema = self._output_schema(len(context.candidates))
+        )
 
         try:
             relevance = self._parser.parse(response).data
