@@ -123,7 +123,11 @@ class EvalsRunnerDeepAgent(EvalsRunnerBase[EvalsCaseDeepAgent, EvalsRecordDeepAg
             for current in events if current.type is TraceEventType.SUBAGENT_STARTED
         ]
         reports = [
-            {"status": str(current.payload.get("status")), "result": str(current.payload.get("result", ""))}
+            {
+                "status": str(current.payload.get("status")),
+                "result": str(current.payload.get("result", "")),
+                "evidence": "\n".join(current.payload.get("evidence") or [])
+            }
             for current in events if current.type is TraceEventType.SUBAGENT_FINISHED
         ]
         tool_statuses = [current.payload.get("status") for current in events if current.type is TraceEventType.TOOL_EXECUTED]
