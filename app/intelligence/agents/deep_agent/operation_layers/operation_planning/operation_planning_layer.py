@@ -18,6 +18,12 @@ class OperationPlanningLayer(OperationLayerBase):
     pipeline parses can never drift apart — adding a field to the plan updates
     the prompt automatically.
 
+    The same schema is passed to the model as output_schema, so its decoding is held to
+    it as well. A small model shown a schema in its prompt sometimes copies the schema
+    back instead of filling it in — for some goals every time — and that reply can never
+    become a plan. The prompt keeps the schema anyway, because the field descriptions in
+    it are what tell the model what to write.
+
     Parsing is delegated to OutputParserStructured, which means a malformed plan
     raises a ValidationError here rather than surfacing as a confusing failure
     three layers later.
@@ -28,6 +34,7 @@ class OperationPlanningLayer(OperationLayerBase):
 
     def __init__(self, model: ModelFoundation) -> None:
         self._model: ModelFoundation = model
+        self._schema: dict = OperationPlan.model_json_schema()
         self._parser: OutputParserStructured[OperationPlan] = OutputParserStructured(
             schema = OperationPlan
         )
@@ -40,10 +47,13 @@ class OperationPlanningLayer(OperationLayerBase):
         return MessageSystem(
             content = PLANNING_SYSTEM_PROMPT.format(
                 subagent_types = format_subagent_capabilities(),
-                schema = json.dumps(OperationPlan.model_json_schema(), indent = 2)
+                schema = json.dumps(self._schema, indent = 2)
             )
         )
 
     def execute(self, context: OperationContext) -> None:
-        response = self._model.invoke([self._build_system_message(), *context.history, context.goal])
+        response = self._model.invoke(
+            [self._build_system_message(), *context.history, context.goal],
+            output_schema = self._schema
+        )
         context.plan = self._parser.parse(response).data
