@@ -18,7 +18,7 @@ class TestToolSearchFiles:
         assert "empty" in make_tool().execute(ToolSearchFilesInput(query = "anything"))
 
     def test_returns_the_matching_line_not_just_the_file(self):
-        """A subagent owns one tool, so a result it cannot open is useless."""
+        """A match that arrives readable saves the turn a read_file would cost."""
         tool = make_tool()
         tool._sandbox_env.write_file("sort.py", "def bubble(x):\n    return x\n")
         output = tool.execute(ToolSearchFilesInput(query = "bubble"))
@@ -47,3 +47,33 @@ class TestToolSearchFiles:
         output = tool.execute(ToolSearchFilesInput(query = "hit"))
         assert "output truncated" not in output
         assert "narrow the query" in output
+
+    def test_a_glob_without_a_slash_matches_file_names(self):
+        tool = make_tool()
+        tool._sandbox_env.write_file("src/a.py", "needle\n")
+        tool._sandbox_env.write_file("notes.md", "needle\n")
+        output = tool.execute(ToolSearchFilesInput(query = "needle", path_glob = "*.py"))
+        assert "src/a.py" in output and "notes.md" not in output
+
+    def test_a_glob_with_a_slash_matches_paths(self):
+        tool = make_tool()
+        tool._sandbox_env.write_file("tests/test_a.py", "needle\n")
+        tool._sandbox_env.write_file("src/a.py", "needle\n")
+        output = tool.execute(ToolSearchFilesInput(query = "needle", path_glob = "tests/*"))
+        assert "tests/test_a.py" in output and "src/a.py" not in output
+
+    def test_a_glob_matching_nothing_says_so(self):
+        tool = make_tool()
+        tool._sandbox_env.write_file("a.py", "x\n")
+        assert "No workspace file matches '*.rs'" in tool.execute(ToolSearchFilesInput(query = "x", path_glob = "*.rs"))
+
+    def test_a_regular_expression_can_be_searched(self):
+        tool = make_tool()
+        tool._sandbox_env.write_file("a.py", "def quick_sort():\ndef merge_sort():\ndef helper():\n")
+        output = tool.execute(ToolSearchFilesInput(query = "def (quick|merge)_sort", is_regex = True))
+        assert "2 match(es)" in output and "helper" not in output
+
+    def test_an_invalid_regular_expression_is_explained(self):
+        tool = make_tool()
+        tool._sandbox_env.write_file("a.py", "x\n")
+        assert "not a valid regular expression" in tool.execute(ToolSearchFilesInput(query = "(", is_regex = True))

@@ -9,3 +9,6 @@ PyJWT
 sqlalchemy
 psycopg[binary]
 boto3
+httpx
+pypdf
+python-docx

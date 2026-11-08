@@ -16,9 +16,9 @@ class SandboxEnvLocal(SandboxEnv):
     so the absence of a sandbox surfaces as a clear message to the agent instead of
     as an unnoticed security hole.
 
-    It also backs the Docker environment's file operations: with the directory bind
-    mounted into the container, host-side reads and writes are the same bytes the
-    container sees, without a round trip through the daemon."""
+    It also backs the Docker environment's file operations: the files stay on the host
+    and are read and written here, without a round trip through the daemon, while a
+    container only ever sees a copy of them made for one command."""
 
     MAX_FILE_BYTES = 200_000
     SKIPPED_DIRECTORIES = {".git", "__pycache__", ".venv", "node_modules", ".pytest_cache"}

@@ -9,7 +9,9 @@ from app.server.routes import find_chat_session
 from app.server.builders import build_rag_agent
 from app.server.builders import build_deep_agent
 from app.server.chat_sessions import ChatSession
+from app.server.security import AuthorizationError
 from app.server.security import IdentityAccessAction
+from app.intelligence.memory import VectorDbMemoryEntry
 from app.server.security import format_knowledge_collection_vrn
 from app.server.security import format_chat_session_collection_vrn
 
@@ -29,6 +31,18 @@ def _title_for(message: str) -> str:
     if len(flattened) <= TITLE_CHARS:
         return flattened
     return flattened[:TITLE_CHARS - 1].rstrip() + "…"
+
+
+def _searchable_entries(request: Request, owner_id: str) -> list[VectorDbMemoryEntry]:
+    """The documents the deep agent's research steps may search: the caller's own, when
+    its role allows searching them, and none otherwise. Unlike the RAG agent, the deep
+    agent has other work to do without them, so a caller without the permission still
+    gets an agent — just one whose document search finds nothing."""
+    try:
+        authorize(request, IdentityAccessAction.KNOWLEDGE_SEARCH, format_knowledge_collection_vrn(owner_id))
+    except AuthorizationError:
+        return []
+    return request.app.state.knowledge_store.load_entries(owner_id)
 
 
 @chat_router.get("/stream")
@@ -54,7 +68,10 @@ def chat_stream(request: Request, message: str = Query(min_length = 1),
         entries = state.knowledge_store.load_entries(owner.entity_id)
         build_agent = lambda tracing_service: build_rag_agent(tracing_service, entries)
     else:
-        build_agent = lambda tracing_service: build_deep_agent(tracing_service, state.sandbox_pool)
+        entries = _searchable_entries(request, owner.entity_id)
+        build_agent = lambda tracing_service: build_deep_agent(
+            tracing_service, state.sandbox_pool, state.web_fetcher, entries
+        )
 
     return StreamingResponse(
         stream_chat(state, message, chat_session, session_id is None, build_agent, agent.value),

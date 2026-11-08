@@ -19,6 +19,18 @@ EMBEDDING_QUERY_TEMPLATE = (
 CONTEXT_WINDOW_TOKENS = 8192
 
 
+def build_knowledge_memory(tracing_service: TracingServiceBase,
+    entries: list[VectorDbMemoryEntry]) -> VectorDbMemory:
+    """One owner's documents as a searchable VectorDbMemory — the entries arrive already
+    embedded from the database, and only a query is ever embedded here, with the
+    instruction qwen3-embedding expects in front of a query and not in front of a
+    passage. Shared by the RAG agent and the deep agent's search_documents tool, so both
+    search the same way with the same model the documents were indexed with."""
+    vector_db_memory = VectorDbMemory(ModelEmbeddings(EMBEDDING_MODEL_NAME, tracing_service), EMBEDDING_QUERY_TEMPLATE)
+    vector_db_memory.add_entries(entries)
+    return vector_db_memory
+
+
 def build_rag_agent(tracing_service: TracingServiceBase,
     entries: list[VectorDbMemoryEntry]) -> RagAgent:
     """Assembles a RagAgent over one owner's documents, wired to one run's tracer —
@@ -26,9 +38,7 @@ def build_rag_agent(tracing_service: TracingServiceBase,
     reports into this run and starts from empty memory.
 
     The entries arrive already embedded, loaded from the database by the route, and go
-    into a VectorDbMemory searched through HybridSearchPolicy. The memory embeds only the
-    query, with the instruction qwen3-embedding expects in front of a query and not in
-    front of a passage.
+    into the memory build_knowledge_memory makes, searched through HybridSearchPolicy.
 
     The three models differ in one setting that matters. Rewriting the query and writing
     the answer run without reasoning, which keeps them to a second or two. Reranking runs
@@ -37,9 +47,7 @@ def build_rag_agent(tracing_service: TracingServiceBase,
     difference between keeping the right passage and discarding every one. Every model
     gets a larger context than Ollama's default, since the answer has to fit the
     passages and the conversation at once."""
-    embeddings = ModelEmbeddings(EMBEDDING_MODEL_NAME, tracing_service)
-    vector_db_memory = VectorDbMemory(embeddings, EMBEDDING_QUERY_TEMPLATE)
-    vector_db_memory.add_entries(entries)
+    vector_db_memory = build_knowledge_memory(tracing_service, entries)
 
     query_model = ModelFoundation(
         ModelConfig(model_name = RAG_MODEL_NAME, temperature = 0.1, context_window_tokens = CONTEXT_WINDOW_TOKENS),

@@ -2,6 +2,7 @@ import pytest
 import pathlib
 import tempfile
 
+from app.intelligence.tools import ToolReadFile
 from app.intelligence.tools import ToolWriteFile
 from app.intelligence.sandbox import SandboxEnvLocal
 from tests.fixtures.model.fake_model import FakeModel
@@ -11,9 +12,9 @@ from app.intelligence.agents import OperationSubagentBlueprint
 from app.intelligence.middleware import MiddlewareSlidingWindow
 
 
-def make_factory(prompt = "You write code. Use {tool}."):
+def make_factory(prompt = "You write code. Your tools are {tools}."):
     blueprint = OperationSubagentBlueprint(
-        tool_factory = ToolWriteFile,
+        tool_factories = [ToolReadFile, ToolWriteFile],
         prompt_template = prompt,
         model = FakeModel(),
         max_context_window_size = 8,
@@ -36,10 +37,11 @@ class TestOperationSubagentFactory:
         with pytest.raises(ValueError, match = "No blueprint registered"):
             make_factory().create(OperationSubagentType.REVIEW, make_env())
 
-    def test_the_tool_is_bound_to_the_env_it_was_given(self):
+    def test_every_tool_is_bound_to_the_env_it_was_given(self):
         env = make_env()
         agent = make_factory().create(OperationSubagentType.CODE, env)
         assert agent._tool_registry.get("write_file")._sandbox_env is env
+        assert agent._tool_registry.get("read_file")._sandbox_env is env
 
     def test_each_call_binds_its_own_env(self):
         factory = make_factory()
@@ -54,10 +56,14 @@ class TestOperationSubagentFactory:
         agent = factory.create(OperationSubagentType.CODE, make_env())
         assert len(agent._short_term_memory) == 0
 
-    def test_the_prompt_is_told_the_tool_name(self):
+    def test_the_whole_toolset_is_registered(self):
+        agent = make_factory().create(OperationSubagentType.CODE, make_env())
+        assert [current.name for current in agent._tool_registry.all()] == ["read_file", "write_file"]
+
+    def test_the_prompt_is_told_the_tool_names(self):
         agent = make_factory().create(OperationSubagentType.CODE, make_env())
         prompt = agent._prompt_manager.build_system_messages()[0].content
-        assert "write_file" in prompt and "{tool}" not in prompt
+        assert "Your tools are read_file, write_file." in prompt and "{tools}" not in prompt
 
     def test_contains_reports_what_is_registered(self):
         factory = make_factory()

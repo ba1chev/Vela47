@@ -70,14 +70,19 @@ class AgentBase(ABC):
         self._short_term_memory.append_message(message.content, MessageType.HUMAN_MESSAGE)
 
     def _append_ai(self, message: MessageAI) -> None:
-        self._short_term_memory.append_message(message.content, MessageType.AI_MESSAGE)
+        self._short_term_memory.append_message(
+            message.content,
+            MessageType.AI_MESSAGE,
+            tool_calls = message.tool_calls
+        )
 
     def _append_tool(self, message: MessageTool) -> None:
         self._short_term_memory.append_message(
             message.content,
             MessageType.TOOL_MESSAGE,
             tool_call_id = message.tool_call_id,
-            status = message.status
+            status = message.status,
+            name = message.name
         )
 
     def _history(self) -> list[MessageBase]:

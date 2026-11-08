@@ -74,9 +74,18 @@ class Config(BaseModel):
     knowledge_max_file_bytes: int = Field(
         default = 512 * 1024,
         gt = 0,
-        description = "Largest document one upload may be, in UTF-8 bytes — "
-            "VELA47_KNOWLEDGE_MAX_FILE_BYTES. Every chunk of an upload is embedded before the "
-            "request returns, so this also bounds how long an upload can take."
+        description = "Most text one document may hold, in UTF-8 bytes, counted after it is "
+            "extracted from the file — VELA47_KNOWLEDGE_MAX_FILE_BYTES. Every chunk of an upload "
+            "is embedded before the request returns, so this also bounds how long an upload can "
+            "take."
+    )
+    knowledge_max_upload_bytes: int = Field(
+        default = 8 * 1024 * 1024,
+        gt = 0,
+        description = "Largest file one upload or URL import may be before its text is extracted, "
+            "in bytes — VELA47_KNOWLEDGE_MAX_UPLOAD_BYTES. A PDF or Word document is far larger "
+            "than the text inside it, so this bounds the work of reading one, while "
+            "knowledge_max_file_bytes still bounds the text that is kept."
     )
     knowledge_max_owner_bytes: int = Field(
         default = 2 * 1024 * 1024,
@@ -135,6 +144,7 @@ class Config(BaseModel):
             "database_secret_id": environ.get("VELA47_DATABASE_SECRET_ID"),
             "aws_region": region,
             "knowledge_max_file_bytes": int(environ.get("VELA47_KNOWLEDGE_MAX_FILE_BYTES", 512 * 1024)),
+            "knowledge_max_upload_bytes": int(environ.get("VELA47_KNOWLEDGE_MAX_UPLOAD_BYTES", 8 * 1024 * 1024)),
             "knowledge_max_owner_bytes": int(environ.get("VELA47_KNOWLEDGE_MAX_OWNER_BYTES", 2 * 1024 * 1024))
         }
         if environ.get("VELA47_SQLITE_PATH"):
