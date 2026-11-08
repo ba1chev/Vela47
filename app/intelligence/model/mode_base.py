@@ -11,11 +11,15 @@ class ModelBase(ABC):
     stream for a token-by-token generator — so agents and pipelines can depend
     on this interface rather than a concrete provider. Concrete subclasses wire
     up a specific backend (e.g. Ollama) and translate between MessageBase and
-    the provider's native format."""
+    the provider's native format.
+
+    invoke() may be given an output_schema — a JSON schema the reply must satisfy. A
+    backend that can constrain decoding to it must; one that cannot still receives the
+    schema in the prompt from whoever asked, so ignoring it degrades rather than breaks."""
 
     @abstractmethod
-    def invoke(self, messages: list[MessageBase],
-        tools: Optional[list[dict]] = None) -> MessageAI:
+    def invoke(self, messages: list[MessageBase], tools: Optional[list[dict]] = None,
+        output_schema: Optional[dict] = None) -> MessageAI:
         raise NotImplementedError("Must be implemented")
 
     @abstractmethod
