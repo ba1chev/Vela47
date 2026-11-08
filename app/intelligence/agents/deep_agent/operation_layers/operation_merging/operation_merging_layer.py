@@ -22,6 +22,11 @@ class OperationMergingLayer(OperationLayerBase):
     synthesising fragments with no way to tell whether they actually answer what
     was asked.
 
+    Each report is written under the step that produced it — the step's instruction,
+    then the report with its status. Listed apart, a small model had to pair the
+    third result with the third step itself, and a report read without the question
+    it answers is easily attributed to the wrong part of the request.
+
     Errors are passed to the model verbatim rather than filtered out, because a
     gap the user should know about is part of an honest answer.
 
@@ -41,22 +46,22 @@ class OperationMergingLayer(OperationLayerBase):
     def operation_type(self) -> OperationType:
         return OperationType.MERGING
 
+    def _instruction(self, context: OperationContext, position: int, task_id: str) -> str:
+        task = next((current for current in context.tasks if current.id == task_id), None)
+        if task is not None:
+            return task.instruction
+        if context.plan is not None and position < len(context.plan.steps):
+            return context.plan.steps[position].description
+        return ""
+
     def _build_report(self, context: OperationContext) -> str:
-        lines: list[str] = [f"GOAL: {context.goal.content}", ""]
-
-        if context.plan is not None:
-            lines.append("PLAN:")
-            lines.extend(
-                f"  {current_step.index}. [{current_step.subagent_type.name}] {current_step.description}"
-                for current_step in context.plan.steps
-            )
-            lines.append("")
-
-        lines.append("SUBAGENT RESULTS:")
-        lines.extend(
-            f"  [{current_result.subagent_type.name}] ({current_result.status}) {current_result.content}"
-            for current_result in context.results
-        )
+        lines: list[str] = [f"REQUEST: {context.goal.content}"]
+        for position, current_result in enumerate(context.results):
+            lines.extend([
+                "",
+                f"STEP {position + 1} [{current_result.subagent_type.name}]: {self._instruction(context, position, current_result.task_id)}",
+                f"REPORT ({current_result.status}): {current_result.content}"
+            ])
         return "\n".join(lines)
 
     def execute(self, context: OperationContext) -> None:
