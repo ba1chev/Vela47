@@ -7,8 +7,8 @@ SUBAGENT_CAPABILITIES: dict[OperationSubagentType, str] = {
         "when there are any — reads pages and reports facts with their sources. It cannot "
         "create or change files.",
     OperationSubagentType.CODE:
-        "writes code. It reads the workspace and creates or edits files. Use it for every "
-        "step that creates or changes a file.",
+        "writes program code. It reads the workspace and creates or edits code files. Use it "
+        "for every step that creates or changes a code file.",
     OperationSubagentType.TEST:
         "tests code. It writes pytest tests for code in the workspace and runs them. Use it "
         "for every step about tests or about checking that code works.",
