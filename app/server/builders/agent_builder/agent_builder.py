@@ -35,7 +35,7 @@ from app.intelligence.agents import OperationSubagentProbeSources
 from app.intelligence.agents import OperationSubagentProbeWorkspace
 from app.intelligence.agents import SUBAGENT_SYSTEM_PROMPT_TEMPLATES
 
-MODEL_NAME = "qwen3:1.7b"
+MODEL_NAME = "qwen3.5:9b"
 SUBAGENT_MAX_ITERATIONS = 6
 SUBAGENT_PROBE_FACTORIES = {
     OperationSubagentType.RESEARCH: [OperationSubagentProbeSources],
