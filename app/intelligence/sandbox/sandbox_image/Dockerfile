@@ -1,6 +1,6 @@
 # The image every sandbox container runs: the slim Python base plus pytest, so a TEST
-# subagent can run the tests it writes. Containers start with no network, so anything a
-# subagent's code needs at run time has to be installed here, at build time.
+# subagent can run the tests it writes. Containers have no route out of their network, so
+# anything a subagent's code needs at run time has to be installed here, at build time.
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
