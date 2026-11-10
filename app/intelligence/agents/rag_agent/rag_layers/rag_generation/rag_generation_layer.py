@@ -17,31 +17,17 @@ from app.intelligence.agents import RAG_GENERATION_SYSTEM_PROMPT
 
 
 class RagGenerationLayer(RagLayerBase):
-    """Writes the answer from the reranked passages and streams it as it is produced,
-    reporting every chunk as an ANSWER_CHUNK event exactly as the DeepAgent's merging
-    layer does, so the browser renders both agents' answers the same way.
+    """Writes the answer from the reranked passages and streams it as ANSWER_CHUNK
+    events, like the DeepAgent's merging layer. Sources come first, each under its
+    number and document title, and the question last, because what a small model reads
+    last weighs most. The same numbers travel in response_metadata with document, chunk,
+    score and excerpt, so a citation can be traced after the conversation is reopened.
 
-    The sources come first and the question last, each source under its number and the
-    title of its document. What a small model reads last weighs most in what it writes,
-    and it is the question it must answer — with the question first, the passages
-    after it are what the answer drifts toward.
-
-    Sources are numbered in the order reranking left them, and the same numbers travel
-    with the answer in response_metadata — document, chunk, score and an excerpt — so a
-    citation such as [2] can always be traced back to the passage it came from, even
-    after the conversation is stored and reopened.
-
-    When no passage survived, the model gets a different, narrower task: tell the user
-    the documents do not cover the question, and nothing else. The question reaches it
-    only quoted inside that instruction — never as a message of its own, nor beside an
-    empty list of sources — because handed anything that reads as a question to
-    answer, a small model answers it from what it happens to know and cites a source
-    it was never given, which reads exactly like a grounded answer. That reply is
-    written as a RagNoSourcesReply, through output_schema: the model names the
-    language of the question before it writes the reply. Asked only to answer in the
-    question's language, it answered Bulgarian questions in English; naming the
-    language first, it followed it every time. The reply is not streamed — it arrives
-    whole, as one chunk, once the JSON around it is read."""
+    With no passage left, the model only tells the user the documents do not cover the
+    question, which reaches it quoted inside that instruction: given anything that reads
+    as a question, a small model answers from memory and cites a source it never had.
+    That reply is a RagNoSourcesReply, which names the question's language first, and
+    arrives whole rather than streamed."""
 
     EXCERPT_CHARS = 240
 
