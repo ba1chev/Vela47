@@ -10,22 +10,15 @@ DEFAULT_SQLITE_PATH = pathlib.Path(__file__).resolve().parents[2] / "db" / "vela
 
 
 class Config(BaseModel):
-    """Everything the server needs to know about where it runs — the single place where
-    configuration is defined, and the only code that reads the environment or Secrets
-    Manager. The rest of the server is handed a Config and never looks anything up on its
-    own, which is what lets a test build one in a line and run the server against it.
+    """Everything the server needs to know about where it runs, and the only code that
+    reads the environment or Secrets Manager. The rest of the server is handed a Config,
+    so a test builds one in a line.
 
-    Values arrive by two routes on purpose. Whatever is not a secret — which environment
-    this is, the RDS endpoint, the region — comes from VELA47_* environment variables,
-    which on EC2 the service definition sets. Secrets never come from the environment in
-    PROD: the token secret and the first admin's credentials are read at startup from one
-    application secret in Secrets Manager, and the database password is not held here at
-    all — the database fetches it from its own RDS-managed secret for every new
-    connection, so a rotation never needs a restart.
-
-    In DEV every field has a default and the server starts with nothing set. In PROD the
-    fields without which it would run insecurely or not at all are required, so a missing
-    one fails the start rather than the first request."""
+    Non-secret values come from VELA47_* environment variables. In PROD secrets never
+    do: the token secret and the first admin are read once from an application secret,
+    and the database password is not held here at all, since the database reads its
+    RDS-managed secret for every new connection. DEV has a default for every field; PROD
+    requires those it cannot run safely without, so a missing one fails the start."""
 
     model_config = {"frozen": True}
 
