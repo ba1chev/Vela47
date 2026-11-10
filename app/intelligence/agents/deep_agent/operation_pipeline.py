@@ -11,23 +11,15 @@ from app.intelligence.agents import OperationLayersFactoryBase
 
 
 class OperationPipeline:
-    """Executes the layer sequence an OperationPolicy resolved, threading one
-    OperationContext through all of them.
+    """Runs the layers an OperationPolicy resolved, threading one OperationContext
+    through them. It is deliberately the dumbest component: it knows nothing of what a
+    layer does and never branches, so adding a stage never touches it. Layers are
+    resolved once, at construction.
 
-    The pipeline is intentionally the dumbest component here: it holds no
-    knowledge of what any layer does, does not branch, and does not inspect the
-    context between stages. Everything variable — which stages run, in what
-    order, with which dependencies — is decided by the policy at construction
-    time. Adding a stage therefore never touches this class.
-
-    It is also the only place that times layers. Because every layer writes its
-    result into the shared context, the pipeline can report what a layer produced
-    by reading the context afterwards, which means layers need no tracer of their
-    own to be visible in the UI. Only work the context cannot describe — an
-    individual subagent running inside a stage — is reported by the layer itself.
-
-    Layers are resolved once in the constructor rather than per run, so a
-    pipeline is a reusable, immutable plan of execution."""
+    It is also the only place that times layers, and it reports what each produced by
+    reading the context afterwards, so layers need no tracer of their own. Only work the
+    context cannot describe, such as one subagent's run, is reported by the layer
+    itself."""
 
     def __init__(self, operation_policy: OperationPolicy,
         tracing_service: Optional[TracingServiceBase] = None) -> None:
