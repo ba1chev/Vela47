@@ -1,5 +1,6 @@
 import pathlib
 
+from db import DatabaseConfig
 from db import DatabaseSqlite
 from db import DatabasePostgres
 from app.server.config import Config
@@ -10,9 +11,11 @@ from app.server.config_environment import ConfigEnvironment
 def make_prod_config():
     return Config(
         environment = ConfigEnvironment.PROD,
-        database_host = "vela47.abc.eu-central-1.rds.amazonaws.com",
-        database_name = "vela47",
-        database_secret_id = "rds!db-123",
+        database = DatabaseConfig(
+            host = "vela47.abc.eu-central-1.rds.amazonaws.com",
+            name = "vela47",
+            secret_id = "rds!db-123"
+        ),
         aws_region = "eu-central-1",
         token_secret = "t" * 32
     )
@@ -20,7 +23,7 @@ def make_prod_config():
 
 class TestDatabaseBuilder:
     def test_dev_builds_sqlite_on_the_configured_file(self):
-        database = build_database(Config(sqlite_path = pathlib.Path("/tmp/x.sqlite3")))
+        database = build_database(Config(database = DatabaseConfig(sqlite_path = pathlib.Path("/tmp/x.sqlite3"))))
         assert isinstance(database, DatabaseSqlite)
         assert database.path == pathlib.Path("/tmp/x.sqlite3")
 
