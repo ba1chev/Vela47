@@ -6,20 +6,15 @@ from hmac import compare_digest
 
 
 class AuthenticationPasswordHasher:
-    """Turns passwords into salted scrypt hashes and checks them, using only the standard
-    library. scrypt is memory-hard — every guess costs an attacker the same hundred-odd
-    megabytes it costs the server — and the default cost follows OWASP's minimum for it:
-    N=2^17, r=8, p=1. The cost is a constructor argument so tests can run cheaply.
+    """Salted scrypt hashes from the standard library, at OWASP's minimum cost (N=2^17,
+    r=8, p=1); the cost is a constructor argument so tests run cheaply. Each hash names
+    its own parameters, so raising the cost never locks out existing accounts, and
+    parameters read back are bounded so a tampered record cannot make a sign-in allocate
+    gigabytes.
 
-    Each hash is self-describing — algorithm, parameters, salt and key in one string — so
-    raising the cost later never locks out existing accounts: verify() uses the
-    parameters a hash was made with rather than today's. Parameters read from a stored
-    hash are bounded, so a tampered record cannot make one sign-in allocate gigabytes.
-
-    verify() takes the stored hash as Optional and, when there is none, still spends one
-    full hash on a dummy before answering False. Signing in as a name that does not exist
-    then takes as long as signing in with a wrong password, so the clock cannot be used
-    to find out which names are registered."""
+    verify() with no stored hash still spends one full hash on a dummy, so an unknown
+    name takes as long as a wrong password and the clock does not reveal which names
+    exist."""
 
     ALGORITHM = "scrypt"
     SEPARATOR = "$"
