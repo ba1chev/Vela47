@@ -9,24 +9,15 @@ from app.intelligence.sandbox import SandboxCommandResult
 
 
 class ToolRunTests(ToolBase[ToolRunTestsInput, str]):
-    """Runs the workspace's tests with pytest inside the sandbox and reports the outcome.
+    """Runs the workspace's tests with pytest in the sandbox and reports the outcome, so
+    a TEST subagent learns whether its assertions pass. A sandbox that cannot run
+    commands raises, and the agent is told why instead of being told its tests passed.
 
-    This is what turns a TEST subagent from writing tests into testing: it sees whether
-    its assertions pass, and can fix a test that is wrong or report code that is. The
-    command runs through the sandbox's run(), which on the Docker pool is a container
-    with no network and capped memory, CPU and processes — model-written code never runs
-    on the host. A sandbox that cannot run commands at all raises, and the agent is told
-    why instead of being told its tests passed.
-
-    The command is built here, never by the model: the path and keyword are confined to
-    the workspace and shell-quoted, so the only thing the agent chooses is which tests.
-    Bytecode and pytest's cache are switched off: the tests run on a copy of the
-    workspace that is deleted when they finish, so writing either would only cost time.
-
-    pytest's exit code says more than its output does at a glance, so the result leads
-    with what the code means — failures, a broken import, nothing collected — then the
-    summary line, then the output with its middle cut if it is long. The end of pytest's
-    output is where the failures are explained, so more of it is kept than of the start."""
+    The command is built here, never by the model: path and keyword are confined to the
+    workspace and shell-quoted, and bytecode and pytest's cache are off, since the copy
+    they run on is deleted. The result leads with what the exit code means, then
+    pytest's summary, then the output with its middle cut, keeping more of the end,
+    where failures are explained."""
 
     TIMEOUT_SECONDS = 90
     HEAD_CHARS = 1_000
