@@ -1,9 +1,8 @@
-import hashlib
+import json
 import pathlib
 import tempfile
 import threading
 import subprocess
-from typing import Optional
 
 from app.intelligence.sandbox import SandboxEnv
 from app.intelligence.sandbox import SandboxSlot
@@ -12,57 +11,25 @@ from app.intelligence.sandbox import SandboxPoolBase
 
 CONTAINER_WORKSPACE_PATH = "/workspace"
 SANDBOX_IMAGE_DIRECTORY = pathlib.Path(__file__).resolve().parent / "sandbox_image"
+SANDBOX_COMPOSE_FILE = SANDBOX_IMAGE_DIRECTORY / "docker-compose.yaml"
 
 
 class SandboxPoolDocker(SandboxPoolBase):
-    """A fixed set of containers started once and reused, like a vending machine
-    stocked at opening time.
+    """A fixed set of containers started once and reused: the services of the Docker
+    Compose project in sandbox_image/, one slot each, read from the file through
+    `docker compose config`.
 
-    Containers are created at start() rather than per task because starting one costs
-    far more than a subagent's whole turn. They sit idle on `sleep infinity` and are
-    entered with `docker exec` when work arrives, so leasing a slot is free.
+    start() rebuilds the image from cache and recreates every container, so nothing a
+    previous process left inside one survives; shutdown() brings the project down. The
+    network gives each container a fixed address and nothing to reach with it.
 
-    No host directory is mounted. Each run's files live in its own subdirectory of
-    base_directory on the host, and a container is handed a copy of one of them for the
-    length of a command, at CONTAINER_WORKSPACE_PATH — see SandboxDocker. A mount is
-    fixed when a container starts, so reaching every run's files through one would mean
-    mounting their parent into every container, and then code written for one user
-    could read every other user's runs.
+    No host directory is mounted: each command gets a copy of one run's directory (see
+    SandboxDocker). Leasing is guarded by a lock, because two requests taking the same
+    slot would put two runs in one container at once."""
 
-    Leasing is guarded by a lock. Requests are served on several threads at once, and
-    two of them taking the same slot would put two runs in one container at the same
-    time — each able to read the other's copy.
-
-    Containers are named deterministically, which makes an orphan from a crashed
-    process findable: start() removes any container of the same name before creating
-    it, so a hard kill costs a stale container rather than a port of corruption.
-
-    The image is built from the Dockerfile in sandbox_image/ unless an image to pull is
-    named instead. It is the slim Python base plus pytest — the containers have no
-    network, so a test runner has to be in the image for a TEST subagent to run anything.
-    The tag is derived from the Dockerfile's contents, so editing it produces a new tag
-    and the next start builds the new image instead of reusing a stale one.
-
-    Talking to Docker through its CLI rather than a client library keeps the
-    dependency list unchanged and makes every failure legible — the command that
-    failed is the command you can paste into a terminal."""
-
-    def __init__(self, size: int = 10, image: Optional[str] = None,
-        build_context: Optional[pathlib.Path] = SANDBOX_IMAGE_DIRECTORY,
-        base_directory: pathlib.Path | None = None,
-        memory_limit: str = "512m", cpu_limit: str = "1.0",
-        name_prefix: str = "vela47-slot") -> None:
-        if image is None and build_context is None:
-            raise ValueError("The pool needs an image to pull or a build context to build one from.")
-
-        self._size: int = size
-        self._build_context: Optional[pathlib.Path] = (
-            pathlib.Path(build_context) if image is None and build_context is not None else None
-        )
-        self._image: str = image if image is not None else self._content_tag(pathlib.Path(build_context))
-        self._memory_limit: str = memory_limit
-        self._cpu_limit: str = cpu_limit
-        self._name_prefix: str = name_prefix
+    def __init__(self, compose_file: pathlib.Path = SANDBOX_COMPOSE_FILE,
+        base_directory: pathlib.Path | None = None) -> None:
+        self._compose_file: pathlib.Path = pathlib.Path(compose_file)
         self._base_directory: pathlib.Path = (
             pathlib.Path(base_directory)
             if base_directory is not None
@@ -76,84 +43,63 @@ class SandboxPoolDocker(SandboxPoolBase):
     def base_directory(self) -> pathlib.Path:
         return self._base_directory
 
-    @property
-    def image(self) -> str:
-        return self._image
-
-    def _content_tag(self, build_context: pathlib.Path) -> str:
-        digest = hashlib.sha256((build_context / "Dockerfile").read_bytes()).hexdigest()[:12]
-        return f"vela47-sandbox:{digest}"
-
-    def _container_name(self, index: int) -> str:
-        return f"{self._name_prefix}-{index}"
-
-    def _docker(self, *arguments: str, timeout: int = 120) -> subprocess.CompletedProcess:
+    def _compose(self, *arguments: str, timeout: int = 120) -> subprocess.CompletedProcess:
         return subprocess.run(
-            ["docker", *arguments],
+            ["docker", "compose", "--file", str(self._compose_file), *arguments],
             capture_output = True,
             text = True,
             timeout = timeout,
             check = False
         )
 
+    def _slots_from(self, configuration: dict) -> list[SandboxSlot]:
+        services = configuration.get("services") or {}
+        if not services:
+            raise RuntimeError(f"The sandbox compose file {self._compose_file} defines no service.")
+
+        unnamed = sorted(current for current in services if not services[current].get("container_name"))
+        if unnamed:
+            raise RuntimeError(
+                f"Every sandbox service needs a container_name to be entered by; "
+                f"{', '.join(unnamed)} has none."
+            )
+
+        return [
+            SandboxSlot(id = index, reference = services[current]["container_name"])
+            for index, current in enumerate(sorted(services))
+        ]
+
     def start(self) -> None:
         self._base_directory.mkdir(parents = True, exist_ok = True)
 
-        present = self._docker("image", "inspect", self._image, timeout = 30)
-        if present.returncode != 0:
-            self._provision_image()
-
-        self._slots = []
-        for index in range(self._size):
-            name = self._container_name(index)
-            self._docker("rm", "-f", name, timeout = 30)
-
-            created = self._docker(
-                "run", "-d",
-                "--name", name,
-                "--network", "none",
-                "--memory", self._memory_limit,
-                "--cpus", self._cpu_limit,
-                "--pids-limit", "256",
-                self._image,
-                "sleep", "infinity"
-            )
-
-            if created.returncode != 0:
-                self.shutdown()
-                raise RuntimeError(
-                    f"Could not start sandbox container '{name}': {created.stderr.strip()}"
-                )
-
-            self._slots.append(SandboxSlot(
-                id = index,
-                reference = created.stdout.strip()[:12] or name
-            ))
-
-        self._busy = set()
-
-    def _provision_image(self) -> None:
-        if self._build_context is None:
-            pulled = self._docker("pull", self._image, timeout = 600)
-            if pulled.returncode != 0:
-                raise RuntimeError(f"Could not pull image '{self._image}': {pulled.stderr.strip()}")
-            return
-
-        built = self._docker("build", "-t", self._image, str(self._build_context), timeout = 900)
-        if built.returncode != 0:
+        configured = self._compose("config", "--format", "json", timeout = 30)
+        if configured.returncode != 0:
             raise RuntimeError(
-                f"Could not build image '{self._image}' from {self._build_context}: "
-                f"{built.stderr.strip()[-2000:]}"
+                f"Could not read the sandbox compose file {self._compose_file}: {configured.stderr.strip()}"
             )
+        slots = self._slots_from(json.loads(configured.stdout))
+
+        started = self._compose(
+            "up", "--detach", "--build", "--force-recreate", "--remove-orphans", "--wait",
+            timeout = 900
+        )
+        if started.returncode != 0:
+            self.shutdown()
+            raise RuntimeError(
+                f"Could not start the sandbox containers from {self._compose_file}: "
+                f"{started.stderr.strip()[-2000:]}"
+            )
+
+        self._slots = slots
+        self._busy = set()
 
     def shutdown(self) -> None:
-        for index in range(self._size):
-            try:
-                self._docker("rm", "-f", self._container_name(index), timeout = 30)
-            except Exception:
-                continue
         self._slots = []
         self._busy = set()
+        try:
+            self._compose("down", "--timeout", "0", "--remove-orphans")
+        except (OSError, subprocess.TimeoutExpired):
+            return
 
     def acquire(self) -> SandboxSlot:
         with self._lock:
@@ -170,7 +116,7 @@ class SandboxPoolDocker(SandboxPoolBase):
 
             raise RuntimeError(
                 f"No sandbox slot available — all {len(self._slots)} containers are in use. "
-                f"Increase the pool size or reduce how many subagents run at once."
+                f"Add a service to the sandbox compose file or reduce how many subagents run at once."
             )
 
     def release(self, slot: SandboxSlot) -> None:
@@ -179,7 +125,7 @@ class SandboxPoolDocker(SandboxPoolBase):
 
     def env_for(self, slot: SandboxSlot, run_id: str) -> SandboxEnv:
         return SandboxDocker(
-            container_name = self._container_name(slot.id),
+            container_name = slot.reference,
             host_directory = self._base_directory / run_id,
             container_directory = CONTAINER_WORKSPACE_PATH
         )
