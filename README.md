@@ -288,6 +288,8 @@ An admin can sign in as the user role for everyday work.
 
 The schema is created with `create_all` at startup. Messages are rebuilt from JSON through `MessageFactory`.
 
+The database settings are a `DatabaseConfig` (`db/database_config.py`): the SQLite file, and the RDS endpoint, port, database name, SSL mode and secret id. It holds no password. `Config` carries one, filled from the `VELA47_SQLITE_PATH` and `VELA47_DATABASE_*` variables.
+
 `app/server/config.py` is the only code that reads the environment or AWS Secrets Manager. In production, the application secret (token key, bootstrap admin) is read once at startup, and the RDS-managed database secret is read for every new connection, so a password rotation needs no restart. Production refuses to start without a database host, database secret, region and token key.
 
 ## Frontend
