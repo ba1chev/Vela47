@@ -12,43 +12,16 @@ from app.intelligence.sandbox import SandboxCommandResult
 
 class SandboxDocker(SandboxEnv):
     """A container that a subagent's commands run inside, over a copy of its run's
-    directory.
+    directory. File operations stay on the host, in that directory, and only run() goes
+    through Docker. The container is leased per task while the directory belongs to the
+    run, so one subagent's files are there for the next.
 
-    File operations do not go through the daemon. The run's files live in a directory
-    on the host and are written and read there directly — which avoids a round trip per
-    file and leaves the artefacts browsable after the run. Only run() needs Docker, and
-    that is the one operation that genuinely requires containment.
-
-    A container holds one run's files, and only while a command runs. Before each
-    command the run's directory is copied into the container's workspace, and after it
-    the workspace is deleted. The containers are shared by every user's runs, so
-    mounting the directory that holds all of them would let code written for one user
-    read what was written for every other; a copy made for one command cannot. The copy
-    travels as a tar archive on the exec's stdin — one call to the daemon, no temporary
-    file — and the workspace is emptied first, so nothing a failed clean-up left behind
-    reaches the next run. What a command writes stays in the copy and goes with it: a
-    test run leaves the workspace exactly as the agents left it.
-
-    The container is leased, the directory is not. Containers are leased per task so
-    several can work at once; the directory belongs to the whole run, so a file one
-    subagent writes is still there for the next. Tying the filesystem to the lease
-    instead would delete a CODE subagent's work before a REVIEW subagent could read it.
-
-    The command string comes from a model and is passed as a single argument to a
-    shell *inside* the container — never to a host shell. The blast radius of
-    anything it does is the container and a throwaway copy of the run's directory.
-
-    Long output loses its middle, not its end. A test runner, a compiler and a crashing
-    script all say what went wrong last, so the end is kept in full and only a short
-    head survives alongside it.
-
-    Nothing a command starts outlives it. A timeout on `docker exec` stops only the CLI
-    on the host — the process inside the container keeps running — and a test can leave
-    a child behind when it ends, so after every command each process in the container
-    except its keep-alive is killed, and the workspace is deleted with them. The
-    container is leased to one subagent at a time, so nothing of anyone else's is
-    running there; without the sweep, one infinite loop would take the container's
-    single CPU from every task leased this slot afterwards."""
+    Containers are shared by every user's runs, so each command sees only a copy: the
+    run's directory is streamed into the emptied workspace as a tar on the exec's stdin,
+    and afterwards every process but the keep-alive is killed and the workspace deleted.
+    Nothing a command writes comes back, and nothing it starts outlives it. The command
+    runs in a shell inside the container, never on the host, and long output keeps a
+    short head and the full tail."""
 
     MAX_OUTPUT_CHARS = 8_000
     KEPT_HEAD_CHARS = 2_000

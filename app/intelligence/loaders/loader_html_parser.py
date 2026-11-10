@@ -4,23 +4,14 @@ from html.parser import HTMLParser
 
 
 class LoaderHtmlParser(HTMLParser):
-    """Walks an HTML page once and keeps what a reader would read: headings, paragraphs,
-    list items, table rows and preformatted blocks, written out as Markdown-like lines.
+    """Walks an HTML page once and keeps what a reader would read (headings, paragraphs,
+    list items, table rows, preformatted blocks) as Markdown-like lines. Scripts,
+    styles, navigation, footers, forms and frames are dropped, counting nested tags so a
+    skipped element is skipped whole.
 
-    What a page wraps around its content is dropped — scripts, styles, navigation,
-    footers, forms, embedded frames — because to a model or an embedding that chrome is
-    noise repeated on every page of a site. Skipping counts nested tags of the same name,
-    so a <div role="navigation"> full of other divs is skipped whole rather than until
-    its first closing tag.
-
-    Text inside <main> or <article> is also collected on its own. When that part holds a
-    real share of the page it is used instead of the whole, which is the cheap half of
-    what readability libraries do: most sites mark their content, and the marked part is
-    what was worth fetching.
-
-    Lines inside <pre> are marked while they are collected so that joining can tell them
-    apart: everywhere else runs of whitespace collapse to one space, but in code the
-    indentation is the meaning."""
+    Text inside <main> or <article> is also collected apart and used instead of the
+    whole page when it holds a real share of it. Lines inside <pre> are marked, so
+    joining keeps their indentation while everywhere else whitespace collapses."""
 
     SKIPPED_TAGS = {
         "script", "style", "noscript", "template", "svg", "canvas", "iframe", "object",

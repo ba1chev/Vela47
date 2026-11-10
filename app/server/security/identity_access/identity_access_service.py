@@ -19,20 +19,15 @@ from app.server.security import IDENTITY_ACCESS_ROLE_REGISTRY
 
 
 class IdentityAccessService:
-    """The identity and access directory — the counterpart of the IAM control plane
-    together with STS's AssumeRole. It owns every rule about identity: which kinds may be
-    created and under what names, which role an entity may act through, how long a role
-    session lasts, and which resource policies are attached where. Authentication and
-    authorization both consult it, and neither keeps any identity state of its own.
+    """The identity and access directory, the counterpart of the IAM control plane plus
+    STS's AssumeRole. It owns every rule about identity (which entities may be created
+    and under what names, which role an entity may act through, how long a session
+    lasts, which resource policies are attached where), and authentication and
+    authorization keep no identity state of their own.
 
-    Storage is delegated to a store, so the same service runs over memory today and over
-    the database once it exists. Roles are not stored: the built-in ones are code, built
-    once from the registry when the service is constructed.
-
-    assume_role() is the one gate between proving who you are and being allowed to do
-    anything at all. It evaluates the target role's trust policy against the entity and
-    refuses unless that policy explicitly allows it — a role whose trust policy says
-    nothing about an entity is a role that entity cannot have."""
+    Storage is delegated to a store; roles are code, built once from the registry.
+    assume_role() refuses unless the role's trust policy explicitly allows the
+    entity."""
 
     def __init__(self, store: IdentityAccessStoreBase,
         password_hasher: AuthenticationPasswordHasher) -> None:

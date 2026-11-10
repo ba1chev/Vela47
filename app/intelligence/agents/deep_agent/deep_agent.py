@@ -13,25 +13,15 @@ from app.intelligence.tracing import TracingServiceBase
 
 
 class DeepAgent(AgentBase):
-    """The orchestrating agent. Unlike a subagent, it never calls a model itself —
-    every inference happens inside a pipeline layer, which is what keeps the
-    orchestration logic free of prompt handling and makes the whole strategy
-    swappable by passing a different OperationPolicy.
+    """The orchestrating agent. It never calls a model itself: every inference happens
+    inside a pipeline layer, so the whole strategy is swapped by passing another
+    OperationPolicy.
 
-    What it does own is the conversation. Each turn is recorded in its
-    ShortTermMemory, so the DeepAgent accumulates a history across turns while
-    each subagent it spawns starts from nothing. That asymmetry is the point:
-    continuity lives at the top, isolation lives at the bottom.
-
-    The earlier turns reach the pipeline as context.history, bounded by AgentBase,
-    which is what lets planning resolve a follow-up and merging continue the
-    conversation — the bound matters here because the planning schema has to fit in
-    the same small context.
-
-    A run that produces no merged answer — a policy configured without a merging
-    stage, or a plan with no executable steps — yields an empty MessageAI rather
-    than raising, so the turn is still recorded and the caller still gets a
-    message to inspect."""
+    What it owns is the conversation. Its memory accumulates the turns while each
+    subagent starts from nothing: continuity at the top, isolation at the bottom.
+    Earlier turns reach planning and merging as context.history, bounded by AgentBase. A
+    run with no merged answer yields an empty MessageAI rather than raising, so the turn
+    is still recorded."""
 
     def __init__(self, model: ModelFoundation, prompt_manager: PromptManager,
         max_context_window_size: int, operation_pipeline: OperationPipeline,

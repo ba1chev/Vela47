@@ -8,21 +8,14 @@ from app.server.security import IdentityAccessPermissionPolicy
 
 class IdentityAccessRoleGuest(IdentityAccessRoleBase):
     """What an anonymous visitor may do: run the agents and keep conversations and
-    documents of its own, and never anything to do with identity. Trusted by guest
-    entities only.
+    documents of its own, never anything to do with identity. Trusted by guest entities
+    only, with twelve-hour sessions, since a leaked guest token grants only what anyone
+    can get by asking for one.
 
-    A guest's conversations and documents are granted through ${principal.id} like a
-    user's, but a guest is only the principal its token names. Once the token expires
-    the next visit is a different guest, and what the earlier one left stays in the
-    database without anyone who can reach it.
-
-    The explicit deny on iam:* is defence in depth rather than a necessity — nothing
-    here allows it anyway. It is there because a deny cannot be overridden, so no
-    resource policy attached later, and no careless widening of the allow above it, can
-    ever let an anonymous caller manage accounts.
-
-    Sessions last twelve hours. A leaked guest token grants only what anyone can obtain
-    by asking for one, so there is nothing a short lifetime would protect."""
+    Own resources are granted through ${principal.id} as for a user, so once the token
+    expires what the guest left stays in the database out of anyone's reach. The
+    explicit deny on iam:* is defence in depth: a deny cannot be overridden, so no later
+    resource policy or widened allow can let a guest manage accounts."""
 
     @property
     def role_type(self) -> IdentityAccessRoleType:

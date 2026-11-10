@@ -14,20 +14,15 @@ from app.server.security import IdentityAccessResourcePolicy
 
 
 class IdentityAccessStoreSql(IdentityAccessStoreBase):
-    """Keeps identities and resource policies in the database, so accounts outlive the
-    process — the store the server runs on, with IdentityAccessStoreInMemory kept for
-    tests that need no database at all. It works the same over the SQLite file in DEV
-    and over RDS in PROD, because it only ever talks to DatabaseBase.
+    """Keeps identities and resource policies in the database, over SQLite in DEV and
+    RDS in PROD alike, since it only talks to DatabaseBase; IdentityAccessStoreInMemory
+    remains for tests. Rows become entities through IdentityEntityFactory and policies
+    through their own model's validation, so a row that no longer fits fails loudly when
+    read.
 
-    Rows and models are translated here and nowhere else. A row becomes an entity
-    through IdentityEntityFactory, keyed on the stored type, and a policy document goes
-    back through its own model's validation, so a row that no longer matches its model
-    fails loudly when read instead of being half-trusted.
-
-    add_entity() leaves the uniqueness of names to the table's unique constraint and turns
-    the violation into the ValueError the store contract promises. That is what makes it
-    atomic across processes and not just threads: two EC2 instances creating the same
-    name at once still end with exactly one account."""
+    add_entity() leaves name uniqueness to the table's unique constraint and turns
+    the violation into ValueError, which makes it atomic across processes, not only
+    threads."""
 
     def __init__(self, database: DatabaseBase) -> None:
         self._database: DatabaseBase = database

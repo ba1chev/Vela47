@@ -9,22 +9,15 @@ from app.intelligence.web import WebAddressGuard
 
 class WebFetcher:
     """Fetches one URL for an agent or an upload, and nothing it was not allowed to.
+    Every hop, redirects included, goes through the WebAddressGuard, and each request is
+    sent to the approved address with the original name as Host header and TLS server
+    name, so certificates are still verified while the name cannot be rebound. Proxy
+    settings are ignored.
 
-    Every hop goes through the WebAddressGuard, redirects included: they are followed by
-    hand rather than by the HTTP client, because a public page that redirects to
-    http://169.254.169.254/ is the oldest way around a check made only on the first URL.
-    Each request is sent to the address the guard approved, with the original name in
-    the Host header and as the TLS server name, so certificates are still verified
-    against the name while the connection cannot be rebound to a different address.
-    Proxy settings from the environment are ignored for the same reason.
-
-    The response is read as a stream and cut at max_bytes, and the whole fetch has a
-    deadline as well as per-read timeouts — a server trickling one byte a second would
-    otherwise pass every read timeout and hold a subagent forever. Decompression happens
-    before the cut, so a compressed response cannot expand past the limit either.
-
-    Any failure leaves as WebAccessError with a sentence a model can act on. The
-    transport is injectable, which is how tests answer requests without a network."""
+    The response is streamed and cut at max_bytes after decompression, with a deadline
+    as well as read timeouts, so a server trickling bytes cannot hold a subagent
+    forever. Failures leave as WebAccessError with a sentence a model can act on, and
+    the transport is injectable for tests."""
 
     USER_AGENT = "Mozilla/5.0 (compatible; Vela47/1.0; +research agent)"
     REDIRECT_STATUSES = {301, 302, 303, 307, 308}

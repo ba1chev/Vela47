@@ -6,19 +6,13 @@ from app.intelligence.sandbox import SandboxCommandResult
 
 
 class SandboxEnvLocal(SandboxEnv):
-    """A plain directory on the host, with no containment beyond path confinement.
+    """A plain directory on the host, with no containment beyond path confinement. Its
+    files are real, which is enough to build and test every tool without a container
+    runtime, and it backs SandboxDocker's file operations.
 
-    Files written here are real files, which is enough to build and test every tool
-    without a container runtime. What it deliberately cannot do is run commands: a
-    subagent asking to execute code it just authored is the ordinary case, and
-    honouring that on the host would mean running model-written code with the
-    server's own privileges. run() therefore refuses rather than degrading quietly,
-    so the absence of a sandbox surfaces as a clear message to the agent instead of
-    as an unnoticed security hole.
-
-    It also backs the Docker environment's file operations: the files stay on the host
-    and are read and written here, without a round trip through the daemon, while a
-    container only ever sees a copy of them made for one command."""
+    run() refuses: executing model-written code here would run it with the server's
+    privileges, so a missing sandbox reaches the agent as a clear message instead of an
+    unnoticed security hole."""
 
     MAX_FILE_BYTES = 200_000
     SKIPPED_DIRECTORIES = {".git", "__pycache__", ".venv", "node_modules", ".pytest_cache"}

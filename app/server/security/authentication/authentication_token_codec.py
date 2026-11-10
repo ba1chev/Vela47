@@ -6,20 +6,14 @@ from app.server.security import IdentityAccessRoleSession
 
 
 class AuthenticationTokenCodec:
-    """Turns a role session into a signed JWT and back. The token is the session — the
-    server keeps no session table — so everything authorization needs travels inside it,
-    and the signature is the only thing standing between a client and a token that
-    claims to be an admin.
+    """Turns a role session into a signed JWT and back. The token is the session, since
+    the server keeps no session table, so the signature is all that stands between a
+    client and a token claiming to be an admin.
 
-    Decoding is strict on purpose. The algorithm is pinned to HS256, so a token cannot
-    choose its own verification scheme — 'none', or an asymmetric algorithm keyed with
-    our secret; issuer and audience must be ours; and every claim a session needs has to
-    be present. Any failure — a bad signature, an expired token, a missing claim, an
-    unknown role — is an AuthenticationError, never a partially trusted session.
-
-    The secret must be at least 32 bytes, the length of the HMAC-SHA256 output. A
-    shorter key would be the weakest link of the signature, and refusing it at
-    construction is cheaper than discovering it from a forged token."""
+    Decoding is strict: the algorithm is pinned to HS256, issuer and audience must be
+    ours, and every claim must be present; any failure is an AuthenticationError, never
+    a partially trusted session. The secret must be at least 32 bytes, the length of the
+    HMAC-SHA256 output."""
 
     ALGORITHM = "HS256"
     ISSUER = "vela47"

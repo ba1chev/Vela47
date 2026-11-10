@@ -24,10 +24,6 @@ logger = logging.getLogger("vela47")
 
 
 def _token_secret(config: Config) -> str:
-    """The key that signs session tokens. PROD always has one — Config refuses to start
-    without it. In DEV it is optional, and a missing one is generated fresh, which signs
-    everyone out on every restart: harmless on a developer's machine, and never a
-    fallback to a fixed key anyone could read here."""
     if config.token_secret is not None:
         return config.token_secret.get_secret_value()
 
@@ -39,10 +35,6 @@ def _token_secret(config: Config) -> str:
 
 
 def _bootstrap_admin(identity_access_service: IdentityAccessService, config: Config) -> None:
-    """Creates the first admin from the configuration — the environment in DEV, the
-    application secret in PROD. Accounts can only be created by an admin, so someone has
-    to exist first. Once the database holds that admin this does nothing, so the
-    credentials can be dropped from the configuration after the first start."""
     if config.admin_username is None or config.admin_password is None:
         logger.warning(
             "No admin credentials are configured, so no admin is bootstrapped on this start."
@@ -60,15 +52,6 @@ def _bootstrap_admin(identity_access_service: IdentityAccessService, config: Con
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Everything with a lifetime longer than a request is set up here, once, in the
-    order each piece needs the previous one: configuration, then the database it
-    describes, then security on top of that database, then the sandbox containers.
-    Starting a container costs far more than a subagent's whole turn, and the database is
-    the only record of who exists, so neither could be built per request.
-
-    Configuration and the database start on worker threads — in PROD the first reads
-    Secrets Manager and the second creates the schema on RDS — and anything missing or
-    malformed fails the start rather than the first request that needs it."""
     config = await asyncio.to_thread(Config.from_environment)
     app.state.config = config
 

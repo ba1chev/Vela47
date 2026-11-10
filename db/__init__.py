@@ -1,5 +1,6 @@
 # Where the server keeps its state: SQLite in DEV, PostgreSQL on RDS in PROD.
 
+from db.database_config import DEFAULT_SQLITE_PATH, DatabaseConfig
 from db.database_credentials import DatabaseCredentials
 from db.database_type import DatabaseType
 from db.tables.json_document import JSON_DOCUMENT
@@ -20,6 +21,8 @@ from db.database_factory.database_registry import DATABASE_REGISTRY
 from db.database_factory.database_factory import DatabaseFactory
 
 __all__ = [
+    "DEFAULT_SQLITE_PATH",
+    "DatabaseConfig",
     "DatabaseCredentials",
     "DatabaseType",
     "JSON_DOCUMENT",

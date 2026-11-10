@@ -17,31 +17,16 @@ from app.intelligence.messages import MessageUsageMetadata
 
 
 class ModelFoundation(ModelBase):
-    """Concrete text-generation model backed by a local Ollama server. All
-    sampling behaviour is driven by an injected ModelConfig — no hard-coded
-    defaults live here. _format_messages() translates the framework's MessageBase
-    list into Ollama's role/content dict format using _ROLE_MAP. invoke() blocks
-    until the full response arrives and attaches a populated MessageUsageMetadata;
-    stream() yields raw text chunks as they are produced, token by token.
+    """Text-generation model backed by a local Ollama server, configured entirely by an
+    injected ModelConfig. invoke() blocks for the full reply with its usage, stream()
+    yields text as it is produced, and every invoke() is reported to the tracer, the
+    only place a run's token accounting comes from.
 
-    An assistant turn that called tools is sent with those calls, and a tool result with
-    the name of the tool that produced it. Without them a model reading its own history
-    sees results to requests it has no record of making, and with more than one tool it
-    cannot tell which result answers which call.
-
-    think is handed to Ollama as a parameter of its own, not among the sampling
-    options. Ollama ignores it there, and a reasoning model then thinks on every call
-    whatever the config says — dozens of times slower for a one-line reply, with the
-    reasoning sometimes leaking into the answer.
-
-    An output_schema is handed to Ollama as format, which constrains decoding to JSON
-    that matches it. Describing a schema in the prompt is not enough for a small model:
-    asked for a plan, qwen3:1.7b answers some goals with the schema itself, every time,
-    and that reply can never be parsed. Constrained, it cannot produce anything else.
-
-    Every invoke() is reported to the injected tracer, which is where a run's token
-    accounting comes from — the model is the only component that sees usage, so if
-    it stays silent no layer above it can report cost."""
+    Assistant turns are sent with their tool calls and tool results with their tool's
+    name, so the model can pair each result with its call. think is passed as its own
+    Ollama parameter, because inside options it is ignored and the model reasons on
+    every call. An output_schema is passed as format and constrains decoding to matching
+    JSON, which a schema described in the prompt cannot do for a small model."""
 
     def __init__(self, config: ModelConfig,
         tracing_service: Optional[TracingServiceBase] = None) -> None:

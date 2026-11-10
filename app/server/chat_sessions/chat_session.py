@@ -7,25 +7,15 @@ from app.server.security import format_chat_session_vrn
 
 
 class ChatSession(BaseModel):
-    """One conversation and everything said in it, owned by the entity that started it —
-    the unit the server will hand out per user once sessions are wired in. It is a plain
-    record: who owns it, what it is called, and the ordered turns, kept in the
-    framework's own message types so an agent can be resumed from it without a
-    translation layer in between.
+    """One conversation and everything said in it, owned by the entity that started it,
+    with its turns kept as the framework's own message types so an agent resumes from it
+    directly. Messages are serialised as what they really are, so an AI message keeps
+    its tool calls and usage; rebuilding them from JSON is the store's job, through
+    MessageFactory, because the message models cannot validate their own JSON.
 
-    Messages are declared as MessageBase and serialised as whatever they really are, so
-    an AI message keeps its tool calls and token usage when the session is dumped. They
-    are accepted only as message instances. Turning stored JSON back into messages is
-    the store's job, done through MessageFactory, because the message models cannot
-    validate their own JSON: their type field accepts the MessageType member but not its
-    string value.
-
-    Frozen like the entity and policy models — a changed conversation is a new record,
-    and the store is where a change becomes durable.
-
-    Its VRN puts the owner in the owner segment, which is what lets one statement in
-    the user role — vrn:session:${principal.id}:* — grant each caller its own
-    conversations and nothing else."""
+    Frozen: a changed conversation is a new record. Its VRN carries the owner, which
+    lets one statement, vrn:session:${principal.id}:*, grant each caller its own
+    conversations only."""
 
     model_config = {"frozen": True}
 

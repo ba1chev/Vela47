@@ -7,19 +7,11 @@ from app.intelligence.memory import VectorDbOperationBaseFactory
 
 
 class VectorDbOperationFactory(VectorDbOperationBaseFactory):
-    """Concrete factory that maps each VectorDbOperationType to its corresponding
-    VectorDbOperation subclass and delegates construction to it. Additional keyword
-    arguments are forwarded verbatim, so callers can supply operation-specific
-    parameters without the factory needing to know about them explicitly.
-
-    Registry reference:
-      SEARCH      -> VectorDbOperationSearch(query_vector=<list[float]>, top_k=<int>)
-      FILTER      -> VectorDbOperationFilter(predicate=<Callable[[VectorDbMemoryEntry], bool]>)
-      RERANK      -> VectorDbOperationRerank(scorer=<Callable[[VectorDbMemoryEntry], float]>)
-      DEDUPLICATE -> VectorDbOperationDeduplicate(threshold=<float>, default 0.95)
-      KEYWORD_SEARCH -> VectorDbOperationKeywordSearch(query=<str>, top_k=<int>)
-      HYBRID_SEARCH -> VectorDbOperationHybridSearch(query=<str>, query_vector=<list[float]>,
-                       top_k=<int>, rank_constant=<int>, default 60)"""
+    """Concrete factory that maps each VectorDbOperationType to its VectorDbOperation
+    subclass through VECTOR_DB_OPERATION_REGISTRY and delegates construction to it.
+    Additional keyword arguments are forwarded verbatim, so callers can supply
+    operation-specific parameters, such as SEARCH's top_k or DEDUPLICATE's threshold,
+    without the factory knowing about them."""
 
     def create(self, type: VectorDbOperationType, **kwargs: Any) -> VectorDbOperation:
         cls = VECTOR_DB_OPERATION_REGISTRY.get(type)

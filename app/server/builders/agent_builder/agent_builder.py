@@ -47,21 +47,6 @@ SUBAGENT_PROBE_FACTORIES = {
 
 def subagent_tool_factories(knowledge_memory: VectorDbMemory,
     web_fetcher: WebFetcher) -> dict[OperationSubagentType, list[Callable[[SandboxEnv], ToolBase]]]:
-    """The toolset of each subagent type — small on purpose, three or four tools that
-    together let a step do its job and check it.
-
-    RESEARCH gathers: the user's documents, the workspace, the web and the pages found
-    there. CODE looks before it writes and edits rather than rewrites. TEST writes tests
-    and runs them in the sandbox, so it learns whether they pass. REVIEW only reads.
-
-    search_documents is offered only when the user has documents to search. Over an
-    empty store its only answer is that there is nothing there, and a small model
-    reports that as its finding instead of moving on to the web.
-
-    Every value is a factory, because a tool acts on the sandbox its agent is leased
-    and that lease does not exist until a task is dispatched. The tools that need
-    something else — the owner's documents, the web — are closures over it that ignore
-    the sandbox they are handed."""
     web_search = WebSearchDuckDuckGo(web_fetcher)
     document_search = [lambda sandbox_env: ToolSearchDocuments(knowledge_memory)] if len(knowledge_memory) > 0 else []
     return {
@@ -79,36 +64,6 @@ def subagent_tool_factories(knowledge_memory: VectorDbMemory,
 
 def build_deep_agent(tracing_service: TracingServiceBase, sandbox_pool: SandboxPoolBase,
     web_fetcher: WebFetcher, knowledge_entries: list[VectorDbMemoryEntry]) -> DeepAgent:
-    """Assembles a complete DeepAgent wired to one run's tracer.
-
-    Models and agents are built per request rather than once at startup, which is what
-    keeps a tracer scoped to a single run: a model built with this run's tracer can
-    only ever report into this run. Rebuilding is nearly free — models hold a config,
-    not a connection — and it also guarantees each run starts from empty memory.
-
-    The sandbox pool and the web fetcher are the exceptions and are passed in. The
-    pool's containers are started once for the whole process, so rebuilding it per
-    request would mean paying tens of seconds of container startup on every message.
-    The caller's documents arrive already embedded, loaded by the route for this owner
-    only, and are searched the way the RAG agent searches them.
-
-    The DeepAgent keeps the last eight messages of a conversation as history. A small
-    model's context has to hold the planning schema as well, and a long chat would
-    otherwise push that out of it.
-
-    Every model shares the RAG agent's context size. Ollama reloads a model whenever the
-    context size it is asked for changes, so one size for every call keeps a single
-    loaded copy serving planning, every subagent and merging. The subagents' windows
-    hold a whole task — the instruction and every turn of its loop — because a sliding
-    window that overflowed would drop the instruction first.
-
-    Every subagent type also gets the probes in SUBAGENT_PROBE_FACTORIES — what the
-    system checks for itself after a step. CODE and TEST have the workspace compared
-    before and after them, TEST has its tests run once more, RESEARCH has the pages and
-    documents it really read listed. REVIEW only reads, so there is nothing to check.
-
-    The planning model is pinned to a low temperature because its output must satisfy a
-    JSON schema, while merging is left free to write prose."""
     planning_model = ModelFoundation(
         ModelConfig(model_name = MODEL_NAME, temperature = 0.1, think = False, context_window_tokens = CONTEXT_WINDOW_TOKENS),
         tracing_service

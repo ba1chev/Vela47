@@ -9,24 +9,14 @@ NAT64_NETWORK = ipaddress.ip_network("64:ff9b::/96")
 
 
 class WebAddressGuard:
-    """Decides whether a URL may be fetched at all, and answers with the address to
-    fetch it from.
+    """Decides whether a URL may be fetched and answers with the address to fetch it
+    from. URLs come from a model that can be steered, and on EC2 169.254.169.254 hands
+    out IAM credentials, so only http and https to hosts whose every resolved address is
+    public pass. Private, loopback, link-local, shared, multicast and reserved ranges
+    are refused, also inside IPv6 forms.
 
-    Every URL a tool fetches was chosen by a model, and a model can be steered — by the
-    user, or by a page it just read telling it to fetch something else. On EC2 the
-    address 169.254.169.254 hands out the instance's IAM credentials, and the database
-    and every internal service sit on private addresses. So only http and https to
-    hosts whose every resolved address is public are allowed: loopback, private,
-    link-local, shared, multicast and reserved ranges are refused, including when they
-    hide inside an IPv6 address (IPv4-mapped, 6to4, Teredo, NAT64).
-
-    The check returns the address it approved, and the fetcher connects to exactly that
-    address. Resolving once here and letting the HTTP client resolve again would leave
-    a window for DNS rebinding — a name that answers with a public address for the
-    check and a private one for the connection.
-
-    The resolver is injectable so tests can decide what a name resolves to without a
-    network."""
+    The fetcher connects to exactly the approved address, so DNS cannot be rebound
+    between the check and the connection. The resolver is injectable for tests."""
 
     ALLOWED_SCHEMES = {"http", "https"}
 

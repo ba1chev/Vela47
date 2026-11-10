@@ -9,21 +9,14 @@ from app.intelligence.loaders import LoaderDocument
 
 
 class LoaderPdf(LoaderBase):
-    """Reads the text layer of a PDF, page by page, with pypdf.
+    """Reads the text layer of a PDF page by page with pypdf. Pages are joined by a
+    blank line, and a word hyphenated across a line break is joined back.
 
-    Pages are joined by a blank line so a chunker never glues the last sentence of one
-    page to the first of the next. A word hyphenated across a line break is joined back,
-    since 'retrie-\\nval' is two words to keyword search and to the embedding alike.
-
-    A PDF without a text layer — a scan, a photographed page — has nothing to read
-    without OCR, and is refused with that explanation rather than indexed as an empty
-    document. An encrypted PDF is opened when it has no user password, which is how
-    most 'protected' PDFs are distributed, and refused otherwise.
-
-    Any failure inside pypdf becomes the ValueError every loader raises, not only its
-    own PyPdfError: on a damaged file it also raises TypeError, KeyError and the like
-    from deep in its parser, and those would otherwise reach the upload as a server
-    error instead of a sentence about the file."""
+    A PDF with no text layer, such as a scan, is refused rather than indexed as empty.
+    An encrypted PDF is opened when it has no user password and refused otherwise. Any
+    failure inside pypdf, including the TypeError or KeyError it raises on damaged
+    files, becomes the ValueError every loader raises, so an upload gets a sentence
+    about the file instead of a server error."""
 
     HYPHENATED_BREAK = re.compile(r"(\w)-\n(\w)")
 

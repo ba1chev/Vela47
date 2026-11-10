@@ -12,20 +12,15 @@ from app.server.security import IdentityAccessPolicyEffect
 
 
 class AuthorizationService(SecurityServiceBase):
-    """Decides whether an authenticated session may perform an action on a resource —
-    the second stage of the pipeline, and an implementation of AWS's evaluation logic
-    for requests within a single account.
+    """Decides whether a session may perform an action on a resource: the second stage
+    of the pipeline, following AWS's evaluation logic within one account. The permission
+    policies of the session's role and the resource policy of the target each give a
+    verdict; an explicit deny anywhere wins, then any allow, otherwise the request is
+    implicitly denied. A resource policy can open a resource to a role that grants
+    nothing on it, but no allow overrides a deny.
 
-    Every policy that could apply is gathered: the permission policies of the role the
-    session acts through, and the resource policy attached to the target, if there is
-    one. Each gives its own verdict and they combine in a fixed order — an explicit deny
-    anywhere wins outright; failing that, an allow anywhere permits; failing that, the
-    request is implicitly denied. A resource policy can therefore open a resource to a
-    caller whose role grants nothing on it, which is what resource policies are for, but
-    no allow in any document can override a deny.
-
-    The role is looked up by name at evaluation time rather than read out of the token,
-    so changing what a role may do takes effect on sessions that were already issued."""
+    The role is looked up at evaluation time rather than read from the token, so a
+    changed role applies to sessions already issued."""
 
     def __init__(self, identity_access_service: IdentityAccessService) -> None:
         self._identity_access_service: IdentityAccessService = identity_access_service

@@ -20,20 +20,16 @@ from app.intelligence.memory import ContextWindowOperationTruncate
 
 
 class AgentBase(ABC):
-    """Abstract base for all agents in the system. Owns its ShortTermMemory and
-    wires it to a ContextWindow. The context window policy is not set here —
-    middleware injects it into the ContextWindow before each inference call.
-    Concrete subclasses implement execute() and define the inference loop — how
-    human messages turn into AI responses, whether tools are invoked, and how the
-    context window is updated between turns. The vector_db_memory and tool_registry
-    are optional: agents that do not need long-term retrieval or tool use omit them.
+    """Abstract base for all agents. Owns a ShortTermMemory wired to a ContextWindow,
+    whose policy middleware injects before each inference; subclasses implement
+    execute(), the loop that turns a human message into a reply. vector_db_memory and
+    tool_registry are optional.
 
-    A conversational agent hands its earlier turns to whatever answers for it, and
-    _history() is that bounded view: the last max_context_window_size messages, each
-    cut to HISTORY_MESSAGE_CHARS, because a small model's context also has to hold the
-    prompts of the agent's own stages. restore() refills the memory from a stored
-    conversation, which is how an agent built for one request resumes a chat that
-    began in an earlier one."""
+    _history() is the bounded view of earlier turns an agent hands on: the last
+    max_context_window_size messages, each cut to HISTORY_MESSAGE_CHARS, so a small
+    model's context still fits the agent's own prompts. restore() refills the memory
+    from a stored conversation, which is how an agent built for one request resumes a
+    chat."""
 
     HISTORY_MESSAGE_CHARS = 1200
 

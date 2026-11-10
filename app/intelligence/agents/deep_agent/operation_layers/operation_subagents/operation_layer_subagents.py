@@ -15,28 +15,14 @@ from app.intelligence.agents import OperationSubagentFactoryBase
 
 
 class OperationSubagentsLayer(OperationLayerBase):
-    """Runs one freshly built subagent per task inside a leased sandbox slot and
-    collects what each produced.
+    """Runs one freshly built subagent per task in a leased sandbox slot and collects
+    what each produced: the report, and beside it the evidence its probes gathered. The
+    pool's fixed size is the only concurrency limit.
 
-    Every task is isolated twice over: a new agent with empty memory, and an
-    environment leased from the pool for the duration of the run and returned
-    afterwards. The pool's fixed size is what bounds concurrency — there is no
-    separate limit here, because a pool of ten slots already means at most ten
-    subagents.
-
-    A failing subagent is recorded as an error result rather than propagated.
-    One subagent that cannot complete its step should not discard the work of
-    the others; the merging layer sees the failure and decides how to report
-    the gap. Slot release happens in a finally block so a crash inside a
-    subagent cannot leak a slot and starve the rest of the run.
-
-    A subagent is handed its instruction together with the user's goal, through
-    SUBAGENT_TASK_TEMPLATE, so a step that says 'the hackathon' can be done for the
-    hackathon the user meant. The plan and the other tasks stay out of view.
-
-    The result carries the subagent's report and, beside it, the evidence its probes
-    gathered on the same step. A step that failed carries none: there is nothing the
-    system could vouch for."""
+    A failing subagent becomes an error result, with no evidence, instead of raising, so
+    one broken step does not discard the others, and the slot is released in a finally
+    block. Each subagent sees its instruction and the user's goal through
+    SUBAGENT_TASK_TEMPLATE, never the plan or the other tasks."""
 
     def __init__(self, subagent_factory: OperationSubagentFactoryBase,
         sandbox_pool: SandboxPoolBase,

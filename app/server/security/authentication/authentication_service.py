@@ -12,20 +12,14 @@ from app.server.security import AuthenticationPasswordHasher
 
 
 class AuthenticationService(SecurityServiceBase):
-    """Establishes who is asking — the first stage of the pipeline, and the only part of
-    the server that ever handles a credential. It has two jobs, which meet at the role
-    session.
+    """Establishes who is asking: the first stage of the pipeline and the only part of
+    the server that handles a credential. Signing in checks a password against the
+    stored hash, or mints a guest, and assumes the requested role through its trust
+    policy. Verifying turns a token back into its session on every request and checks
+    that the entity still exists, so removing an account ends its access at once.
 
-    Signing in turns credentials into a session. A password is checked against the
-    entity's stored hash and the requested role is then assumed through that role's
-    trust policy; a guest has no credential and is minted on the spot. Verifying runs on
-    every request and turns a token back into its session, checking again that the
-    entity behind it still exists — so removing an account ends its access immediately
-    instead of when its tokens happen to expire.
-
-    A failed sign-in says the same thing whether the name is unknown or the password is
-    wrong, and takes the same time either way, so neither the message nor the clock
-    reveals which accounts exist."""
+    A failed sign-in reads the same and takes as long whether the name is unknown or the
+    password is wrong."""
 
     def __init__(self, identity_access_service: IdentityAccessService,
         token_codec: AuthenticationTokenCodec,

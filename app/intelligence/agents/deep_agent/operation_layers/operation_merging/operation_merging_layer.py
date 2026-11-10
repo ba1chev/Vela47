@@ -14,28 +14,16 @@ from app.intelligence.agents import MERGING_SYSTEM_PROMPT
 
 
 class OperationMergingLayer(OperationLayerBase):
-    """Folds every subagent result into the single answer the DeepAgent returns.
+    """Folds every subagent result into the single answer the DeepAgent returns. It
+    reads the goal and the plan from the shared context, not just the results, so it can
+    tell whether they answer what was asked.
 
-    This is the layer that justifies threading one OperationContext through the
-    pipeline instead of chaining each layer's return value: merging needs the
-    original goal and the plan, not just the results. Without them it would be
-    synthesising fragments with no way to tell whether they actually answer what
-    was asked.
-
-    Each report is written under the step that produced it — the step's instruction,
-    then the report with its status. Listed apart, a small model had to pair the
-    third result with the third step itself, and a report read without the question
-    it answers is easily attributed to the wrong part of the request. The report is
-    phrased in plain sentences and ends by asking for the answer: laid out under
-    capitalised labels, it was copied label by label into the answer instead. Under a
-    report come the facts the system checked on that step, each on a line of its own
-    marked as checked by the system, so the model can tell them from the report.
-
-    Errors are passed to the model verbatim rather than filtered out, because a
-    gap the user should know about is part of an honest answer.
-
-    The conversation's earlier turns precede the report, so the answer is written
-    as the next turn of that conversation rather than as if it had just begun."""
+    Each report is written under the step that produced it, in plain sentences, followed
+    by the facts the system checked on that step on lines marked as such. Listed apart,
+    a small model paired reports with the wrong steps; under capitalised labels, it
+    copied the labels into the answer. Errors are passed on verbatim, since a gap
+    belongs in an honest answer, and the earlier turns come first so the answer
+    continues the conversation."""
 
     def __init__(self, model: ModelFoundation,
         tracing_service: Optional[TracingServiceBase] = None) -> None:

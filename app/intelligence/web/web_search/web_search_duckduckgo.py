@@ -6,19 +6,13 @@ from app.intelligence.web import WebSearchDuckDuckGoParser
 
 
 class WebSearchDuckDuckGo(WebSearchBase):
-    """Searches the web through DuckDuckGo's HTML endpoint — the page DuckDuckGo serves to
-    browsers without JavaScript. It needs no API key and no account, which is what lets
-    a local deployment search at all, and it is the same source several open-source MCP
-    search servers use.
+    """Searches the web through DuckDuckGo's HTML endpoint, which needs no API key or
+    account, so a local deployment can search at all. The request goes through the
+    WebFetcher and inherits its guard, size limit and deadline.
 
-    The request goes through the WebFetcher like any other, so it inherits the address
-    guard, the size limit and the deadline. A page with no results that asks for a
-    challenge instead means DuckDuckGo is rate limiting this address; that is reported as
-    an error rather than as an empty search, because 'nothing found' would send the agent
-    off to conclude the topic does not exist.
-
-    The kl parameter sets the region; 'wt-wt' asks for no region, so results are not
-    skewed toward wherever the server happens to run."""
+    A challenge page means DuckDuckGo is rate limiting this address and is reported as
+    an error, not as an empty search, which would make the agent conclude the topic does
+    not exist. kl='wt-wt' asks for no region."""
 
     SEARCH_URL = "https://html.duckduckgo.com/html/"
     CHALLENGE_MARKERS = (b"anomaly-modal", b"challenge-form", b"anomaly.js")

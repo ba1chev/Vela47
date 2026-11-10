@@ -7,20 +7,14 @@ from app.server.security import IdentityAccessPermissionPolicy
 
 
 class IdentityAccessRoleBase(ABC):
-    """Abstract base for a role: a set of permissions a principal may act through for a
-    limited time, together with the trust policy deciding which principals may. Roles
-    hold no credentials and nobody is a role — an entity assumes one and receives a role
-    session, exactly as with AWS IAM roles and STS.
+    """Abstract base for a role: permissions a principal may act through for a limited
+    time, plus the trust policy deciding which principals may. Nobody is a role; an
+    entity assumes one and receives a role session, as with AWS IAM roles and STS, so
+    permissions are written once per role and widening who holds them is one trust
+    policy edit.
 
-    Splitting who you are from what you may do is what makes the trust policy both
-    necessary and useful. Permissions are written once per role instead of once per
-    person, and widening who may hold them is an edit to one trust policy.
-
-    The roles are code while the policies they return are data. The built-in roles are a
-    closed set the server cannot run without, so each lives in a file of its own that
-    answers, in one read, who can become it and what it can do. A role defined at
-    runtime would be one more subclass that takes its documents in its constructor —
-    nothing that evaluates roles reads anything but the properties below."""
+    Roles are code and their policies data. The built-in roles are a closed set, each in
+    a file of its own that says in one read who can become it and what it can do."""
 
     @property
     @abstractmethod

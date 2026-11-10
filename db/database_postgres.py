@@ -8,24 +8,15 @@ from db import DatabaseCredentials
 
 
 class DatabasePostgres(DatabaseBase):
-    """The production database: PostgreSQL on an RDS Multi-AZ instance, reached through
-    psycopg 3.
+    """The production database: PostgreSQL on an RDS Multi-AZ instance through psycopg
+    3. Credentials are not in the URL; a provider is called for every new connection,
+    because the password rotates in Secrets Manager and one read at startup would lock
+    the server out after the first rotation.
 
-    Credentials are not part of the URL. They come from a provider called every time the
-    pool opens a new connection, because on RDS the password lives in Secrets Manager and
-    rotates there: a password read once at startup would work until the first rotation
-    and then lock the server out of its own database. Keeping them out of the URL also
-    keeps the password out of every place SQLAlchemy prints one.
-
-    The pool is set up for failover. When Multi-AZ fails over, the endpoint's DNS moves
-    to the standby and every open connection dies; pre-ping tests a connection before
-    handing it out and replaces a dead one rather than failing the request with it, and
-    recycling retires connections before the network gets a chance to cut them. The
-    connect timeout makes an unreachable primary fail fast instead of hanging a thread.
-
-    sslmode defaults to 'require' — encrypted, which RDS supports out of the box.
-    'verify-full' authenticates the server as well, and needs the RDS CA bundle on the
-    host."""
+    The pool is set up for failover: pre-ping replaces connections that died when the
+    endpoint moved to the standby, recycling retires them before the network cuts them,
+    and the connect timeout makes an unreachable primary fail fast. sslmode defaults to
+    'require'; 'verify-full' needs the RDS CA bundle."""
 
     DRIVER = "postgresql+psycopg"
     POOL_RECYCLE_SECONDS = 1800
