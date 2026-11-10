@@ -18,42 +18,16 @@ from app.intelligence.agents import OperationSubagentProbeBase
 
 
 class OperationSubagent(AgentBase):
-    """A deliberately primitive ReAct agent that owns a small, fixed toolset. Small is
-    the design: a type gets only the three or four tools its job needs — a CODE agent can
-    look, read, write and edit; a TEST agent can look, read, write tests and run them —
-    so choosing a tool stays a narrow decision a small model makes reliably, while the
-    agent can still check its own work inside one step. Anything outside its toolset is
-    another type and therefore another plan step.
+    """A deliberately primitive ReAct agent over a small fixed toolset: three or four
+    tools per type, so picking one stays a narrow decision a small model makes reliably.
 
-    Each instance keeps its own ShortTermMemory and ContextWindow inherited from
-    AgentBase, and is handed its own model and context window middleware — so a
-    cheap fast model with a sliding window and an expensive model with
-    summarisation can run side by side in the same pipeline.
-
-    The loop runs at most max_iterations times. A model still calling tools when the cap
-    is reached gets one last turn with the tools withdrawn, so it has to write up what
-    its tool results show instead of ending on a call nobody will answer — a subagent
-    that ran out of turns still has partial findings worth merging, and an empty reply
-    would throw them away.
-
-    A reply that calls no tool before any tool has been used is not taken as the answer.
-    Small models often open by announcing what they are about to do — 'I will first
-    search the user's documents…' — and stop there, and accepted as the result that
-    announcement would reach the merging layer as if it were a finding. Such a reply is
-    answered once with SUBAGENT_ACT_PROMPT and the loop goes on; a second one is
-    accepted, because some tasks genuinely need no tool.
-
-    The last turn is announced with SUBAGENT_REPORT_PROMPT. Given no tools and no word
-    that they are gone, a model mid-task writes its next call out as text, and a raw
-    <tool_call> block became the step's report — which the merging layer then turned
-    into test results nobody ran. Any tool call written as text is removed from the
-    report; if nothing is left, the report says the step ran out of turns and passes
-    on the last tool result, which is real, instead of nothing.
-
-    Around the loop run the probes of its type: before() as the task starts, after() once
-    the report is written, with every message of the run. What they find is kept as
-    evidence, beside the report rather than inside it, so the merging layer can tell the
-    model's account of the step from what the system checked."""
+    The loop runs at most max_iterations turns, then one last turn with the tools
+    withdrawn and announced through SUBAGENT_REPORT_PROMPT, so the model writes up its
+    results instead of a call nobody will answer. A first reply that calls no tool is
+    answered once with SUBAGENT_ACT_PROMPT, since small models open by announcing what
+    they will do. Tool calls written as text are stripped from the report; if nothing is
+    left, the last real tool result is passed on. The probes of its type run around the
+    loop, and what they find is kept as evidence beside the report."""
 
     TOOL_CALL_TEXT = re.compile(r"<tool_call>.*?(</tool_call>|$)", re.DOTALL)
     LAST_RESULT_CHARS = 1200
