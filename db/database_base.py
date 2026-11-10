@@ -10,20 +10,14 @@ from db import TABLE_REGISTRY
 
 
 class DatabaseBase(ABC):
-    """Abstract base for the database the server keeps its state in — the counterpart of
-    SandboxPoolBase: built at startup, started once, shut down on the way out. Concrete
-    subclasses differ only in how the SQLAlchemy engine is built; everything above this
-    class goes through transaction() and never learns which backend answered.
+    """Abstract base for the database the server keeps its state in: built at startup,
+    started once, shut down on the way out. Subclasses differ only in how the SQLAlchemy
+    engine is built.
 
-    start() creates every registered table that does not exist yet and leaves existing
-    ones untouched. That is enough while the schema grows only by whole tables. The day a
-    column has to change on a table that already holds data, schema migrations (Alembic)
-    have to take over from it.
-
-    transaction() is the only way in, and it is a unit of work: everything done inside
-    the block is committed together when the block ends normally and rolled back together
-    when it raises. A store therefore cannot leave half a change behind, and raising is
-    all it takes to abandon one."""
+    start() creates every registered table that is missing and leaves the rest, which
+    holds while the schema grows by whole tables; changing a column on a table that
+    holds data will need migrations. transaction() is the only way in and a unit of
+    work: committed when the block ends, rolled back when it raises."""
 
     def __init__(self) -> None:
         self._engine: Optional[Engine] = None
