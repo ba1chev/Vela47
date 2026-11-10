@@ -22,11 +22,6 @@ RERANKING_MAX_OUTPUT_TOKENS = 512
 
 def build_knowledge_memory(tracing_service: TracingServiceBase,
     entries: list[VectorDbMemoryEntry]) -> VectorDbMemory:
-    """One owner's documents as a searchable VectorDbMemory — the entries arrive already
-    embedded from the database, and only a query is ever embedded here, with the
-    instruction qwen3-embedding expects in front of a query and not in front of a
-    passage. Shared by the RAG agent and the deep agent's search_documents tool, so both
-    search the same way with the same model the documents were indexed with."""
     vector_db_memory = VectorDbMemory(ModelEmbeddings(EMBEDDING_MODEL_NAME, tracing_service), EMBEDDING_QUERY_TEMPLATE)
     vector_db_memory.add_entries(entries)
     return vector_db_memory
@@ -34,21 +29,6 @@ def build_knowledge_memory(tracing_service: TracingServiceBase,
 
 def build_rag_agent(tracing_service: TracingServiceBase,
     entries: list[VectorDbMemoryEntry]) -> RagAgent:
-    """Assembles a RagAgent over one owner's documents, wired to one run's tracer —
-    built per request like the DeepAgent, for the same reason: everything it holds
-    reports into this run and starts from empty memory.
-
-    The entries arrive already embedded, loaded from the database by the route, and go
-    into the memory build_knowledge_memory makes, searched through HybridSearchPolicy.
-
-    None of the three models reasons. On qwen3:1.7b reranking needed reasoning to match a
-    Bulgarian question to English passages; qwen3.5:9b scores them right without it, in
-    about four seconds, while with reasoning on it once thought for over four thousand
-    tokens — almost six minutes — on a single rerank. The reranker's reply is capped at
-    RERANKING_MAX_OUTPUT_TOKENS, far more than one score per passage needs, so a reply
-    that runs away is cut off and falls back to retrieval order instead of holding up
-    the answer. Every model gets a larger context than Ollama's default, since the
-    answer has to fit the passages and the conversation at once."""
     vector_db_memory = build_knowledge_memory(tracing_service, entries)
 
     query_model = ModelFoundation(

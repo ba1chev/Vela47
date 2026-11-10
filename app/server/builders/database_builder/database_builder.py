@@ -11,14 +11,6 @@ from app.server.config_environment import ConfigEnvironment
 
 def build_database(config: Config,
     secret_reader: Callable[[str, str], dict[str, str]] = read_secret) -> DatabaseBase:
-    """Turns the configuration into the database it describes: the SQLite file in DEV,
-    the RDS instance in PROD. Built but not started — the lifespan starts it on a worker
-    thread, since creating the schema talks to the database.
-
-    In PROD the database is handed a credentials provider instead of credentials. It
-    reads the RDS-managed secret, whose JSON carries username and password, each time a
-    connection is opened — which is what keeps the server connected across the password
-    rotations RDS performs on that secret."""
     factory = DatabaseFactory()
 
     if config.environment is ConfigEnvironment.DEV:
