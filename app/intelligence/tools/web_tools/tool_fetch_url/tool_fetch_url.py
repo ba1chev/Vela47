@@ -11,24 +11,14 @@ from app.intelligence.loaders import resolve_loader_type
 
 
 class ToolFetchUrl(ToolBase[ToolFetchUrlInput, str]):
-    """Reads a web page — or a PDF or Word document online — as plain text, a window of
-    characters at a time, the way MCP's fetch server does with start_index and
-    max_length.
+    """Reads a web page, PDF or Word document as plain text, a window of characters at a
+    time from start_index, like MCP's fetch server. The page goes through the
+    WebFetcher, so only public addresses are reachable, and through the loader its
+    content type calls for; the result starts with the title and the final URL to cite.
 
-    The page is fetched through the WebFetcher, so only public addresses are reachable,
-    and read by the loader its content type calls for: an HTML page loses its navigation
-    and scripts, a PDF is read for its text layer. What comes back starts with the
-    page's title and its final URL — the one to cite after redirects.
-
-    A page is fetched once per tool, which is once per subagent task, and kept in
-    memory while the agent pages through it: asking for characters 4000 to 8000 should
-    not download the page again, and should not risk the second download differing from
-    the first.
-
-    A page with no text is said to be one, and an HTML page with none is most often an
-    application drawn by JavaScript, which a fetch does not run. The result says so and
-    points to another source, since the useful next move is a different search result,
-    not the same URL again."""
+    A page is fetched once per tool, which is once per task, and kept while the agent
+    pages through it. A page with no text, usually one drawn by JavaScript, is reported
+    as such with a pointer to another source."""
 
     def __init__(self, web_fetcher: WebFetcher,
         loaders_factory: Optional[LoadersFactoryBase] = None) -> None:
