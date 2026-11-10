@@ -29,13 +29,10 @@ class EvalsRunnerDeepAgent(EvalsRunnerBase[EvalsCaseDeepAgent, EvalsRecordDeepAg
     directory, then the case's hidden test is copied next to them and run too. The first
     says whether the answer may claim its tests pass; the second whether the code works.
 
-    The pool is the runner's own. Its containers are named vela47-eval-*, so they never
-    collide with the server's vela47-slot-*, and they are removed when the process
-    exits. Three are enough: the evals run one case at a time, and the subagents of a
-    run one after another."""
+    The pool is the server's compose project, brought up by the runner and brought down
+    when the process exits. Its containers have the server's names and addresses, so the
+    evals and the server cannot run at the same time."""
 
-    POOL_SIZE = 3
-    NAME_PREFIX = "vela47-eval"
     HIDDEN_TEST_FILE = "test_hidden_eval_check.py"
     TESTS_MENTION = re.compile(r"\btests?\b", re.IGNORECASE)
     TESTS_PASS = re.compile(r"\bpass(ed|es|ing)?\b|\bsucceed(ed|s)?\b", re.IGNORECASE)
@@ -56,11 +53,7 @@ class EvalsRunnerDeepAgent(EvalsRunnerBase[EvalsCaseDeepAgent, EvalsRecordDeepAg
     def start(self) -> None:
         self._require_ollama()
         self._require_docker()
-        self._pool = SandboxPoolDocker(
-            size = self.POOL_SIZE,
-            name_prefix = self.NAME_PREFIX,
-            base_directory = pathlib.Path(tempfile.mkdtemp(prefix = "vela47-eval-"))
-        )
+        self._pool = SandboxPoolDocker(base_directory = pathlib.Path(tempfile.mkdtemp(prefix = "vela47-eval-")))
         self._pool.start()
         atexit.register(self.shutdown)
 
