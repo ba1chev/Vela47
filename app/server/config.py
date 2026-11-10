@@ -1,12 +1,19 @@
 import os
-import pathlib
 from typing import Any, Callable, Mapping, Optional, Self
 from pydantic import BaseModel, Field, SecretStr, model_validator
 
+from db import DatabaseConfig
 from app.server.config_secrets import read_secret
 from app.server.config_environment import ConfigEnvironment
 
-DEFAULT_SQLITE_PATH = pathlib.Path(__file__).resolve().parents[2] / "db" / "vela47.sqlite3"
+DATABASE_VARIABLES = {
+    "sqlite_path": "VELA47_SQLITE_PATH",
+    "host": "VELA47_DATABASE_HOST",
+    "port": "VELA47_DATABASE_PORT",
+    "name": "VELA47_DATABASE_NAME",
+    "ssl_mode": "VELA47_DATABASE_SSL_MODE",
+    "secret_id": "VELA47_DATABASE_SECRET_ID"
+}
 
 
 class Config(BaseModel):
@@ -27,37 +34,11 @@ class Config(BaseModel):
         description = "Where the server runs — VELA47_ENVIRONMENT, 'dev' or 'prod'. Decides the "
             "database backend and where secrets are read from."
     )
-    sqlite_path: pathlib.Path = Field(
-        default = DEFAULT_SQLITE_PATH,
-        description = "DEV only. The SQLite file — VELA47_SQLITE_PATH, by default db/vela47.sqlite3 "
-            "in the repository. Created on first start."
-    )
-    database_host: Optional[str] = Field(
-        default = None,
-        description = "PROD only, required. The RDS endpoint — VELA47_DATABASE_HOST. On a Multi-AZ "
-            "instance this name follows the primary through a failover."
-    )
-    database_port: int = Field(
-        default = 5432,
-        gt = 0,
-        description = "PROD only. PostgreSQL port of the RDS instance — VELA47_DATABASE_PORT."
-    )
-    database_name: str = Field(
-        default = "vela47",
-        min_length = 1,
-        description = "PROD only. Database to use on the instance — VELA47_DATABASE_NAME. Has to "
-            "exist; set it as the initial database name when creating the RDS instance."
-    )
-    database_ssl_mode: str = Field(
-        default = "require",
-        description = "PROD only. libpq sslmode for the RDS connection — VELA47_DATABASE_SSL_MODE. "
-            "'require' encrypts; 'verify-full' also checks the certificate against the RDS CA bundle."
-    )
-    database_secret_id: Optional[str] = Field(
-        default = None,
-        description = "PROD only, required. ARN or name of the RDS-managed secret holding the "
-            "database username and password — VELA47_DATABASE_SECRET_ID. Read for every new "
-            "connection, never stored here."
+    database: DatabaseConfig = Field(
+        default_factory = DatabaseConfig,
+        description = "Where the database is and how to reach it. DEV: the SQLite file, "
+            "VELA47_SQLITE_PATH. PROD: VELA47_DATABASE_HOST, _PORT, _NAME, _SSL_MODE and "
+            "_SECRET_ID, of which the host and the secret are required."
     )
     aws_region: Optional[str] = Field(
         default = None,
@@ -112,8 +93,13 @@ class Config(BaseModel):
 
         missing = [
             current_name
-            for current_name in ("database_host", "database_secret_id", "aws_region", "token_secret")
-            if getattr(self, current_name) is None
+            for current_name, current_value in (
+                ("database.host", self.database.host),
+                ("database.secret_id", self.database.secret_id),
+                ("aws_region", self.aws_region),
+                ("token_secret", self.token_secret)
+            )
+            if current_value is None
         ]
         if missing:
             raise ValueError(f"PROD cannot start without {', '.join(missing)}.")
@@ -130,18 +116,16 @@ class Config(BaseModel):
         )
         values: dict[str, Any] = {
             "environment": environment,
-            "database_host": environ.get("VELA47_DATABASE_HOST"),
-            "database_port": int(environ.get("VELA47_DATABASE_PORT", "5432")),
-            "database_name": environ.get("VELA47_DATABASE_NAME", "vela47"),
-            "database_ssl_mode": environ.get("VELA47_DATABASE_SSL_MODE", "require"),
-            "database_secret_id": environ.get("VELA47_DATABASE_SECRET_ID"),
+            "database": DatabaseConfig(**{
+                current_field: environ[current_variable]
+                for current_field, current_variable in DATABASE_VARIABLES.items()
+                if environ.get(current_variable)
+            }),
             "aws_region": region,
             "knowledge_max_file_bytes": int(environ.get("VELA47_KNOWLEDGE_MAX_FILE_BYTES", 512 * 1024)),
             "knowledge_max_upload_bytes": int(environ.get("VELA47_KNOWLEDGE_MAX_UPLOAD_BYTES", 8 * 1024 * 1024)),
             "knowledge_max_owner_bytes": int(environ.get("VELA47_KNOWLEDGE_MAX_OWNER_BYTES", 2 * 1024 * 1024))
         }
-        if environ.get("VELA47_SQLITE_PATH"):
-            values["sqlite_path"] = environ["VELA47_SQLITE_PATH"]
 
         if environment is ConfigEnvironment.DEV:
             values.update(
