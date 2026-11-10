@@ -1,3 +1,4 @@
+import re
 import pytest
 import pathlib
 import tempfile
@@ -5,42 +6,55 @@ import threading
 
 from app.intelligence.sandbox import SandboxSlot
 from app.intelligence.sandbox import SandboxPoolDocker
+from app.intelligence.sandbox import SANDBOX_COMPOSE_FILE
 from app.intelligence.sandbox import SANDBOX_IMAGE_DIRECTORY
 from app.intelligence.sandbox import CONTAINER_WORKSPACE_PATH
 
 
-def make_context(dockerfile):
-    context = pathlib.Path(tempfile.mkdtemp())
-    (context / "Dockerfile").write_text(dockerfile)
-    return context
+def make_pool():
+    return SandboxPoolDocker(base_directory = pathlib.Path(tempfile.mkdtemp()))
 
 
 def make_started_pool(size):
-    pool = SandboxPoolDocker(size = size, image = "python:3.12-slim", base_directory = pathlib.Path(tempfile.mkdtemp()))
-    pool._slots = [SandboxSlot(id = index, reference = f"slot-{index}") for index in range(size)]
+    pool = make_pool()
+    pool._slots = [SandboxSlot(id = index, reference = f"vela47-slot-{index}") for index in range(size)]
     return pool
 
 
 class TestSandboxPoolDocker:
-    def test_by_default_the_bundled_image_is_built_and_tagged_by_its_contents(self):
-        pool = SandboxPoolDocker(size = 1)
-        assert pool.image.startswith("vela47-sandbox:") and pool._build_context == SANDBOX_IMAGE_DIRECTORY
-
     def test_the_bundled_image_has_pytest_for_the_test_subagent(self):
         assert "pytest" in (SANDBOX_IMAGE_DIRECTORY / "Dockerfile").read_text()
 
-    def test_changing_the_dockerfile_changes_the_tag(self):
-        first = SandboxPoolDocker(size = 1, build_context = make_context("FROM python:3.12-slim\n"))
-        second = SandboxPoolDocker(size = 1, build_context = make_context("FROM python:3.13-slim\n"))
-        assert first.image != second.image
+    def test_the_bundled_network_reaches_nothing(self):
+        compose = SANDBOX_COMPOSE_FILE.read_text()
+        assert "internal: true" in compose
+        assert "gateway_mode_ipv4: isolated" in compose
+        assert 'enable_icc: "false"' in compose
 
-    def test_a_named_image_is_pulled_rather_than_built(self):
-        pool = SandboxPoolDocker(size = 1, image = "python:3.12-slim")
-        assert pool.image == "python:3.12-slim" and pool._build_context is None
+    def test_every_bundled_slot_has_a_name_and_an_address_of_its_own(self):
+        compose = SANDBOX_COMPOSE_FILE.read_text()
+        names = re.findall(r"container_name: (\S+)", compose)
+        addresses = re.findall(r"ipv4_address: (\S+)", compose)
+        assert len(names) == len(set(names)) == len(addresses) == len(set(addresses)) == 10
 
-    def test_a_pool_with_neither_an_image_nor_a_build_context_is_refused(self):
-        with pytest.raises(ValueError, match = "image to pull or a build context"):
-            SandboxPoolDocker(size = 1, image = None, build_context = None)
+    def test_slots_are_the_compose_services_in_a_stable_order(self):
+        slots = make_pool()._slots_from({"services": {
+            "slot-1": {"container_name": "vela47-slot-1"},
+            "slot-0": {"container_name": "vela47-slot-0"}
+        }})
+        assert slots == [SandboxSlot(id = 0, reference = "vela47-slot-0"), SandboxSlot(id = 1, reference = "vela47-slot-1")]
+
+    def test_a_service_without_a_container_name_is_refused(self):
+        with pytest.raises(RuntimeError, match = "slot-1 has none"):
+            make_pool()._slots_from({"services": {"slot-0": {"container_name": "vela47-slot-0"}, "slot-1": {}}})
+
+    def test_a_compose_file_without_services_is_refused(self):
+        with pytest.raises(RuntimeError, match = "defines no service"):
+            make_pool()._slots_from({"services": {}})
+
+    def test_a_slot_is_entered_by_its_container_name(self):
+        pool = make_started_pool(2)
+        assert pool.env_for(pool._slots[1], "run-a").identifier == "vela47-slot-1"
 
     def test_every_run_is_copied_to_the_same_workspace_from_its_own_host_directory(self):
         pool = make_started_pool(1)
