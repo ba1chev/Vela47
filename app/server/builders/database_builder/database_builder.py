@@ -22,17 +22,17 @@ def build_database(config: Config,
     factory = DatabaseFactory()
 
     if config.environment is ConfigEnvironment.DEV:
-        return factory.create(DatabaseType.SQLITE, path = config.sqlite_path)
+        return factory.create(DatabaseType.SQLITE, path = config.database.sqlite_path)
 
     def credentials() -> DatabaseCredentials:
-        secret = secret_reader(config.database_secret_id, config.aws_region)
+        secret = secret_reader(config.database.secret_id, config.aws_region)
         return DatabaseCredentials(username = secret["username"], password = secret["password"])
 
     return factory.create(
         DatabaseType.POSTGRES,
-        host = config.database_host,
-        port = config.database_port,
-        name = config.database_name,
-        ssl_mode = config.database_ssl_mode,
+        host = config.database.host,
+        port = config.database.port,
+        name = config.database.name,
+        ssl_mode = config.database.ssl_mode,
         credentials = credentials
     )
