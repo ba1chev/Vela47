@@ -10,26 +10,15 @@ from app.intelligence.agents import format_subagent_capabilities
 
 
 class OperationPlanningLayer(OperationLayerBase):
-    """Turns the user's goal into a structured OperationPlan. The JSON schema the
-    model must produce is generated from OperationPlan itself and passed to the model
-    as output_schema, so its decoding is held to the same contract the pipeline
-    parses — adding a field to the plan changes what the model can write without
-    anyone touching the prompt.
+    """Turns the user's goal into an OperationPlan. The JSON schema is generated from
+    OperationPlan and passed as output_schema, so decoding is held to the contract the
+    pipeline parses, and OutputParserStructured makes a malformed plan raise here rather
+    than three layers later.
 
-    The schema is not pasted into the prompt. It describes the plan to developers —
-    its descriptions name factories and layers — and a small model given three
-    thousand characters of it, with the subagent types as bare numbers, planned
-    worse and at times copied the schema back instead of filling it in. The prompt
-    shows the shape through two short example plans instead, and a test keeps every
-    field of the schema named in it.
-
-    Parsing is delegated to OutputParserStructured, which means a malformed plan
-    raises a ValidationError here rather than surfacing as a confusing failure
-    three layers later.
-
-    The conversation's earlier turns sit between the system prompt and the goal, in
-    the order they happened, so a goal like 'now add tests for it' can be planned
-    against what 'it' was."""
+    The schema is not pasted into the prompt: written for developers, it made a small
+    model plan worse and sometimes copy it back. Two short example plans show the shape
+    instead, and a test keeps every schema field named in the prompt. Earlier turns sit
+    between the system prompt and the goal, so 'now add tests for it' can be planned."""
 
     def __init__(self, model: ModelFoundation) -> None:
         self._model: ModelFoundation = model
