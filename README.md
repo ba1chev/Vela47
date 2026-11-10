@@ -194,11 +194,13 @@ Tools act on the sandbox of the task they belong to. Because that sandbox only e
 
 ## Sandbox
 
-`SandboxPoolDocker` starts a fixed pool of 10 containers at application startup and reuses them. Each container is created with:
+`SandboxPoolDocker` brings up the Docker Compose project in `app/intelligence/sandbox/sandbox_image/` at application startup and reuses its 10 containers. Each service in `docker-compose.yaml` is one slot, and the pool reads the slots from the file. Each container has:
 
-- `--network none`
-- `--memory 512m`, `--cpus 1.0`, `--pids-limit 256`
-- the image from `app/intelligence/sandbox/sandbox_image/` (`python:3.12-slim` with pytest), tagged by the hash of its build context and built on first start if missing
+- a fixed address, `172.30.47.10` to `172.30.47.19`, on a network that is internal (no route out), has an isolated gateway (the host has no address on it) and blocks traffic between containers
+- 512 MB of memory, 1 CPU, 256 processes
+- the image built from the Dockerfile next to the compose file (`python:3.12-slim` with pytest)
+
+Every start rebuilds the image from cache and recreates the containers, and shutdown brings the project down with its network. The eval runner brings up the same project, so the evals and the server cannot run at the same time. The isolated gateway needs a recent Docker Engine (developed on 29.8). Without it, an internal network still reaches every service listening on the host.
 
 No host directory is mounted. A run's files live on the host under a per-run directory and are read and written there directly. For each command, the run's directory is streamed into the container's `/workspace` as a tar archive on `docker exec` stdin, the command runs with a 60-second timeout, and afterwards every process in the container is killed and the workspace deleted. A mount is fixed when a container starts, so the only way to reach every run's files through a mount would expose all runs to every container. A per-command copy exposes only one. Nothing a command writes comes back to the host. Command output is capped at 8,000 characters, keeping the head and the tail.
 
@@ -240,7 +242,7 @@ The trace panel shows which layer is running and what it produced, each subagent
 Validating the output schema says nothing about whether the model followed instructions hidden in a page it read. Vela47 does not rely on the model ignoring injected text. It limits what any model can do with it.
 
 - The only subagent that reads external content (web pages, search results, documents) is RESEARCH, and it has no tool that writes files or runs code.
-- The subagents that write and execute (CODE, TEST) have no network access through their tools, and their commands run in containers with `--network none`.
+- The subagents that write and execute (CODE, TEST) have no network access through their tools, and their commands run in containers on a network that cannot reach the internet, the host or another sandbox.
 - External text reaches a model only as a tool result, never as a system prompt, and always truncated: 4,000 characters per page window, 900 per passage, 300 per snippet.
 - Fetching cannot reach internal addresses, so an injected "fetch http://169.254.169.254/..." fails at the guard.
 - Documents and conversations are scoped to their owner by policy, and no tool can address another owner's data.
@@ -410,7 +412,7 @@ Upload limits are answered with 413.
 
 ## Running locally
 
-Requirements: Python (developed on 3.15), Docker, and Ollama with about 10 GB of free memory for the models.
+Requirements: Python (developed on 3.15), Docker with Compose, and Ollama with about 10 GB of free memory for the models.
 
 ```bash
 python -m venv .venv
