@@ -468,7 +468,7 @@ Serverless hosting does not fit this workload. Lambda cannot run Docker containe
 
 These parts are planned and may not all be completed:
 
-- Agent-to-agent (A2A) communication between subagents. Today each subagent sees only its own task and the user's request.
+- Agent-to-agent (A2A) communication between subagents. `A2AInteractionDocker` (`app/intelligence/a2a_interaction/`) already connects the containers of two subagents through a network of their own and carries a message to the other agent and its answer back, but no agent uses it yet. Today each subagent sees only its own task and the user's request.
 - A human-in-the-loop channel over WebSocket, where the orchestrator can ask the user a question mid-run, with confirmation for tools that have external side effects.
 - The AWS deployment described above.
 - Enforcing the step limit in the plan schema, and running independent steps in parallel.
