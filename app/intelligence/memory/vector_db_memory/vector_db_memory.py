@@ -10,23 +10,15 @@ from app.intelligence.memory import VectorDbOperationManager
 
 
 class VectorDbMemory(MemoryBase):
-    """Persistent vector store for long-term agent memory. Each message is
-    embedded by a ModelEmbeddings instance at insertion time and stored as a
-    VectorDbMemoryEntry alongside its source MessageBase. Retrieval is driven
-    by a VectorDbOperationPolicy that resolves an operation pipeline — search,
-    filter, rerank, deduplicate — executed by the VectorDbOperationManager.
-    Satisfies the MemoryBase contract so it can substitute for any memory
-    implementation, while exposing an additional search() method for
-    semantic retrieval.
+    """Vector store for long-term agent memory. Each message is embedded at insertion
+    and kept as a VectorDbMemoryEntry beside its source message, and retrieval runs the
+    operations a VectorDbOperationPolicy resolves. Entries embedded earlier, read back
+    from a database, are loaded with add_entries() and never embedded twice;
+    search_entries() returns entries with their vectors for a caller that reranks them.
 
-    Entries whose vectors were computed earlier — read back from a database — are
-    loaded with add_entries() and never embedded twice. search_entries() returns the
-    entries themselves, vectors included, for a caller that goes on to rerank them.
-
-    query_template exists because some embedding models are asymmetric: they expect a
-    query to carry an instruction that a stored passage does not. Only the query
-    vector is built from the template; the query text itself reaches keyword-matching
-    operations unchanged, since an instruction's words would match every passage."""
+    query_template exists for asymmetric embedding models that expect an instruction on
+    queries only. It shapes the query vector alone, and keyword operations get the plain
+    query text."""
 
     def __init__(self, embeddings: ModelEmbeddings, query_template: str = "{query}") -> None:
         self._embeddings: ModelEmbeddings = embeddings
