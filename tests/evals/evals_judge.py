@@ -17,21 +17,15 @@ from tests.evals.evals_cases.evals_cases_rag_agent import EVALS_DOCUMENTS_RAG_AG
 
 class EvalsJudge:
     """Scores the answers of an eval session from 1 to 5 for helpfulness and
-    faithfulness, with a larger local model than the one being evaluated.
+    faithfulness, with a larger local model than the one evaluated. It runs on its own
+    over a finished results directory (`.venv/bin/python -m tests.evals.evals_judge
+    tests/evals/results/<session>`), because its scores are opinions that must never
+    fail a test, and its model beside the agents' pushes the machine into swap. Unload
+    it after with `ollama stop qwen3:14b`.
 
-    It runs on its own, after the evals and over their results directory:
-        .venv/bin/python -m tests.evals.evals_judge tests/evals/results/<session>
-    rather than inside them, for two reasons. Its scores are opinions — the same answer
-    can get a 3 or a 5 — so they inform a comparison but must never fail a test. And
-    the judge model is large: loaded beside the agents' model it pushes a 24 GB machine
-    into swap, so it is loaded once, when the agents are done. Unload it afterwards with
-    `ollama stop qwen3:14b`.
-
-    A deep agent answer is judged against the reports its subagents wrote, a RAG answer
-    against the documents themselves. The judge is told to judge only against that
-    evidence, but it still knows what it was trained on — a fact newer than its
-    training, such as a recent release, can be marked unfaithful when it is not. Read
-    the reasons in <runner type>_judged.jsonl before trusting a drop in faithfulness."""
+    Deep answers are judged against their subagents' reports, RAG answers against the
+    documents. The judge can still mark facts newer than its training unfaithful, so
+    read the reasons in <runner type>_judged.jsonl before trusting a drop."""
 
     SCHEMA = {
         "type": "object",
