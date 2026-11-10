@@ -16,30 +16,16 @@ from app.intelligence.agents import RAG_RERANKING_SYSTEM_PROMPT
 
 
 class RagRerankingLayer(RagLayerBase):
-    """Keeps the candidates that actually answer the query, best first. Hybrid search
-    measures resemblance; a model reading the passage can tell whether it answers. One
-    structured call scores every candidate from 0 to 10, parsed through the same
-    OutputParserStructured the planner uses, against a schema generated from
-    RagRelevance itself.
+    """Keeps the candidates that actually answer the query, best first. One structured
+    call scores every candidate from 0 to 10 against a schema from RagRelevance, passed
+    as output_schema with exactly as many entries as passages: without the count, a
+    model held to the schema answered with an empty list. Ordering and the cut are
+    VectorDbOperationRerank and VectorDbOperationFilter, and sorting is stable.
 
-    The ordering and the cut are vector_db operations, not code of this layer: the
-    scores become a VectorDbOperationRerank scorer and a VectorDbOperationFilter
-    threshold, run by VectorDbOperationManager. Sorting is stable, so passages the model
-    scored alike keep the order hybrid search gave them.
-
-    The passages are judged against the question as asked, with the query layer's
-    rewrite beside it only to say what words like 'it' refer to — the rewrite helps the
-    reranker read a follow-up, but it is never trusted to replace the question.
-
-    The schema also constrains the model's decoding, passed as output_schema with as
-    many entries required as there are passages. Without the count, a reasoning model
-    held to the schema took its shortest valid path and answered with an empty list;
-    with it, the grammar itself asks for a score for every passage. The prompt shows
-    the shape in one line rather than pasting the schema.
-
-    A reply that cannot be parsed does not fail the run. Reranking refines retrieval, it
-    does not replace it — so the candidates are kept in retrieval order, and relevance
-    stays empty, which is how the trace shows that reranking was skipped."""
+    Passages are judged against the question as asked, with the rewrite shown only to
+    resolve references. A reply that cannot be parsed keeps the candidates in
+    retrieval order with relevance left empty, which is how the trace shows reranking
+    was skipped."""
 
     PASSAGE_CHARS = 500
 
