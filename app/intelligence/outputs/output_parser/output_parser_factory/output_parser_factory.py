@@ -7,19 +7,11 @@ from app.intelligence.outputs import OutputParserBaseFactory
 
 
 class OutputParserFactory(OutputParserBaseFactory):
-    """Concrete factory that maps each OutputParserType to its corresponding
-    OutputParserBase subclass and delegates construction to it. Additional
-    keyword arguments are forwarded verbatim, so callers can supply
-    parser-specific parameters — such as a Pydantic schema for STRUCTURED or
-    a delimiter for LIST — without the factory needing to know about them
-    explicitly.
-
-    Registry reference:
-      TEXT           -> OutputParserText()
-      JSON           -> OutputParserJSON()
-      STRUCTURED     -> OutputParserStructured(schema=<BaseModel subclass>)
-      LIST           -> OutputParserList(delimiter=<str>, default "\\n")
-      CLASSIFICATION -> OutputParserClassification(entry_type=<OutputEntry subclass>)"""
+    """Concrete factory that maps each OutputParserType to its OutputParserBase subclass
+    through OUTPUT_PARSER_REGISTRY and delegates construction to it. Additional keyword
+    arguments are forwarded verbatim, so callers can supply parser-specific parameters,
+    such as a Pydantic schema for STRUCTURED or a delimiter for LIST, without the
+    factory knowing about them."""
 
     def create(self, type: OutputParserType, **kwargs: Any) -> OutputParserBase:
         cls = OUTPUT_PARSER_REGISTRY.get(type)
