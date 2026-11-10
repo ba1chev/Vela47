@@ -10,25 +10,16 @@ ACTION_PATTERN = re.compile(r"\*|[a-z0-9*?-]+:[A-Za-z0-9*?]+")
 
 
 class IdentityAccessPolicyStatement(BaseModel):
-    """One rule inside a policy document, in AWS's grammar: an effect, the actions it
-    covers and the resources it covers — plus, in documents attached to something other
-    than an identity, the principals it applies to. Every one of those fields holds
-    patterns, not literals: `*` matches any run of characters, `?` exactly one, and
-    `${...}` is replaced by a variable of the request being evaluated. That last one is
-    what lets a single statement grant every caller only its own resources —
-    vrn:session:${principal.id}:* — and a variable the request cannot resolve makes the
-    pattern match nothing, never everything. A resolved value is matched literally, so
-    an id that happened to contain `*` could not widen the grant.
+    """One rule in a policy document, in AWS's grammar: an effect, actions, resources
+    and, outside identity policies, principals. All of them are patterns: `*` matches
+    any run of characters, `?` exactly one, and `${...}` a request variable, which is
+    how vrn:session:${principal.id}:* grants each caller only its own resources. An
+    unresolvable variable matches nothing, and a resolved value is matched literally.
 
-    Resources and principals are VRNs, the counterpart of ARNs:
-    vrn:<service>:<owner>:<resource>, e.g. vrn:iam::entity/user/9f2c… for an entity or
-    vrn:agent::deep-agent for the agent. Malformed patterns are refused at construction,
-    because a pattern that can never match fails in the safest-looking way possible — as
-    a permission that quietly never applies.
-
-    Which fields must be present depends on where the statement lives, so that is
-    enforced by the policy kinds rather than here: a permission policy forbids
-    principals, a resource policy requires them, and a trust policy forbids resources."""
+    Resources and principals are VRNs, vrn:<service>:<owner>:<resource>. Malformed
+    patterns are refused at construction, since one that can never match fails silently,
+    as a permission that never applies. Which fields must be present is enforced by the
+    policy kinds."""
 
     model_config = {"frozen": True}
 
