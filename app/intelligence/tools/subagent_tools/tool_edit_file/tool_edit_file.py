@@ -8,31 +8,17 @@ from app.intelligence.tools import python_syntax_warning
 
 
 class ToolEditFile(ToolBase[ToolEditFileInput, str]):
-    """Changes part of an existing file by replacing exact text, the way the edit tools of
-    MCP's filesystem server and of coding agents do, and answers with a unified diff.
+    """Changes part of an existing file by replacing exact text, as the edit tools of
+    coding agents do, and answers with a unified diff. Text is matched by content, never
+    by line number, and must occur exactly once unless replace_all is set, so an
+    ambiguous edit is refused with the count.
 
-    Replacement is by content, never by line number: line numbers go stale with every
-    edit, while the text the agent just read is what it actually means to change. The
-    text has to occur exactly once, so an ambiguous edit is refused with the count
-    instead of landing in the wrong place — unless replace_all says every occurrence is
-    meant.
-
-    Whole lines are matched with their indentation ignored, and the replacement is
-    re-indented to where it lands. Small models reproduce code reliably but not its
-    whitespace — they drop the leading indentation of the first line, or of all of them
-    — and an otherwise correct edit failing over a tab, or landing with its second line
-    at the wrong depth, is the commonest way this tool would be useless. How far old_text
-    was off is measured against the lines it matched. When every line but the first
-    already sits at the file's depth, only the first was copied without its indentation,
-    so only new_text's first line is moved — moving the whole block by the first line's
-    error would push every line after it one level too deep, and turn a method added
-    after it into one nested inside it. Otherwise the whole of new_text is moved by the
-    first line's error, keeping its own relative indentation. A new_text whose first
-    line already sits at the file's depth is left as written. Text that is only part of
-    a line is matched exactly instead.
-
-    Nothing is written unless the edit applies. The diff shows the agent what it really
-    changed — the only reliable check that an edit did what was intended."""
+    Whole lines are matched with their indentation ignored and the replacement is
+    re-indented to where it lands, because small models reproduce code but not its
+    whitespace. When only old_text's first line lost its indentation, only new_text's
+    first line is moved; otherwise all of new_text is moved by the first line's error.
+    Text that is only part of a line is matched exactly. Nothing is written unless the
+    edit applies."""
 
     def __init__(self, sandbox_env: SandboxEnv) -> None:
         super().__init__()
