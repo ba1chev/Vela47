@@ -13,22 +13,15 @@ TRecord = TypeVar("TRecord", bound = EvalsRecordBase)
 
 
 class EvalsRunnerBase(ABC, Generic[TCase, TRecord]):
-    """Abstract base for running one agent, for real, on an eval case and turning each
-    run into a record of what it measurably did. TCase is what the runner is asked to
-    do and TRecord what it reports back — both Pydantic models, so a record can be
-    written as a JSON line and read back without the runner.
+    """Abstract base for running one agent for real on an eval case and recording what
+    it measurably did. TCase and TRecord are Pydantic models, so records are written and
+    read back as JSON lines. Everything is measured from what a run left behind (trace,
+    answer, files), never from what the agent says about itself.
 
-    Everything a run is measured by comes from what it left behind — the trace, the
-    answer, the files it wrote — never from what the agent says about its own work.
-
-    Building a runner costs nothing; start() does what a whole session shares and
-    costs seconds — containers to start, documents to embed — and run_all() calls it
-    the first time it is needed. That keeps a test module free to build its runner on
-    import, which the unit suite does when it collects the module only to deselect it.
-
-    A service the agent needs that is not running skips the calling eval rather than
-    failing it: without the model or the sandbox there is nothing to measure, which is
-    not the same as something being wrong."""
+    Building a runner costs nothing; start() does the expensive shared work and
+    run_all() calls it when first needed, so a test module can build its runner on
+    import. A missing service skips the eval rather than failing it: there is nothing to
+    measure, which is not the same as something being wrong."""
 
     def __init__(self) -> None:
         self._started: bool = False
