@@ -7,20 +7,13 @@ from app.intelligence.tools import python_syntax_warning
 
 
 class ToolWriteFile(ToolBase[ToolWriteFileInput, str]):
-    """Writes a whole file into the sandbox, creating or replacing it.
+    """Writes a whole file into the sandbox, creating or replacing it, and says which:
+    replacing a file the agent did not know existed is the mistake worth noticing. A
+    Python file that does not parse is reported on the spot. Changing part of a file is
+    edit_file's job, since a small model rewriting a whole file tends to drop something.
 
-    It is the tool for new files. Changing part of an existing one is edit_file's job,
-    because a small model rewriting a whole file to change three lines tends to drop
-    something else along the way; this one says so in its description.
-
-    The result says whether the file was created or replaced — replacing a file the
-    agent did not know existed is the mistake worth noticing — and a Python file that
-    does not parse is reported on the spot.
-
-    The file outlives the subagent that wrote it. Sandbox slots are leased per task
-    but the directory belongs to the run, so what a CODE subagent writes here is
-    what a TEST or REVIEW subagent later reads — the only channel through which two
-    isolated subagents can collaborate."""
+    The file outlives the subagent. The directory belongs to the run, so what a CODE
+    subagent writes is what a TEST or REVIEW subagent reads later."""
 
     def __init__(self, sandbox_env: SandboxEnv) -> None:
         super().__init__()
