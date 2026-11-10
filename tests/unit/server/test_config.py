@@ -1,9 +1,8 @@
 import pytest
-import pathlib
 from pydantic import ValidationError
 
+from db import DEFAULT_SQLITE_PATH
 from app.server.config import Config
-from app.server.config import DEFAULT_SQLITE_PATH
 from app.server.config_environment import ConfigEnvironment
 
 PROD = {
@@ -27,11 +26,11 @@ class TestConfig:
     def test_with_nothing_set_it_is_dev_on_the_default_sqlite_file(self):
         config = Config.from_environment({})
         assert config.environment is ConfigEnvironment.DEV
-        assert config.sqlite_path == DEFAULT_SQLITE_PATH
+        assert config.database.sqlite_path == DEFAULT_SQLITE_PATH
 
-    def test_the_default_sqlite_file_lives_in_the_db_directory(self):
-        assert DEFAULT_SQLITE_PATH.parent.name == "db"
-        assert DEFAULT_SQLITE_PATH.parent.parent == pathlib.Path(__file__).resolve().parents[3]
+    def test_dev_takes_the_sqlite_file_from_the_environment(self):
+        config = Config.from_environment({"VELA47_SQLITE_PATH": "/tmp/vela47.sqlite3"})
+        assert str(config.database.sqlite_path) == "/tmp/vela47.sqlite3"
 
     def test_dev_reads_its_secrets_from_the_environment(self):
         config = Config.from_environment({
@@ -50,7 +49,7 @@ class TestConfig:
 
     def test_empty_variables_count_as_unset(self):
         config = Config.from_environment({"VELA47_TOKEN_SECRET": "", "VELA47_SQLITE_PATH": ""})
-        assert config.token_secret is None and config.sqlite_path == DEFAULT_SQLITE_PATH
+        assert config.token_secret is None and config.database.sqlite_path == DEFAULT_SQLITE_PATH
 
     def test_an_unknown_environment_is_refused(self):
         with pytest.raises(ValueError):
@@ -72,6 +71,12 @@ class TestConfig:
     def test_there_is_no_field_for_the_database_password_at_all(self):
         assert [current_name for current_name in Config.model_fields if "password" in current_name] == ["admin_password"]
 
+    def test_prod_reads_the_database_settings_from_the_environment(self):
+        environment = dict(PROD, VELA47_DATABASE_PORT = "6543", VELA47_DATABASE_NAME = "other", VELA47_DATABASE_SSL_MODE = "verify-full")
+        database = Config.from_environment(environment, make_reader()).database
+        assert database.host == "vela47.abc.eu-central-1.rds.amazonaws.com" and database.secret_id == "rds!db-123"
+        assert database.port == 6543 and database.name == "other" and database.ssl_mode == "verify-full"
+
     def test_prod_falls_back_to_the_standard_aws_region_variable(self):
         environment = {current_key: current_value for current_key, current_value in PROD.items() if current_key != "VELA47_AWS_REGION"}
         reads = []
@@ -85,8 +90,12 @@ class TestConfig:
 
     def test_prod_without_a_database_endpoint_cannot_start(self):
         environment = {current_key: current_value for current_key, current_value in PROD.items() if current_key != "VELA47_DATABASE_HOST"}
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValidationError, match = "database.host"):
             Config.from_environment(environment, make_reader())
+
+    def test_prod_without_a_database_secret_cannot_start(self):
+        with pytest.raises(ValidationError, match = "database.secret_id"):
+            Config.from_environment(dict(PROD, VELA47_DATABASE_SECRET_ID = ""), make_reader())
 
     def test_prod_whose_secret_lacks_a_token_secret_cannot_start(self):
         with pytest.raises(ValidationError):
