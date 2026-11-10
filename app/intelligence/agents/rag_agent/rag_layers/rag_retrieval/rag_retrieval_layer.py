@@ -7,20 +7,14 @@ from app.intelligence.memory import VectorDbOperationPolicy
 
 
 class RagRetrievalLayer(RagLayerBase):
-    """Finds the candidate passages for the query in the agent's VectorDbMemory, through
-    whatever retrieval policy it was given — HybridSearchPolicy for documents, so that
-    both the meaning of the question and its exact words count.
+    """Finds the candidate passages for the query through the memory's retrieval policy,
+    HybridSearchPolicy for documents, so both meaning and exact words count. It asks for
+    more candidates than will be used, since reranking narrows them after.
 
-    It asks for more candidates than will be used. Retrieval is fast and approximate,
-    reranking is slow and careful, and a passage that retrieval ranks tenth can still be
-    the one that answers the question — so the net is cast wide here and narrowed after.
-    An empty memory yields no candidates and costs no embedding call.
-
-    It searches twice — for the question as asked and for the query layer's rewrite —
-    and fuses the two rankings with reciprocal_rank_fusion. A rewrite is what makes a
-    follow-up like 'how do I fix it?' findable, but a small model's rewrite is sometimes
-    wrong, once even a stray phrase of its own instructions. Searching both means a good
-    rewrite helps and a bad one cannot lose what the question alone would have found."""
+    It searches twice, for the question and for the query layer's rewrite, and fuses the
+    rankings with reciprocal_rank_fusion: a good rewrite makes a follow-up findable, and
+    a bad one cannot lose what the question alone would have found. An empty memory
+    costs no embedding call."""
 
     def __init__(self, vector_db_memory: VectorDbMemory,
         retrieval_policy: VectorDbOperationPolicy, candidates: int = 12) -> None:
