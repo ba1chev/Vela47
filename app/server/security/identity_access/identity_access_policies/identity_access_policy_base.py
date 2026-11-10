@@ -9,22 +9,15 @@ from app.server.security import IdentityAccessPolicyStatement
 
 
 class IdentityAccessPolicyBase(BaseModel, ABC):
-    """Abstract base for every policy document: the grammar all three kinds share — a
-    name and a list of statements — and the one rule by which each reaches a verdict.
-    Policies are data, not code. A document can be built, attached, stored and replaced
-    at runtime, which is what lets policies move into the database later without the
-    evaluation engine noticing.
+    """Abstract base for every policy document: a name, a list of statements and the
+    rule by which they reach a verdict. Policies are data, so they can be built, stored
+    and replaced at runtime without the evaluation engine noticing.
 
-    evaluate() gives this document's verdict on one request: DENY if any statement that
-    covers the request denies it, ALLOW if one allows it and none denies, and None if no
-    statement covers it at all. None is not a denial — it means this document has no
-    opinion, and it is the authorization service that turns the absence of an ALLOW
-    across every document into the implicit deny.
-
-    Which statements cover a request is the one thing the kinds disagree on, so it is
-    the one thing left abstract: a permission policy compares action and resource, a
-    resource policy the principal as well, and a trust policy the principal and the
-    action alone."""
+    evaluate() answers DENY if a covering statement denies, ALLOW if one allows and none
+    denies, and None if none covers the request. None is no opinion, not a denial; the
+    authorization service turns the absence of any ALLOW into the implicit deny. Which
+    statements cover a request is the one thing the kinds disagree on, so it is left
+    abstract."""
 
     model_config = {"frozen": True}
 
