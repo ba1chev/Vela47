@@ -1,6 +1,6 @@
 output "url" {
-  description = "Where the UI is served, through the load balancer."
-  value       = "${lower(var.load_balancer_listener_protocol)}://${aws_lb.load_balancer.dns_name}:${var.load_balancer_listener_port}"
+  description = "Where the UI is served, over HTTPS through the load balancer."
+  value       = "https://${var.app_domain_name}"
 }
 
 output "load_balancer_dns_name" {
@@ -29,7 +29,7 @@ output "nat_public_ip" {
 }
 
 output "autoscaling_group_name" {
-  description = "The auto scaling group that runs the EC2 instances."
+  description = "The auto scaling group that runs the EC2 instance. Deploy what is on the branch now with `aws autoscaling start-instance-refresh --auto-scaling-group-name <name>`."
   value       = aws_autoscaling_group.web.name
 }
 
