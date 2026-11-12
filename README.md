@@ -194,7 +194,7 @@ Tools act on the sandbox of the task they belong to. Because that sandbox only e
 
 ## Sandbox
 
-`SandboxPoolDocker` brings up the Docker Compose project in `app/intelligence/sandbox/sandbox_image/` at application startup and reuses its 10 containers. Each service in `docker-compose.yaml` is one slot, and the pool reads the slots from the file. Each container has:
+`SandboxPoolDocker` brings up the Docker Compose project in `deploy/dev/images/sandbox_image/` at application startup and reuses its 10 containers. Each service in `docker-compose.yaml` is one slot, and the pool reads the slots from the file. Each container has:
 
 - a fixed address, `172.30.47.10` to `172.30.47.19`, on a network that is internal (no route out), has an isolated gateway (the host has no address on it) and blocks traffic between containers
 - 512 MB of memory, 1 CPU, 256 processes
@@ -464,7 +464,7 @@ terraform destroy
 
 No container is on both networks. The server connects to `10.111.0.2:5432`: the packets leave through the app network's gateway and enter through the database network's gateway, so PostgreSQL sees them coming from `10.111.0.1`. Docker forwards between two bridge networks only to a published port, which is why 5432 is published. Binding it to `127.0.0.1` keeps it off the LAN. Every other port of the database container is unreachable from the app network, and the sandbox network, whose gateway is isolated, cannot reach the database at all. A gateway address cannot be used as the published address, because Docker Desktop binds published addresses on the Mac.
 
-The server image is built from the repository root, and `terraform apply` rebuilds it and replaces the container when a file under `app/` or `db/`, `requirements.txt` or the Dockerfile changes. The server container:
+The server image is built from the repository root, and `terraform apply` rebuilds it and replaces the container when a file under `app/`, `db/` or `deploy/dev/images/sandbox_image/`, `requirements.txt` or the Dockerfile changes. The sandbox compose project is copied into the image at the same relative path, so the server finds it the same way as outside a container. The server container:
 
 - runs in DEV mode against the database container, without SSL
 - reaches Ollama on the host through `host.docker.internal`, so the models keep the host's GPU
