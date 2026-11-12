@@ -4,6 +4,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "3.9.1"
+    }
   }
 }
 
@@ -114,6 +118,13 @@ resource "aws_security_group" "lb_sg" {
   tags        = local.common_tags
 }
 
+resource "aws_security_group" "database" {
+  name        = var.rds_security_group_name
+  vpc_id      = aws_vpc.main.id
+  description = "Security group for the RDS instance"
+  tags        = local.common_tags
+}
+
 # Inbound and outbound traffic rules for the EC2 instances
 # Inbound traffic is allowed only from the load balancer security group
 resource "aws_vpc_security_group_ingress_rule" "web_from_lb" {
@@ -145,12 +156,137 @@ resource "aws_vpc_security_group_egress_rule" "lb_all" {
   ip_protocol       = var.load_balancer_egress_ip_protocol
 }
 
+# Inbound traffic rule for the database
+# PostgreSQL is reachable only from the EC2 instances security group, the database opens no connections itself
+resource "aws_vpc_security_group_ingress_rule" "database_from_web" {
+  security_group_id            = aws_security_group.database.id
+  referenced_security_group_id = aws_security_group.web.id
+  ip_protocol                  = "tcp"
+  from_port                    = var.rds_port
+  to_port                      = var.rds_port
+}
+
+# Database subnet group declaration (Multi-AZ needs subnets in at least 2 availability zones)
+resource "aws_db_subnet_group" "database" {
+  name       = var.rds_subnet_group_name
+  subnet_ids = aws_subnet.private[*].id
+  tags       = local.common_tags
+}
+
+# RDS PostgreSQL instance declaration (primary + standby in another availability zone, lives in the private subnets)
+# RDS creates the master password itself and keeps it in a Secrets Manager secret which it rotates,
+# the server reads that secret for every new connection
+resource "aws_db_instance" "database" {
+  identifier     = var.rds_instance_identifier
+  engine         = var.rds_engine
+  engine_version = var.rds_engine_version
+  instance_class = var.rds_instance_class
+
+  allocated_storage = var.rds_allocated_storage
+  storage_type      = var.rds_storage_type
+  storage_encrypted = var.rds_storage_encrypted
+
+  db_name                     = var.rds_database_name
+  username                    = var.rds_master_username
+  manage_master_user_password = true
+  port                        = var.rds_port
+
+  multi_az               = var.rds_multi_az
+  db_subnet_group_name   = aws_db_subnet_group.database.name
+  vpc_security_group_ids = [aws_security_group.database.id]
+  publicly_accessible    = var.rds_publicly_accessible
+
+  backup_retention_period = var.rds_backup_retention_period
+  skip_final_snapshot     = var.rds_skip_final_snapshot
+  deletion_protection     = var.rds_deletion_protection
+  tags                    = local.common_tags
+}
+
+# Application secret declaration (token signing key and the admin bootstrapped on the first start)
+# The server reads it once at startup, VELA47_APP_SECRET_ID points to it
+resource "random_password" "token_secret" {
+  length  = var.app_token_secret_length
+  special = false
+}
+
+resource "random_password" "admin_password" {
+  length  = var.app_admin_password_length
+  special = false
+}
+
+resource "aws_secretsmanager_secret" "app" {
+  name                    = var.app_secret_name
+  recovery_window_in_days = var.app_secret_recovery_window_in_days
+  tags                    = local.common_tags
+}
+
+resource "aws_secretsmanager_secret_version" "app" {
+  secret_id = aws_secretsmanager_secret.app.id
+  secret_string = jsonencode({
+    token_secret   = random_password.token_secret.result
+    admin_username = var.app_admin_username
+    admin_password = random_password.admin_password.result
+  })
+}
+
+# IAM role declaration for the EC2 instances
+# The server never calls the RDS API, it only reads the application secret and the database secret
+data "aws_iam_policy_document" "ec2_assume_role" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "ec2" {
+  name               = var.ec2_iam_role_name
+  assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
+  tags               = local.common_tags
+}
+
+data "aws_iam_policy_document" "ec2_read_secrets" {
+  statement {
+    actions = ["secretsmanager:GetSecretValue"]
+    resources = [
+      aws_secretsmanager_secret.app.arn,
+      aws_db_instance.database.master_user_secret[0].secret_arn,
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "ec2_read_secrets" {
+  name   = var.ec2_iam_policy_name
+  role   = aws_iam_role.ec2.id
+  policy = data.aws_iam_policy_document.ec2_read_secrets.json
+}
+
+# Instance profile declaration (how the IAM role is handed to the EC2 instances)
+resource "aws_iam_instance_profile" "ec2" {
+  name = var.ec2_instance_profile_name
+  role = aws_iam_role.ec2.name
+}
+
 # Launch EC2 instances template declaration
 resource "aws_launch_template" "web" {
   name                   = var.ec2_launch_template_name
   image_id               = var.ec2_instance_ami
   instance_type          = var.ec2_instance_type
   vpc_security_group_ids = [aws_security_group.web.id]
+
+  iam_instance_profile {
+    arn = aws_iam_instance_profile.ec2.arn
+  }
+
+  # IMDSv2 only, the server runs in a container which is one hop further from the metadata service than the host
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = var.ec2_instance_metadata_hop_limit
+  }
 
   # Tags for the EC2 instances, not for the template itself
   tag_specifications {
