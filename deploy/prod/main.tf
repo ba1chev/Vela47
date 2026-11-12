@@ -293,7 +293,7 @@ resource "aws_launch_template" "web" {
   instance_type          = var.ec2_instance_type
   vpc_security_group_ids = [aws_security_group.web.id]
 
-  user_data = base64encode(templatefile("${path.module}/scripts/user_data.sh.tftpl", {
+  user_data = base64encode(templatefile("${path.module}/scripts/user_data.sh", {
     aws_region            = var.aws_region
     app_network_name      = var.app_network_name
     app_network_subnet    = var.app_network_subnet
