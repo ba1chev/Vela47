@@ -10,16 +10,12 @@ from app.intelligence.sandbox import SandboxDocker
 from app.intelligence.sandbox import SandboxPoolBase
 
 CONTAINER_WORKSPACE_PATH = "/workspace"
-SANDBOX_IMAGE_DIRECTORY = (
-    pathlib.Path(__file__).resolve().parents[3] / "deploy" / "dev" / "images" / "sandbox_image"
-)
-SANDBOX_COMPOSE_FILE = SANDBOX_IMAGE_DIRECTORY / "docker-compose.yaml"
 
 
 class SandboxPoolDocker(SandboxPoolBase):
-    """A fixed set of containers started once and reused: the services of the Docker
-    Compose project in deploy/dev/images/sandbox_image/, one slot each, read from the
-    file through `docker compose config`.
+    """A fixed set of containers started once and reused: the services of a Docker
+    Compose project, one slot each, read from the file through `docker compose config`.
+    Which project it is belongs to whoever builds the pool (see build_sandbox_pool).
 
     start() rebuilds the image from cache and recreates every container, so nothing a
     previous process left inside one survives; shutdown() brings the project down. The
@@ -29,7 +25,7 @@ class SandboxPoolDocker(SandboxPoolBase):
     SandboxDocker). Leasing is guarded by a lock, because two requests taking the same
     slot would put two runs in one container at once."""
 
-    def __init__(self, compose_file: pathlib.Path = SANDBOX_COMPOSE_FILE,
+    def __init__(self, compose_file: pathlib.Path,
         base_directory: pathlib.Path | None = None) -> None:
         self._compose_file: pathlib.Path = pathlib.Path(compose_file)
         self._base_directory: pathlib.Path = (
