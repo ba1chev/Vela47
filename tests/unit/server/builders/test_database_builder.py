@@ -3,6 +3,7 @@ import pathlib
 from db import DatabaseConfig
 from db import DatabaseSqlite
 from db import DatabasePostgres
+from db import DatabaseCredentials
 from app.server.config import Config
 from app.server.builders import build_database
 from app.server.config_environment import ConfigEnvironment
@@ -26,6 +27,20 @@ class TestDatabaseBuilder:
         database = build_database(Config(database = DatabaseConfig(sqlite_path = pathlib.Path("/tmp/x.sqlite3"))))
         assert isinstance(database, DatabaseSqlite)
         assert database.path == pathlib.Path("/tmp/x.sqlite3")
+
+    def test_dev_with_a_database_host_builds_postgres_with_the_configured_credentials(self):
+        reads = []
+        config = Config(
+            database = DatabaseConfig(host = "10.111.0.2", ssl_mode = "disable"),
+            database_credentials = DatabaseCredentials(username = "vela47", password = "local-password")
+        )
+        database = build_database(config, lambda secret_id, region: reads.append(secret_id) or {})
+        parameters = {}
+        database._inject_credentials(None, None, None, parameters)
+        assert isinstance(database, DatabasePostgres)
+        assert database.url.host == "10.111.0.2" and database.url.query["sslmode"] == "disable"
+        assert parameters == {"user": "vela47", "password": "local-password"}
+        assert reads == []
 
     def test_prod_builds_postgres_on_the_configured_endpoint(self):
         database = build_database(make_prod_config(), lambda secret_id, region: {})
