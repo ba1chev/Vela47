@@ -1,7 +1,8 @@
 # The Vela47 server for local development. Built with the repository root as its context.
 # The image carries the docker CLI with its compose and buildx plugins, because the server
 # brings up the sandbox project itself, through the host's Docker socket mounted at
-# /var/run/docker.sock. Ollama is not in the image: it runs on the host, where it has the GPU.
+# /var/run/docker.sock, from the compose project copied in at the path it has in the
+# repository. Ollama is not in the image: it runs on the host, where it has the GPU.
 FROM docker:29.8.1-cli AS docker_cli
 
 FROM python:3.15-slim
@@ -22,6 +23,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
+COPY deploy/dev/images/sandbox_image ./deploy/dev/images/sandbox_image
 COPY db ./db
 COPY app ./app
 
