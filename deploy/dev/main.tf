@@ -24,16 +24,13 @@ terraform {
 }
 
 provider "docker" {
-  context = "desktop-linux"
+  context = var.docker_context
 }
 
 locals {
   repository       = abspath("${path.module}/../..")
   app_dockerfile   = "deploy/dev/images/app_image/Dockerfile"
   database_context = "${local.repository}/deploy/dev/images/db_image"
-  app_address      = "10.112.0.2"
-  database_address = "10.111.0.2"
-  admin_username   = "admin"
   source_files = sort([
     for current_file in setunion(
       fileset(local.repository, "app/**"),
@@ -64,8 +61,8 @@ resource "docker_network" "database" {
   driver = "bridge"
 
   ipam_config {
-    subnet  = "10.111.0.0/16"
-    gateway = "10.111.0.1"
+    subnet  = var.database_network_subnet
+    gateway = var.database_network_gateway
   }
 }
 
@@ -74,8 +71,8 @@ resource "docker_network" "app" {
   driver = "bridge"
 
   ipam_config {
-    subnet  = "10.112.0.0/16"
-    gateway = "10.112.0.1"
+    subnet  = var.application_network_subnet
+    gateway = var.application_network_gateway
   }
 }
 
@@ -105,12 +102,12 @@ resource "docker_container" "database" {
 
   networks_advanced {
     name         = docker_network.database.name
-    ipv4_address = local.database_address
+    ipv4_address = var.database_container_address
   }
 
   ports {
     internal = 5432
-    external = 5432
+    external = var.database_published_port
     ip       = "127.0.0.1"
   }
 
@@ -156,24 +153,24 @@ resource "docker_container" "app" {
 
   env = [
     "VELA47_ENVIRONMENT=dev",
-    "VELA47_DATABASE_HOST=${local.database_address}",
+    "VELA47_DATABASE_HOST=${var.database_container_address}",
     "VELA47_DATABASE_SSL_MODE=disable",
     "VELA47_DATABASE_USERNAME=vela47",
     "VELA47_DATABASE_PASSWORD=${random_password.database_password.result}",
     "VELA47_TOKEN_SECRET=${random_password.token_secret.result}",
-    "VELA47_ADMIN_USERNAME=${local.admin_username}",
+    "VELA47_ADMIN_USERNAME=${var.admin_username}",
     "VELA47_ADMIN_PASSWORD=${random_password.admin_password.result}",
-    "OLLAMA_HOST=http://host.docker.internal:11434",
+    "OLLAMA_HOST=${var.ollama_host}",
   ]
 
   networks_advanced {
     name         = docker_network.app.name
-    ipv4_address = local.app_address
+    ipv4_address = var.application_container_address
   }
 
   ports {
     internal = 8000
-    external = 8000
+    external = var.application_published_port
     ip       = "127.0.0.1"
   }
 

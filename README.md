@@ -444,7 +444,7 @@ Eval results are written to `tests/evals/results/<time>-<commit>/`.
 
 ## Deployment
 
-**Development.** `deploy/dev/` runs the server and its PostgreSQL in two containers on the local Docker Desktop, managed by Terraform with the `kreuzwerker/docker` provider. Ollama stays on the host.
+**Development.** `deploy/dev/` runs the server and its PostgreSQL in two containers on the local Docker Desktop, managed by Terraform with the `kreuzwerker/docker` provider. Ollama stays on the host. Subnets, gateways, container addresses, published ports, the Docker context, the Ollama URL and the admin username are variables in `deploy/dev/variables.tf`; the table shows their defaults.
 
 ```bash
 cd deploy/dev
