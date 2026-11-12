@@ -41,13 +41,24 @@ def _bootstrap_admin(identity_access_service: IdentityAccessService, config: Con
         )
         return
 
-    if identity_access_service.find_entity(config.admin_username) is None:
+    if identity_access_service.find_entity(config.admin_username) is not None:
+        return
+
+    try:
         identity_access_service.create_entity(
             IdentityEntityType.ADMIN,
             config.admin_username,
             config.admin_password.get_secret_value()
         )
-        logger.warning("Admin '%s' created from the configuration.", config.admin_username.strip().lower())
+    except ValueError:
+        if identity_access_service.find_entity(config.admin_username) is None:
+            raise
+        logger.warning(
+            "Admin '%s' was created by another server starting at the same time.",
+            config.admin_username.strip().lower()
+        )
+        return
+    logger.warning("Admin '%s' created from the configuration.", config.admin_username.strip().lower())
 
 
 @asynccontextmanager
@@ -71,7 +82,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
     _bootstrap_admin(app.state.identity_access_service, config)
 
-    pool = build_sandbox_pool(SANDBOX_POOL_SIZE)
+    pool = build_sandbox_pool(config, SANDBOX_POOL_SIZE)
     await asyncio.to_thread(pool.start)
     app.state.sandbox_pool = pool
     logger.warning("Sandbox ready: %s slots in %s", pool.available, type(pool).__name__)
