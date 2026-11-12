@@ -1,11 +1,11 @@
 output "url" {
   description = "Where the UI is served."
-  value       = "http://127.0.0.1:8000"
+  value       = "http://127.0.0.1:${var.application_published_port}"
 }
 
 output "admin_username" {
   description = "The admin bootstrapped on the first start."
-  value       = local.admin_username
+  value       = var.admin_username
 }
 
 output "admin_password" {
@@ -15,7 +15,7 @@ output "admin_password" {
 }
 
 output "database_password" {
-  description = "Password of the vela47 user on the PostgreSQL published at 127.0.0.1:5432."
+  description = "Password of the vela47 user on the PostgreSQL published on 127.0.0.1."
   value       = random_password.database_password.result
   sensitive   = true
 }
