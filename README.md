@@ -194,11 +194,11 @@ Tools act on the sandbox of the task they belong to. Because that sandbox only e
 
 ## Sandbox
 
-`SandboxPoolDocker` brings up the Docker Compose project in `deploy/dev/images/sandbox_image/` at application startup and reuses its 10 containers. Each service in `docker-compose.yaml` is one slot, and the pool reads the slots from the file. Each container has:
+`SandboxPoolDocker` brings up a Docker Compose project at application startup and reuses its 10 containers. `build_sandbox_pool` picks the project by environment: `deploy/dev/images/sandbox_image/` in development, `deploy/prod/images/sandbox_image/` in production. Each service in `docker-compose.yaml` is one slot, and the pool reads the slots from the file. Each container has:
 
 - a fixed address, `172.30.47.10` to `172.30.47.19`, on a network that is internal (no route out), has an isolated gateway (the host has no address on it) and blocks traffic between containers
 - 512 MB of memory, 1 CPU, 256 processes
-- the image built from the Dockerfile next to the compose file (`python:3.12-slim` with pytest)
+- the image built from the Dockerfile next to the compose file (pytest on `python:3.12-slim` in development, on `python:3.15` in production)
 
 Every start rebuilds the image from cache and recreates the containers, and shutdown brings the project down with its network. The eval runner brings up the same project, so the evals and the server cannot run at the same time. The isolated gateway needs a recent Docker Engine (developed on 29.8). Without it, an internal network still reaches every service listening on the host.
 
@@ -224,6 +224,8 @@ Leasing is guarded by a lock, and `acquire()` raises when no slot is free instea
 Each run gets its own `TracingService`: a lock-protected buffer plus live subscribers, with callbacks invoked outside the lock. Components receive a tracer explicitly and never check whether one is present. `TracingServiceNull` stands in when tracing is off.
 
 Event types: `pipeline_started/finished`, `layer_started/finished`, `subagent_started/finished`, `sandbox_acquired/released`, `model_invoked`, `tool_executed`, `run_failed`, `answer_chunk`. Durations are reported as started/finished pairs, so the UI can show a step as running the moment it begins.
+
+A model call can produce no event for minutes. When nothing has been sent for 15 seconds, the stream sends an SSE comment, which `EventSource` ignores, so a load balancer or proxy does not close the connection as idle.
 
 The stream endpoint emits five SSE event types:
 
@@ -254,7 +256,7 @@ No action in the current toolset has an effect outside the run's sandbox or chan
 
 The security layer in `app/server/security/` follows the AWS IAM model within a single account.
 
-**Entities** are who is asking: admin, user and guest. Admins and users sign in with a password and are stored. Guests are minted on request, identified by a random id and exist only inside their token. Users are created by admins only (`iam:CreateEntity`). The first admin is bootstrapped from configuration on startup.
+**Entities** are who is asking: admin, user and guest. Admins and users sign in with a password and are stored. Guests are minted on request, identified by a random id and exist only inside their token. Users are created by admins only (`iam:CreateEntity`). The first admin is bootstrapped from configuration on startup. A server that loses the race to create it, because another one started at the same time, finds it created and carries on.
 
 **Roles** are what an entity acts as. An entity assumes a role through the role's trust policy and receives an `IdentityAccessRoleSession`, the equivalent of an STS session.
 
@@ -286,7 +288,7 @@ An admin can sign in as the user role for everyday work.
 | `knowledge_documents` | document metadata and size per owner |
 | `knowledge_chunks` | chunk text and float32-packed vectors |
 
-The schema is created with `create_all` at startup. Messages are rebuilt from JSON through `MessageFactory`.
+The schema is created with `create_all` at startup, in one transaction. On PostgreSQL that transaction first takes an advisory lock, so two servers starting against an empty database create the tables once instead of one failing on a duplicate. Messages are rebuilt from JSON through `MessageFactory`.
 
 The database settings are a `DatabaseConfig` (`db/database_config.py`): the SQLite file, and the PostgreSQL endpoint, port, database name, SSL mode and RDS secret id. It holds no password. `Config` carries one, filled from the `VELA47_SQLITE_PATH` and `VELA47_DATABASE_*` variables. In development it also carries the credentials of the local PostgreSQL; in production it never holds database credentials.
 
@@ -368,7 +370,7 @@ Reference-based metrics such as BLEU, ROUGE and BERTScore are not used. Open-end
 
 ## Cost
 
-There is no per-token API cost: every model runs locally. Measured on an Apple M5 laptop with `qwen3.5:9b` (6.3 GB loaded at an 8K context, about 12 tokens per second), a deep run takes about 2.5 minutes and a RAG request a few seconds. On the planned deployment host, a `g6.xlarge` at about $0.80 per hour on demand, that is roughly $0.03 to $0.04 of instance time per deep run and well under a cent per RAG request, assuming the instance is busy. The L4 GPU is faster than the laptop, so these numbers are an upper bound.
+There is no per-token API cost: every model runs locally. Measured on an Apple M5 laptop with `qwen3.5:9b` (6.3 GB loaded at an 8K context, about 12 tokens per second), a deep run takes about 2.5 minutes and a RAG request a few seconds. On the deployment host, a `g6.xlarge` at about $1.01 per hour on demand in `eu-central-1`, that is roughly $0.04 of instance time per deep run and well under a cent per RAG request, assuming the instance is busy. The L4 GPU is faster than the laptop, so these numbers are an upper bound. The instance, the NAT gateway, the load balancer and the Multi-AZ database are billed by the hour while they exist, whether requests arrive or not.
 
 Two forms of caching keep this down. Every role uses the same model at the same context size, so one copy stays loaded (`keep_alive` 30 minutes) and no call pays for a reload. And inside a subagent loop the prompt only grows by appending, so Ollama's prompt cache prefills just the new turn instead of the whole conversation.
 
@@ -468,19 +470,33 @@ The server image is built from the repository root, and `terraform apply` rebuil
 
 - runs in DEV mode against the database container, without SSL
 - reaches Ollama on the host through `host.docker.internal`, so the models keep the host's GPU
-- mounts the host's Docker socket and brings the sandbox project up through it, so the sandbox containers run beside the server rather than inside it. Run directories are streamed in over `docker exec`, so no path has to exist on the host. Stopping the container brings the project down.
+- mounts the host's Docker socket and brings the sandbox project up through it, so the sandbox containers run beside the server rather than inside it. Run directories are streamed in over `docker exec`, so no path has to exist on the host. Stopping the container brings the project down. The socket gives the server full control of the host's Docker daemon, so whoever takes over the server takes over the host. The sandbox containers never get it.
 - gets its token key, the database password and the password of the bootstrap admin `admin` from `random_password` resources, kept in the Terraform state (`terraform output -raw database_password` for `psql`)
 
 The volume survives a rebuild of either container; `terraform destroy` deletes it.
 
 The container and a server started with uvicorn use the same port and the same sandbox project, so only one of them can run at a time.
 
-**Production.** The production configuration path (RDS PostgreSQL, Secrets Manager, rotation-safe credentials) is implemented. The deployment itself is not done yet. The target is:
+**Production.** `deploy/prod/` creates the AWS environment in `eu-central-1` with Terraform and the `hashicorp/aws` provider. Every value is a variable with a default in `deploy/prod/variables.tf`.
 
-- one EC2 GPU instance (`g6.xlarge`, NVIDIA L4 24 GB) running the FastAPI application, Ollama and the Docker sandbox pool
-- RDS PostgreSQL, Multi-AZ
-- Secrets Manager for the application secret and the RDS-managed database secret
-- an Application Load Balancer terminating TLS
+- Network: a VPC (`10.0.0.0/16`) with two public and two private subnets in two availability zones, an internet gateway and one NAT gateway.
+- An internet-facing Application Load Balancer in the public subnets. HTTPS on 443 uses an ACM certificate for `vela47.y47.sevc.link`, validated through the Route 53 zone `y47.sevc.link`, which also holds the alias record for the load balancer. HTTP on 80 only redirects to HTTPS, because the session cookie is `Secure` in production. The idle timeout is 300 seconds.
+- One `g6.xlarge` (NVIDIA L4, 24 GB) in an auto scaling group of exactly one instance, in the private subnets, from the Deep Learning Base AMI on Ubuntu 24.04, with a 100 GB root volume. The group replaces the instance when the load balancer's health check on `/` fails, after a 30-minute grace period that covers the first boot, and when the launch template changes.
+- RDS PostgreSQL 17, Multi-AZ, `db.t4g.micro`, encrypted, reachable only from the instance's security group. RDS creates and rotates the master password in Secrets Manager, and the server reads that secret for every new connection.
+- The application secret `vela47/app` with the token key and the bootstrap admin, generated by Terraform.
+- An IAM role for the instance that may read those two secrets and nothing else on the application's behalf, plus Session Manager access (`AmazonSSMManagedInstanceCore`), so the instance can be reached without SSH or a public address. The launch template requires IMDSv2 with a hop limit of 2, so the server reaches the role's credentials from inside its container.
+
+On its first boot the instance runs `deploy/prod/scripts/user_data.sh.tftpl`. The script brings the Docker Engine to version 28 or newer, which the sandbox network's isolated gateway needs. It starts `ollama/ollama:0.35.1` on the GPU and pulls `qwen3.5:9b` and `qwen3-embedding:0.6b`. It clones `main` from GitHub, builds `deploy/prod/images/app_image/` and starts the server in PROD mode with the RDS endpoint and both secret ARNs. The server and Ollama share a Docker network, and only the server's port 8000 is published. The server brings up `deploy/prod/images/sandbox_image/` through the host's Docker socket, as in development. Both containers restart with Docker. The script's output is in `/var/log/cloud-init-output.log`.
+
+```bash
+cd deploy/prod
+terraform init
+terraform apply
+terraform output url
+terraform output -raw admin_password    # sign in as admin
+aws autoscaling start-instance-refresh --auto-scaling-group-name "$(terraform output -raw autoscaling_group_name)"   # rebuild from main
+terraform destroy
+```
 
 Serverless hosting does not fit this workload. Lambda cannot run Docker containers on demand and caps execution at 15 minutes, Fargate tasks have no Docker daemon to start sandboxes from, and neither provides a GPU for the model.
 
@@ -495,6 +511,9 @@ Serverless hosting does not fit this workload. Lambda cannot run Docker containe
 - The schema is created with `create_all`; there are no migrations yet.
 - DuckDuckGo's HTML endpoint can rate-limit a busy address.
 - Uploads are JSON with base64 content rather than multipart.
+- The server container holds the host's Docker socket, which is equivalent to root on the host.
+- The production instance builds whatever is on `main` when it boots. There is no image registry or pinned release.
+- The production Terraform has been validated and planned against AWS but not yet applied, so the first-boot script has not run on a real instance.
 
 ## Roadmap
 
@@ -502,6 +521,5 @@ These parts are planned and may not all be completed:
 
 - Agent-to-agent (A2A) communication between subagents. Today each subagent sees only its own task and the user's request.
 - A human-in-the-loop channel over WebSocket, where the orchestrator can ask the user a question mid-run, with confirmation for tools that have external side effects.
-- The AWS deployment described above.
 - Enforcing the step limit in the plan schema, and running independent steps in parallel.
 - Cleanup of expired guest data, and Alembic migrations.
