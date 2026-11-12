@@ -6,9 +6,10 @@ DEFAULT_SQLITE_PATH = pathlib.Path(__file__).resolve().parent / "vela47.sqlite3"
 
 
 class DatabaseConfig(BaseModel):
-    """Where the database is and how to reach it: the SQLite file for development and the
-    PostgreSQL endpoint on RDS for production. Plain data, like ModelConfig; which of the
-    two is used is decided by whoever builds the database, not here.
+    """Where the database is and how to reach it: the SQLite file, and the PostgreSQL
+    endpoint, which is RDS in production and may be a local container in development.
+    Plain data, like ModelConfig; which of the two is used is decided by whoever builds
+    the database, not here.
 
     No password is part of it. On RDS the password lives in a secret that rotates, so only
     the secret's id is configured, and the database asks for credentials on every new
@@ -23,8 +24,9 @@ class DatabaseConfig(BaseModel):
     )
     host: Optional[str] = Field(
         default = None,
-        description = "PostgreSQL only, required there. The RDS endpoint. On a Multi-AZ instance "
-            "this name follows the primary through a failover."
+        description = "PostgreSQL only, required there. The RDS endpoint in production, where on a "
+            "Multi-AZ instance this name follows the primary through a failover. In development, "
+            "setting it moves the server from SQLite to the PostgreSQL at this address."
     )
     port: int = Field(
         default = 5432,
@@ -44,6 +46,6 @@ class DatabaseConfig(BaseModel):
     )
     secret_id: Optional[str] = Field(
         default = None,
-        description = "PostgreSQL only, required there. ARN or name of the RDS-managed secret "
+        description = "PostgreSQL on RDS only, required there. ARN or name of the RDS-managed secret "
             "holding the username and password. Read for every new connection, never stored here."
     )
