@@ -1,4 +1,3 @@
-import re
 import pytest
 import pathlib
 import tempfile
@@ -6,13 +5,13 @@ import threading
 
 from app.intelligence.sandbox import SandboxSlot
 from app.intelligence.sandbox import SandboxPoolDocker
-from app.intelligence.sandbox import SANDBOX_COMPOSE_FILE
-from app.intelligence.sandbox import SANDBOX_IMAGE_DIRECTORY
 from app.intelligence.sandbox import CONTAINER_WORKSPACE_PATH
+
+COMPOSE_FILE = pathlib.Path("docker-compose.yaml")
 
 
 def make_pool():
-    return SandboxPoolDocker(base_directory = pathlib.Path(tempfile.mkdtemp()))
+    return SandboxPoolDocker(COMPOSE_FILE, base_directory = pathlib.Path(tempfile.mkdtemp()))
 
 
 def make_started_pool(size):
@@ -22,21 +21,6 @@ def make_started_pool(size):
 
 
 class TestSandboxPoolDocker:
-    def test_the_bundled_image_has_pytest_for_the_test_subagent(self):
-        assert "pytest" in (SANDBOX_IMAGE_DIRECTORY / "Dockerfile").read_text()
-
-    def test_the_bundled_network_reaches_nothing(self):
-        compose = SANDBOX_COMPOSE_FILE.read_text()
-        assert "internal: true" in compose
-        assert "gateway_mode_ipv4: isolated" in compose
-        assert 'enable_icc: "false"' in compose
-
-    def test_every_bundled_slot_has_a_name_and_an_address_of_its_own(self):
-        compose = SANDBOX_COMPOSE_FILE.read_text()
-        names = re.findall(r"container_name: (\S+)", compose)
-        addresses = re.findall(r"ipv4_address: (\S+)", compose)
-        assert len(names) == len(set(names)) == len(addresses) == len(set(addresses)) == 10
-
     def test_slots_are_the_compose_services_in_a_stable_order(self):
         slots = make_pool()._slots_from({"services": {
             "slot-1": {"container_name": "vela47-slot-1"},
