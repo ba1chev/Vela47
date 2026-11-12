@@ -4,6 +4,8 @@
 # networks support an isolated gateway (the sandbox relies on it), starts Ollama on the GPU
 # and pulls the models, then builds the server from a clone of the repository and starts it.
 # Both containers restart with Docker, so a reboot needs none of this again.
+# It is a Terraform template, not a script to run as it is: main.tf fills in its placeholders
+# through templatefile(), and a dollar sign that bash should see before a brace is doubled.
 set -euxo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
