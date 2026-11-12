@@ -37,3 +37,29 @@ output "target_group_arn" {
   description = "Target group of the EC2 instances. Check their health with `aws elbv2 describe-target-health --target-group-arn <arn>`."
   value       = aws_lb_target_group.web.arn
 }
+
+output "database_address" {
+  description = "Host name of the RDS instance, VELA47_DATABASE_HOST. It follows the primary through a failover."
+  value       = aws_db_instance.database.address
+}
+
+output "database_secret_arn" {
+  description = "The RDS-managed secret with the database username and password, VELA47_DATABASE_SECRET_ID."
+  value       = aws_db_instance.database.master_user_secret[0].secret_arn
+}
+
+output "app_secret_arn" {
+  description = "The secret with the token signing key and the bootstrapped admin, VELA47_APP_SECRET_ID."
+  value       = aws_secretsmanager_secret.app.arn
+}
+
+output "admin_username" {
+  description = "The admin bootstrapped on the first start."
+  value       = var.app_admin_username
+}
+
+output "admin_password" {
+  description = "Password of that admin. Read it with `terraform output -raw admin_password`."
+  value       = random_password.admin_password.result
+  sensitive   = true
+}
