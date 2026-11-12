@@ -1,6 +1,7 @@
 from db import DatabaseType
 from db import DatabasePostgres
 from db import DatabaseCredentials
+from tests.fixtures.db.recording_connection import RecordingConnection
 
 
 def make_database(calls = None):
@@ -44,3 +45,10 @@ class TestDatabasePostgres:
         parameters = {}
         make_database()._inject_credentials(None, None, None, parameters)
         assert parameters == {"user": "vela", "password": "p@ss/w:rd"}
+
+    def test_the_schema_is_created_under_an_advisory_lock_held_until_the_transaction_ends(self):
+        connection = RecordingConnection()
+        make_database()._lock_schema(connection)
+        assert connection.statements == [
+            ("SELECT pg_advisory_xact_lock(:key)", {"key": DatabasePostgres.SCHEMA_LOCK_KEY})
+        ]

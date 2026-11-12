@@ -14,6 +14,8 @@ from app.intelligence.tracing import TracingService
 from app.intelligence.tracing import TracingServiceBase
 
 POLL_INTERVAL_SECONDS = 0.05
+KEEPALIVE_SECONDS = 15.0
+KEEPALIVE_FRAME = ": keep-alive\n\n"
 
 
 def _frame(event: str, data: dict[str, Any]) -> str:
@@ -45,7 +47,8 @@ def _remember(state: State, chat_session: ChatSession, is_new: bool, turn: list[
 
 
 async def stream_chat(state: State, message: str, chat_session: ChatSession, is_new: bool,
-    build_agent: Callable[[TracingServiceBase], AgentBase], agent_name: str) -> AsyncIterator[str]:
+    build_agent: Callable[[TracingServiceBase], AgentBase], agent_name: str,
+    keepalive_seconds: float = KEEPALIVE_SECONDS) -> AsyncIterator[str]:
     """Streams one exchange. The first frame names the conversation, so the browser
     knows which one a new chat became before any of the answer arrives; the agent is
     built fresh and refilled from the stored conversation, and the exchange is stored
@@ -59,7 +62,11 @@ async def stream_chat(state: State, message: str, chat_session: ChatSession, is_
     that takes this run's tracer — the agent has to be built inside the run, since the
     tracer it reports to is created here. Whatever it answers is marked with agent_name
     before it is stored, so a conversation that moved between agents still shows who
-    wrote each reply, and the answer frame carries the sources a RAG answer cites."""
+    wrote each reply, and the answer frame carries the sources a RAG answer cites.
+
+    A model call can stay silent for minutes, longer than a load balancer keeps an idle
+    connection open, so an SSE comment goes out whenever nothing else has for
+    keepalive_seconds. EventSource ignores comments."""
     yield _frame("session", {"id": chat_session.id, "title": chat_session.title, "new": is_new})
 
     loop = asyncio.get_running_loop()
@@ -74,11 +81,16 @@ async def stream_chat(state: State, message: str, chat_session: ChatSession, is_
     human_message = MessageHuman(content = message)
     work = asyncio.create_task(asyncio.to_thread(agent.execute, human_message))
 
+    last_frame_at = loop.time()
     while True:
         while not queue.empty():
             yield _frame_for(queue.get_nowait())
+            last_frame_at = loop.time()
         if work.done():
             break
+        if loop.time() - last_frame_at >= keepalive_seconds:
+            yield KEEPALIVE_FRAME
+            last_frame_at = loop.time()
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
     while not queue.empty():

@@ -11,8 +11,10 @@ from app.server.builders import build_deep_agent
 from app.intelligence.messages import MessageHuman
 from app.intelligence.tracing import TracingService
 from app.intelligence.tracing import TraceEventType
+from app.server.builders import SANDBOX_COMPOSE_FILES
 from app.intelligence.sandbox import SandboxPoolDocker
 from app.intelligence.agents import OperationSubagentType
+from app.server.config_environment import ConfigEnvironment
 from tests.evals.evals_runners.evals_runner_base import EvalsRunnerBase
 from tests.evals.evals_runners.evals_runners_type import EvalsRunnersType
 from tests.evals.evals_cases.evals_case_deep_agent import EvalsCaseDeepAgent
@@ -53,7 +55,10 @@ class EvalsRunnerDeepAgent(EvalsRunnerBase[EvalsCaseDeepAgent, EvalsRecordDeepAg
     def start(self) -> None:
         self._require_ollama()
         self._require_docker()
-        self._pool = SandboxPoolDocker(base_directory = pathlib.Path(tempfile.mkdtemp(prefix = "vela47-eval-")))
+        self._pool = SandboxPoolDocker(
+            SANDBOX_COMPOSE_FILES[ConfigEnvironment.DEV],
+            base_directory = pathlib.Path(tempfile.mkdtemp(prefix = "vela47-eval-"))
+        )
         self._pool.start()
         atexit.register(self.shutdown)
 
