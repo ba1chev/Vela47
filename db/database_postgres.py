@@ -1,6 +1,6 @@
 from typing import Any, Callable
-from sqlalchemy.engine import URL, Engine
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
+from sqlalchemy.engine import URL, Connection, Engine
 
 from db import DatabaseBase
 from db import DatabaseType
@@ -16,11 +16,13 @@ class DatabasePostgres(DatabaseBase):
     The pool is set up for failover: pre-ping replaces connections that died when the
     endpoint moved to the standby, recycling retires them before the network cuts them,
     and the connect timeout makes an unreachable primary fail fast. sslmode defaults to
-    'require'; 'verify-full' needs the RDS CA bundle."""
+    'require'. The schema is created under a transaction-level advisory lock, because two
+    servers creating the same tables at once make one of them fail."""
 
     DRIVER = "postgresql+psycopg"
     POOL_RECYCLE_SECONDS = 1800
     CONNECT_TIMEOUT_SECONDS = 10
+    SCHEMA_LOCK_KEY = 4747
 
     def __init__(self, host: str, credentials: Callable[[], DatabaseCredentials],
         name: str = "vela47", port: int = 5432, ssl_mode: str = "require",
@@ -47,6 +49,9 @@ class DatabasePostgres(DatabaseBase):
             database = self._name,
             query = {"sslmode": self._ssl_mode}
         )
+
+    def _lock_schema(self, connection: Connection) -> None:
+        connection.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": self.SCHEMA_LOCK_KEY})
 
     def _inject_credentials(self, dialect: Any, connection_record: Any,
         connection_arguments: Any, connection_parameters: dict[str, Any]) -> None:
