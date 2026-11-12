@@ -2,7 +2,7 @@
 
 Vela47 is a question-answering and research system that runs two agents over one shared document store. The RAG agent answers questions from the user's own documents in a few seconds. The deep agent takes on requests that need several steps, the web or code: it plans the work, hands each step to a ReAct subagent running against an isolated Docker sandbox, and merges the reports into one answer. Both agents cite their sources, and every stage of a run is streamed to the browser as it happens.
 
-Everything runs on local models served by Ollama. The backend is a single FastAPI application. Persistence is SQLite in development and PostgreSQL in production.
+Everything runs on local models served by Ollama. The backend is a single FastAPI application. Persistence is SQLite or a local PostgreSQL container in development and PostgreSQL in production.
 
 ## Contents
 
@@ -194,7 +194,7 @@ Tools act on the sandbox of the task they belong to. Because that sandbox only e
 
 ## Sandbox
 
-`SandboxPoolDocker` brings up the Docker Compose project in `app/intelligence/sandbox/sandbox_image/` at application startup and reuses its 10 containers. Each service in `docker-compose.yaml` is one slot, and the pool reads the slots from the file. Each container has:
+`SandboxPoolDocker` brings up the Docker Compose project in `deploy/dev/images/sandbox_image/` at application startup and reuses its 10 containers. Each service in `docker-compose.yaml` is one slot, and the pool reads the slots from the file. Each container has:
 
 - a fixed address, `172.30.47.10` to `172.30.47.19`, on a network that is internal (no route out), has an isolated gateway (the host has no address on it) and blocks traffic between containers
 - 512 MB of memory, 1 CPU, 256 processes
@@ -276,7 +276,7 @@ An admin can sign in as the user role for everyday work.
 
 ## Persistence
 
-`db/` is independent of `app/` and uses SQLAlchemy 2. `DatabaseBase` defines start, transaction and shutdown, with `DatabaseSqlite` for development (a file at `db/vela47.sqlite3`) and `DatabasePostgres` for production (psycopg 3, RDS). Both are selected through a factory and registry.
+`db/` is independent of `app/` and uses SQLAlchemy 2. `DatabaseBase` defines start, transaction and shutdown, with `DatabaseSqlite` (a file at `db/vela47.sqlite3`) and `DatabasePostgres` (psycopg 3). Both are selected through a factory and registry. Development uses SQLite unless `VELA47_DATABASE_HOST` is set, and then PostgreSQL with a user and password from the environment, as in the development deployment. Production always uses PostgreSQL on RDS.
 
 | Table | Contents |
 |---|---|
@@ -288,7 +288,7 @@ An admin can sign in as the user role for everyday work.
 
 The schema is created with `create_all` at startup. Messages are rebuilt from JSON through `MessageFactory`.
 
-The database settings are a `DatabaseConfig` (`db/database_config.py`): the SQLite file, and the RDS endpoint, port, database name, SSL mode and secret id. It holds no password. `Config` carries one, filled from the `VELA47_SQLITE_PATH` and `VELA47_DATABASE_*` variables.
+The database settings are a `DatabaseConfig` (`db/database_config.py`): the SQLite file, and the PostgreSQL endpoint, port, database name, SSL mode and RDS secret id. It holds no password. `Config` carries one, filled from the `VELA47_SQLITE_PATH` and `VELA47_DATABASE_*` variables. In development it also carries the credentials of the local PostgreSQL; in production it never holds database credentials.
 
 `app/server/config.py` is the only code that reads the environment or AWS Secrets Manager. In production, the application secret (token key, bootstrap admin) is read once at startup, and the RDS-managed database secret is read for every new connection, so a password rotation needs no restart. Production refuses to start without a database host, database secret, region and token key.
 
@@ -382,11 +382,12 @@ All variables are read in `app/server/config.py`.
 | `VELA47_SQLITE_PATH` | dev | SQLite file, default `db/vela47.sqlite3` |
 | `VELA47_TOKEN_SECRET` | dev | token signing key, at least 32 bytes; generated per run if unset |
 | `VELA47_ADMIN_USERNAME`, `VELA47_ADMIN_PASSWORD` | dev | bootstrap admin |
-| `VELA47_DATABASE_HOST` | prod | RDS endpoint (required) |
+| `VELA47_DATABASE_HOST` | both | prod: RDS endpoint (required); dev: PostgreSQL server, SQLite when unset |
 | `VELA47_DATABASE_SECRET_ID` | prod | RDS-managed secret (required) |
 | `VELA47_APP_SECRET_ID` | prod | secret with `token_secret`, `admin_username`, `admin_password` (required) |
 | `VELA47_AWS_REGION` | prod | region, falls back to `AWS_REGION` / `AWS_DEFAULT_REGION` (required) |
-| `VELA47_DATABASE_PORT`, `VELA47_DATABASE_NAME`, `VELA47_DATABASE_SSL_MODE` | prod | defaults `5432`, `vela47`, `require` |
+| `VELA47_DATABASE_PORT`, `VELA47_DATABASE_NAME`, `VELA47_DATABASE_SSL_MODE` | both | defaults `5432`, `vela47`, `require` |
+| `VELA47_DATABASE_USERNAME`, `VELA47_DATABASE_PASSWORD` | dev | PostgreSQL credentials, required with `VELA47_DATABASE_HOST` |
 | `VELA47_KNOWLEDGE_MAX_FILE_BYTES` | both | extracted text per document, default 512 KB |
 | `VELA47_KNOWLEDGE_MAX_UPLOAD_BYTES` | both | raw upload or URL import, default 8 MB |
 | `VELA47_KNOWLEDGE_MAX_OWNER_BYTES` | both | total per owner, default 2 MB |
@@ -418,7 +419,7 @@ Requirements: Python (developed on 3.15), Docker with Compose, and Ollama with a
 
 ```bash
 python -m venv .venv
-.venv/bin/python -m pip install -r requrements.txt
+.venv/bin/python -m pip install -r requirements.txt
 
 ollama pull qwen3.5:9b
 ollama pull qwen3-embedding:0.6b
@@ -443,7 +444,38 @@ Eval results are written to `tests/evals/results/<time>-<commit>/`.
 
 ## Deployment
 
-The production configuration path (RDS PostgreSQL, Secrets Manager, rotation-safe credentials) is implemented. The deployment itself is not done yet. The target is:
+**Development.** `deploy/dev/` runs the server and its PostgreSQL in two containers on the local Docker Desktop, managed by Terraform with the `kreuzwerker/docker` provider. Ollama stays on the host.
+
+```bash
+cd deploy/dev
+terraform init
+terraform apply
+terraform output -raw admin_password    # sign in as admin
+terraform destroy
+```
+
+| | Server | Database |
+|---|---|---|
+| Image | `deploy/dev/images/app_image/` | `deploy/dev/images/db_image/` (`postgres:17-alpine`) |
+| Network | `vela47-app-network`, `10.112.0.0/16`, gateway `10.112.0.1` | `vela47-db-network`, `10.111.0.0/16`, gateway `10.111.0.1` |
+| Address | `10.112.0.2` | `10.111.0.2` |
+| Published | `127.0.0.1:8000` | `127.0.0.1:5432` |
+| Data | none | `vela47-db-data` volume |
+
+No container is on both networks. The server connects to `10.111.0.2:5432`: the packets leave through the app network's gateway and enter through the database network's gateway, so PostgreSQL sees them coming from `10.111.0.1`. Docker forwards between two bridge networks only to a published port, which is why 5432 is published. Binding it to `127.0.0.1` keeps it off the LAN. Every other port of the database container is unreachable from the app network, and the sandbox network, whose gateway is isolated, cannot reach the database at all. A gateway address cannot be used as the published address, because Docker Desktop binds published addresses on the Mac.
+
+The server image is built from the repository root, and `terraform apply` rebuilds it and replaces the container when a file under `app/`, `db/` or `deploy/dev/images/sandbox_image/`, `requirements.txt` or the Dockerfile changes. The sandbox compose project is copied into the image at the same relative path, so the server finds it the same way as outside a container. The server container:
+
+- runs in DEV mode against the database container, without SSL
+- reaches Ollama on the host through `host.docker.internal`, so the models keep the host's GPU
+- mounts the host's Docker socket and brings the sandbox project up through it, so the sandbox containers run beside the server rather than inside it. Run directories are streamed in over `docker exec`, so no path has to exist on the host. Stopping the container brings the project down.
+- gets its token key, the database password and the password of the bootstrap admin `admin` from `random_password` resources, kept in the Terraform state (`terraform output -raw database_password` for `psql`)
+
+The volume survives a rebuild of either container; `terraform destroy` deletes it.
+
+The container and a server started with uvicorn use the same port and the same sandbox project, so only one of them can run at a time.
+
+**Production.** The production configuration path (RDS PostgreSQL, Secrets Manager, rotation-safe credentials) is implemented. The deployment itself is not done yet. The target is:
 
 - one EC2 GPU instance (`g6.xlarge`, NVIDIA L4 24 GB) running the FastAPI application, Ollama and the Docker sandbox pool
 - RDS PostgreSQL, Multi-AZ

@@ -4,3 +4,6 @@ main.py
 .pytest_cache
 *.sqlite3
 tests/evals/results
+.terraform
+*.tfstate
+*.tfstate.*

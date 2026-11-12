@@ -10,14 +10,16 @@ from app.intelligence.sandbox import SandboxDocker
 from app.intelligence.sandbox import SandboxPoolBase
 
 CONTAINER_WORKSPACE_PATH = "/workspace"
-SANDBOX_IMAGE_DIRECTORY = pathlib.Path(__file__).resolve().parent / "sandbox_image"
+SANDBOX_IMAGE_DIRECTORY = (
+    pathlib.Path(__file__).resolve().parents[3] / "deploy" / "dev" / "images" / "sandbox_image"
+)
 SANDBOX_COMPOSE_FILE = SANDBOX_IMAGE_DIRECTORY / "docker-compose.yaml"
 
 
 class SandboxPoolDocker(SandboxPoolBase):
     """A fixed set of containers started once and reused: the services of the Docker
-    Compose project in sandbox_image/, one slot each, read from the file through
-    `docker compose config`.
+    Compose project in deploy/dev/images/sandbox_image/, one slot each, read from the
+    file through `docker compose config`.
 
     start() rebuilds the image from cache and recreates every container, so nothing a
     previous process left inside one survives; shutdown() brings the project down. The

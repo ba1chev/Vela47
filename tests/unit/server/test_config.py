@@ -68,8 +68,23 @@ class TestConfig:
         assert config.token_secret.get_secret_value() == "m" * 32
         assert config.admin_password.get_secret_value() == "from-secrets-manager"
 
-    def test_there_is_no_field_for_the_database_password_at_all(self):
-        assert [current_name for current_name in Config.model_fields if "password" in current_name] == ["admin_password"]
+    def test_dev_reads_the_local_postgres_and_its_credentials_from_the_environment(self):
+        config = Config.from_environment({
+            "VELA47_DATABASE_HOST": "10.111.0.2",
+            "VELA47_DATABASE_USERNAME": "vela47",
+            "VELA47_DATABASE_PASSWORD": "local-password"
+        })
+        assert config.database.host == "10.111.0.2"
+        assert config.database_credentials.username == "vela47"
+        assert config.database_credentials.password.get_secret_value() == "local-password"
+
+    def test_dev_with_a_database_host_but_no_credentials_cannot_start(self):
+        with pytest.raises(ValidationError, match = "VELA47_DATABASE_PASSWORD"):
+            Config.from_environment({"VELA47_DATABASE_HOST": "10.111.0.2", "VELA47_DATABASE_USERNAME": "vela47"})
+
+    def test_prod_never_holds_database_credentials(self):
+        environment = dict(PROD, VELA47_DATABASE_USERNAME = "vela47", VELA47_DATABASE_PASSWORD = "from-the-environment")
+        assert Config.from_environment(environment, make_reader()).database_credentials is None
 
     def test_prod_reads_the_database_settings_from_the_environment(self):
         environment = dict(PROD, VELA47_DATABASE_PORT = "6543", VELA47_DATABASE_NAME = "other", VELA47_DATABASE_SSL_MODE = "verify-full")
@@ -114,5 +129,12 @@ class TestConfig:
         assert config.knowledge_max_owner_bytes == 4096
 
     def test_secrets_never_show_in_a_repr(self):
-        config = Config.from_environment({"VELA47_TOKEN_SECRET": "s" * 32, "VELA47_ADMIN_PASSWORD": "admin-password-long"})
+        config = Config.from_environment({
+            "VELA47_TOKEN_SECRET": "s" * 32,
+            "VELA47_ADMIN_PASSWORD": "admin-password-long",
+            "VELA47_DATABASE_HOST": "10.111.0.2",
+            "VELA47_DATABASE_USERNAME": "vela47",
+            "VELA47_DATABASE_PASSWORD": "local-password"
+        })
         assert "s" * 32 not in repr(config) and "admin-password-long" not in repr(config)
+        assert "local-password" not in repr(config)

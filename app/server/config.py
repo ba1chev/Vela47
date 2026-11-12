@@ -3,6 +3,7 @@ from typing import Any, Callable, Mapping, Optional, Self
 from pydantic import BaseModel, Field, SecretStr, model_validator
 
 from db import DatabaseConfig
+from db import DatabaseCredentials
 from app.server.config_secrets import read_secret
 from app.server.config_environment import ConfigEnvironment
 
@@ -23,9 +24,10 @@ class Config(BaseModel):
 
     Non-secret values come from VELA47_* environment variables. In PROD secrets never
     do: the token secret and the first admin are read once from an application secret,
-    and the database password is not held here at all, since the database reads its
-    RDS-managed secret for every new connection. DEV has a default for every field; PROD
-    requires those it cannot run safely without, so a missing one fails the start."""
+    and no database password is held here at all, since the database reads its
+    RDS-managed secret for every new connection. DEV has a default for every field and
+    runs on SQLite unless a database host is set, then on that PostgreSQL with
+    credentials from the environment. PROD requires what it cannot run safely without."""
 
     model_config = {"frozen": True}
 
@@ -39,6 +41,12 @@ class Config(BaseModel):
         description = "Where the database is and how to reach it. DEV: the SQLite file, "
             "VELA47_SQLITE_PATH. PROD: VELA47_DATABASE_HOST, _PORT, _NAME, _SSL_MODE and "
             "_SECRET_ID, of which the host and the secret are required."
+    )
+    database_credentials: Optional[DatabaseCredentials] = Field(
+        default = None,
+        description = "DEV only, required once a database host is set. User and password of the "
+            "local PostgreSQL — VELA47_DATABASE_USERNAME and VELA47_DATABASE_PASSWORD. Its "
+            "password never rotates, so it is held here; PROD never holds one."
     )
     aws_region: Optional[str] = Field(
         default = None,
@@ -87,6 +95,17 @@ class Config(BaseModel):
     )
 
     @model_validator(mode = "after")
+    def validate_development(self) -> Self:
+        if self.environment is not ConfigEnvironment.DEV:
+            return self
+
+        if self.database.host is not None and self.database_credentials is None:
+            raise ValueError(
+                "DEV with a database host needs VELA47_DATABASE_USERNAME and VELA47_DATABASE_PASSWORD."
+            )
+        return self
+
+    @model_validator(mode = "after")
     def validate_production(self) -> Self:
         if self.environment is not ConfigEnvironment.PROD:
             return self
@@ -128,10 +147,17 @@ class Config(BaseModel):
         }
 
         if environment is ConfigEnvironment.DEV:
+            database_username = environ.get("VELA47_DATABASE_USERNAME")
+            database_password = environ.get("VELA47_DATABASE_PASSWORD")
             values.update(
                 token_secret = environ.get("VELA47_TOKEN_SECRET") or None,
                 admin_username = environ.get("VELA47_ADMIN_USERNAME") or None,
-                admin_password = environ.get("VELA47_ADMIN_PASSWORD") or None
+                admin_password = environ.get("VELA47_ADMIN_PASSWORD") or None,
+                database_credentials = (
+                    DatabaseCredentials(username = database_username, password = database_password)
+                    if database_username and database_password
+                    else None
+                )
             )
             return cls(**values)
 
