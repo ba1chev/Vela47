@@ -8,6 +8,7 @@ from db import DatabaseType
 from db import DatabaseSqlite
 from db import TABLE_REGISTRY
 from db import IdentityEntityTable
+from tests.fixtures.db.recording_connection import RecordingConnection
 
 
 def make_row(id = "a" * 32, name = "ana"):
@@ -25,6 +26,11 @@ def make_started(path = None):
 class TestDatabaseSqlite:
     def test_its_type_is_sqlite(self):
         assert DatabaseSqlite().database_type is DatabaseType.SQLITE
+
+    def test_a_single_file_needs_no_schema_lock(self):
+        connection = RecordingConnection()
+        DatabaseSqlite()._lock_schema(connection)
+        assert connection.statements == []
 
     def test_start_creates_every_registered_table(self):
         database = make_started()
