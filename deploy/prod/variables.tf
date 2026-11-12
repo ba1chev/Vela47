@@ -49,19 +49,36 @@ variable "private_subnet_cidr_blocks" {
 # EC2 instance variables
 variable "ec2_instance_ami" {
   type        = string
-  default     = "resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
-  description = "EC2 instance AMI value"
+  default     = "resolve:ssm:/aws/service/deeplearning/ami/x86_64/base-oss-nvidia-driver-gpu-ubuntu-24.04/latest/ami-id"
+  description = "EC2 instance AMI value, the Deep Learning AMI on Ubuntu comes with the NVIDIA driver and Container Toolkit"
 }
 
 variable "ec2_instance_type" {
   type        = string
-  default     = "t2.micro"
-  description = "EC2 instance type value"
+  default     = "g6.xlarge"
+  description = "EC2 instance type value, g6.xlarge has one NVIDIA L4 with 24 GB for the models"
+}
+
+variable "ec2_instance_root_device_name" {
+  type        = string
+  default     = "/dev/sda1"
+  description = "Root device name of the AMI"
+}
+
+variable "ec2_instance_root_volume_size" {
+  type        = number
+  default     = 100
+  description = "Size of the root volume in GB, it holds the models, the images and the Docker build cache"
+
+  validation {
+    condition     = var.ec2_instance_root_volume_size >= 75
+    error_message = "The root volume can not be smaller than the 75 GB snapshot of the Deep Learning AMI."
+  }
 }
 
 variable "ec2_instance_http_port" {
   type        = number
-  default     = 80
+  default     = 8000
   description = "Port on which the application on the EC2 instances listens"
 }
 
@@ -122,7 +139,7 @@ variable "ec2_launch_template_name" {
 
 variable "ec2_launch_template_min_instances" {
   type        = number
-  default     = 2
+  default     = 1
   description = "Minimum number of EC2 instances running"
 
   validation {
@@ -133,14 +150,20 @@ variable "ec2_launch_template_min_instances" {
 
 variable "ec2_launch_template_max_instances" {
   type        = number
-  default     = 4
-  description = "Maximum number of EC2 instances running"
+  default     = 1
+  description = "Maximum number of EC2 instances running, every instance runs its own GPU, Ollama and sandbox"
 }
 
 variable "ec2_launch_template_desired_instances" {
   type        = number
-  default     = 2
+  default     = 1
   description = "Desired number of EC2 instances running"
+}
+
+variable "ec2_autoscaling_health_check_grace_period" {
+  type        = number
+  default     = 1800
+  description = "Seconds a new instance gets before failed health checks count, the first boot pulls the models and builds the server"
 }
 
 variable "ec2_autoscaling_health_check_type" {
@@ -211,13 +234,42 @@ variable "load_balancer_egress_ip_protocol" {
 variable "load_balancer_listener_port" {
   type        = number
   default     = 80
-  description = "Port on which the load balancer listens"
+  description = "Port on which the load balancer listens for HTTP, which it redirects to HTTPS"
 }
 
 variable "load_balancer_listener_protocol" {
   type        = string
   default     = "HTTP"
-  description = "Protocol of the load balancer listener and target group"
+  description = "Protocol of the load balancer listener which redirects to HTTPS"
+}
+
+variable "load_balancer_https_listener_port" {
+  type        = number
+  default     = 443
+  description = "Port on which the load balancer listens for HTTPS"
+}
+
+variable "load_balancer_ssl_policy" {
+  type        = string
+  default     = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  description = "TLS policy of the HTTPS listener"
+}
+
+variable "load_balancer_target_group_protocol" {
+  type        = string
+  default     = "HTTP"
+  description = "Protocol between the load balancer and the EC2 instances, TLS ends at the load balancer"
+}
+
+variable "load_balancer_idle_timeout" {
+  type        = number
+  default     = 300
+  description = "Seconds a connection may stay idle, an agent run streams for minutes and an upload is embedded before it returns"
+
+  validation {
+    condition     = var.load_balancer_idle_timeout >= 1 && var.load_balancer_idle_timeout <= 4000
+    error_message = "The idle timeout must be between 1 and 4000 seconds."
+  }
 }
 
 variable "load_balancer_target_group_name" {
@@ -384,4 +436,84 @@ variable "app_admin_password_length" {
     condition     = var.app_admin_password_length >= 12
     error_message = "The server needs an admin password of at least 12 characters."
   }
+}
+
+# Domain variables
+variable "route53_zone_name" {
+  type        = string
+  default     = "y47.sevc.link"
+  description = "Route 53 hosted zone which already exists in the account and holds the application domain"
+}
+
+variable "app_domain_name" {
+  type        = string
+  default     = "vela47.y47.sevc.link"
+  description = "Domain the application is served on over HTTPS"
+}
+
+# Server variables (what user_data starts on the instance)
+variable "app_repository_url" {
+  type        = string
+  default     = "https://github.com/ba1chev/Vela47.git"
+  description = "Public repository the instance clones and builds the server from"
+}
+
+variable "app_repository_branch" {
+  type        = string
+  default     = "main"
+  description = "Branch the instance builds the server from on its first boot"
+}
+
+variable "app_network_name" {
+  type        = string
+  default     = "vela47-app-network"
+  description = "Name for the Docker network the server and Ollama share on the instance"
+}
+
+variable "app_network_subnet" {
+  type        = string
+  default     = "10.112.0.0/16"
+  description = "Value for the Docker network subnet on the instance, it must not overlap the VPC"
+
+  validation {
+    condition     = can(cidrhost(var.app_network_subnet, 0))
+    error_message = "The app_network_subnet must be a valid IPv4 CIDR, e.g. 10.112.0.0/16."
+  }
+}
+
+variable "app_image_name" {
+  type        = string
+  default     = "vela47-app:prod"
+  description = "Name and tag for the server image built on the instance"
+}
+
+variable "app_container_name" {
+  type        = string
+  default     = "vela47-app"
+  description = "Name for the server container"
+}
+
+# Ollama variables
+variable "ollama_image" {
+  type        = string
+  default     = "ollama/ollama:0.35.1"
+  description = "Ollama image, the same version as in development"
+}
+
+variable "ollama_container_name" {
+  type        = string
+  default     = "vela47-ollama"
+  description = "Name for the Ollama container, the server reaches it by this name"
+}
+
+variable "ollama_volume_name" {
+  type        = string
+  default     = "vela47-ollama-data"
+  description = "Name for the volume which keeps the pulled models"
+}
+
+variable "ollama_models" {
+  type        = list(string)
+  default     = ["qwen3.5:9b", "qwen3-embedding:0.6b"]
+  description = "Models pulled on the first boot, the agents' model and the embedding model"
 }
