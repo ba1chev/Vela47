@@ -6,6 +6,7 @@ from app.intelligence.agents import RagPolicyFull
 from app.intelligence.memory import VectorDbMemory
 from app.intelligence.model import ModelEmbeddings
 from app.intelligence.model import ModelFoundation
+from app.intelligence.model import ModelClientBase
 from app.intelligence.memory import HybridSearchPolicy
 from app.intelligence.memory import VectorDbMemoryEntry
 from app.intelligence.tracing import TracingServiceBase
@@ -13,65 +14,55 @@ from app.server.config_environment import ConfigEnvironment
 
 RAG_MODEL_NAMES = {
     ConfigEnvironment.DEV: "qwen3.5:9b",
-    ConfigEnvironment.PROD: "qwen3.5:35b-a3b"
+    ConfigEnvironment.PROD: "qwen.qwen3-235b-a22b-2507-v1:0"
 }
 EMBEDDING_MODEL_NAMES = {
     ConfigEnvironment.DEV: "qwen3-embedding:0.6b",
-    ConfigEnvironment.PROD: "qwen3-embedding:8b"
+    ConfigEnvironment.PROD: "amazon.titan-embed-text-v2:0"
 }
-EMBEDDING_QUERY_TEMPLATE = (
-    "Instruct: Given a question, retrieve passages from the user's documents that answer it\n"
-    "Query: {query}"
-)
-CONTEXT_WINDOW_TOKENS = {
-    ConfigEnvironment.DEV: 8192,
-    ConfigEnvironment.PROD: 32768
+EMBEDDING_QUERY_TEMPLATES = {
+    ConfigEnvironment.DEV: (
+        "Instruct: Given a question, retrieve passages from the user's documents that answer it\n"
+        "Query: {query}"
+    ),
+    ConfigEnvironment.PROD: "{query}"
 }
-KEEP_ALIVE = {
-    ConfigEnvironment.DEV: "30m",
-    ConfigEnvironment.PROD: "-1"
-}
+CONTEXT_WINDOW_TOKENS = 8192
 RERANKING_MAX_OUTPUT_TOKENS = 512
 
 
 def build_knowledge_memory(tracing_service: TracingServiceBase, entries: list[VectorDbMemoryEntry],
-    environment: ConfigEnvironment) -> VectorDbMemory:
+    environment: ConfigEnvironment, model_client: ModelClientBase) -> VectorDbMemory:
     vector_db_memory = VectorDbMemory(
-        ModelEmbeddings(EMBEDDING_MODEL_NAMES[environment], tracing_service, KEEP_ALIVE[environment]),
-        EMBEDDING_QUERY_TEMPLATE
+        ModelEmbeddings(EMBEDDING_MODEL_NAMES[environment], tracing_service, client = model_client),
+        EMBEDDING_QUERY_TEMPLATES[environment]
     )
     vector_db_memory.add_entries(entries)
     return vector_db_memory
 
 
 def build_rag_agent(tracing_service: TracingServiceBase, entries: list[VectorDbMemoryEntry],
-    environment: ConfigEnvironment) -> RagAgent:
-    vector_db_memory = build_knowledge_memory(tracing_service, entries, environment)
+    environment: ConfigEnvironment, model_client: ModelClientBase) -> RagAgent:
+    vector_db_memory = build_knowledge_memory(tracing_service, entries, environment, model_client)
     model_name = RAG_MODEL_NAMES[environment]
-    context_window_tokens = CONTEXT_WINDOW_TOKENS[environment]
-    keep_alive = KEEP_ALIVE[environment]
 
     query_model = ModelFoundation(
-        ModelConfig(
-            model_name = model_name, temperature = 0.1,
-            context_window_tokens = context_window_tokens, keep_alive = keep_alive
-        ),
-        tracing_service
+        ModelConfig(model_name = model_name, temperature = 0.1, context_window_tokens = CONTEXT_WINDOW_TOKENS),
+        tracing_service,
+        model_client
     )
     reranking_model = ModelFoundation(
         ModelConfig(
-            model_name = model_name, temperature = 0.1,
-            context_window_tokens = context_window_tokens, keep_alive = keep_alive,
+            model_name = model_name, temperature = 0.1, context_window_tokens = CONTEXT_WINDOW_TOKENS,
             max_output_tokens = RERANKING_MAX_OUTPUT_TOKENS
         ),
-        tracing_service
+        tracing_service,
+        model_client
     )
     generation_model = ModelFoundation(
-        ModelConfig(
-            model_name = model_name, temperature = 0.4,
-            context_window_tokens = context_window_tokens, keep_alive = keep_alive
-        ),
-        tracing_service
+        ModelConfig(model_name = model_name, temperature = 0.4, context_window_tokens = CONTEXT_WINDOW_TOKENS),
+        tracing_service,
+        model_client
     )
 
     policy = RagPolicyFull(
