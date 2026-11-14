@@ -590,6 +590,6 @@ variable "sandbox_role_name" {
 # Bedrock variables
 variable "bedrock_model_ids" {
   type        = list(string)
-  default     = ["qwen.qwen3-235b-a22b-2507-v1:0", "amazon.titan-embed-text-v2:0"]
-  description = "Bedrock models the server task may call, the same IDs the server asks for in PROD"
+  default     = ["eu.anthropic.claude-sonnet-5-5", "amazon.titan-embed-text-v2:0"]
+  description = "Bedrock models the server task may call, the same IDs the server asks for in PROD, an eu. prefix is a cross-region inference profile that keeps the requests in EU regions"
 }
