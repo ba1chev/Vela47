@@ -41,6 +41,22 @@ locals {
   }
 }
 
+# Bedrock models the server task may call
+# An ID with a geography prefix (eu.) is an inference profile, which routes a request to one of several regions,
+# so the task needs the profile itself and the base model in every region it can be routed to
+data "aws_caller_identity" "current" {}
+
+locals {
+  bedrock_base_model_ids = [for current in var.bedrock_model_ids : replace(current, "/^(eu|us|apac|global)\\./", "")]
+  bedrock_resources = concat(
+    [for current in local.bedrock_base_model_ids : "arn:aws:bedrock:*::foundation-model/${current}"],
+    [
+      for current in var.bedrock_model_ids : "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/${current}"
+      if !contains(local.bedrock_base_model_ids, current)
+    ]
+  )
+}
+
 # Paths of the images, and the files whose change rebuilds each of them
 # An image is tagged with a hash of its files, so a change gives a new tag and ECS deploys it
 locals {
@@ -457,7 +473,7 @@ data "aws_iam_policy_document" "ecs_task" {
 
   statement {
     actions   = ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"]
-    resources = [for current in var.bedrock_model_ids : "arn:aws:bedrock:${var.aws_region}::foundation-model/${current}"]
+    resources = local.bedrock_resources
   }
 
   statement {
