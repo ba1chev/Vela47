@@ -95,3 +95,11 @@ class TestOperationMergingLayer:
         OperationMergingLayer(model).execute(context)
         report = model.calls[0][0][1].content
         assert "Report (success): found this\nChecked by the system: Pages read: https://a.org." in report
+
+    def test_a_request_that_needed_no_step_is_answered_directly(self):
+        model = FakeModel(["Hi Yoan!"])
+        context = OperationContext(goal = MessageHuman(content = "hi, I am Yoan"), plan = OperationPlan(goal = "Greet Yoan", steps = []))
+        OperationMergingLayer(model).execute(context)
+        report = model.calls[0][0][-1].content
+        assert "No step was needed for this request." in report and "reports, each under" not in report
+        assert context.final.content == "Hi Yoan! "
