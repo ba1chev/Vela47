@@ -29,6 +29,7 @@ EMBEDDING_QUERY_TEMPLATES = {
 }
 CONTEXT_WINDOW_TOKENS = 8192
 RERANKING_MAX_OUTPUT_TOKENS = 512
+ANSWER_MAX_OUTPUT_TOKENS = 8192
 
 
 def build_knowledge_memory(tracing_service: TracingServiceBase, entries: list[VectorDbMemoryEntry],
@@ -60,7 +61,10 @@ def build_rag_agent(tracing_service: TracingServiceBase, entries: list[VectorDbM
         model_client
     )
     generation_model = ModelFoundation(
-        ModelConfig(model_name = model_name, temperature = 0.4, context_window_tokens = CONTEXT_WINDOW_TOKENS),
+        ModelConfig(
+            model_name = model_name, temperature = 0.4, context_window_tokens = CONTEXT_WINDOW_TOKENS,
+            max_output_tokens = ANSWER_MAX_OUTPUT_TOKENS
+        ),
         tracing_service,
         model_client
     )
