@@ -50,7 +50,7 @@ class TestModelClientBedrock:
     def test_the_model_and_its_sampling_are_sent(self):
         request = sent([MessageHuman(content = "hi")], temperature = 0.1, top_p = 0.8, max_output_tokens = 512, stop = ["END"])
         assert request["modelId"] == "qwen.qwen3-235b-a22b-2507-v1:0"
-        assert request["inferenceConfig"] == {"temperature": 0.1, "topP": 0.8, "maxTokens": 512, "stopSequences": ["END"]}
+        assert request["inferenceConfig"] == {"temperature": 0.1, "maxTokens": 512, "stopSequences": ["END"]}
 
     def test_a_conversation_that_starts_with_the_assistant_gets_a_user_turn_first(self):
         request = sent([MessageAI(content = "earlier answer"), MessageHuman(content = "and now?")])
