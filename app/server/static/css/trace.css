@@ -1,0 +1,141 @@
+/* The trace panel. */
+
+.trace-head, .sessions-head { justify-content: space-between; }
+
+.trace-head h2, .sessions-head h2 {
+  margin: 0;
+  font: 650 10px/1 var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--muted);
+}
+
+.ghost {
+  border: none;
+  background: none;
+  color: var(--faint);
+  font: 11px/1 var(--mono);
+  cursor: pointer;
+  padding: 4px 7px;
+  border-radius: 6px;
+  transition: color .15s, background .15s;
+}
+
+.ghost:hover { color: var(--accent); background: var(--accent-soft); }
+
+/* Wrapper exists so the empty message can sit centred in the panel instead of
+   being pushed to the bottom by the event list. */
+.trace-body, .sessions-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.events {
+  list-style: none;
+  margin: 0;
+  padding: 8px 0;
+  font-size: 13px;
+}
+
+.trace-empty, .sessions-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.ev {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: baseline;
+  padding: 7px 14px;
+  border-left: 2px solid transparent;
+  animation: slide .26s cubic-bezier(.2, .8, .2, 1);
+}
+
+@keyframes slide {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.ev[data-depth="1"] { padding-left: 26px; }
+.ev[data-depth="2"] { padding-left: 40px; }
+
+.ev[data-kind="layer"] {
+  border-left-color: var(--accent);
+  background: linear-gradient(90deg, var(--accent-soft), transparent);
+}
+
+.ev[data-kind="error"] {
+  border-left-color: var(--err);
+  background: linear-gradient(90deg, rgba(255, 127, 138, .12), transparent);
+}
+
+/* Each subagent type gets its own hue, set from --agent by the stylesheet below. */
+.ev[data-agent] { border-left-color: var(--agent); }
+.ev[data-agent] .name { color: var(--agent); }
+.ev[data-agent] .dot  { background: var(--agent); }
+.ev[data-agent="RESEARCH"] { --agent: var(--agent-research); }
+.ev[data-agent="CODE"]     { --agent: var(--agent-code); }
+.ev[data-agent="TEST"]     { --agent: var(--agent-test); }
+.ev[data-agent="REVIEW"]   { --agent: var(--agent-review); }
+
+.ev .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--faint);
+  justify-self: center;
+  transform: translateY(-1px);
+}
+
+.ev[data-kind="pipeline"] .dot,
+.ev[data-kind="layer"] .dot { background: var(--accent); }
+.ev[data-kind="subagent"] .dot { background: var(--ok); }
+.ev[data-kind="error"] .dot { background: var(--err); }
+
+.ev[data-live="1"] .dot {
+  animation: glow 1.3s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%, 100% { transform: translateY(-1px) scale(1);   opacity: .55; }
+  50%      { transform: translateY(-1px) scale(1.4); opacity: 1; }
+}
+
+.ev .label { min-width: 0; }
+.ev .name { overflow-wrap: anywhere; }
+
+.ev[data-kind="pipeline"] .name,
+.ev[data-kind="layer"] .name { font-weight: 650; }
+.ev[data-kind="subagent"] .name {
+  font-weight: 700;
+  letter-spacing: .04em;
+  font-size: 12px;
+}
+
+.ev[data-kind="error"] .name { color: var(--err); }
+.ev[data-kind="a2a"] .name { font-weight: 650; }
+
+.ev .detail {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--muted);
+  font: 11px/1.55 var(--mono);
+  overflow-wrap: anywhere;
+  margin-top: 2px;
+}
+
+.ev .time {
+  color: var(--faint);
+  font: 11px/1 var(--mono);
+  white-space: nowrap;
+}
