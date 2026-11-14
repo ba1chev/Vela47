@@ -9,6 +9,7 @@ from app.intelligence.model import ModelClientOllama
 from app.server.builders import EMBEDDING_MODEL_NAMES
 from app.server.builders import build_knowledge_memory
 from app.intelligence.tracing import TracingServiceNull
+from app.server.builders import ANSWER_MAX_OUTPUT_TOKENS
 from app.server.builders import EMBEDDING_QUERY_TEMPLATES
 from app.server.config_environment import ConfigEnvironment
 
@@ -50,3 +51,7 @@ class TestRagAgentBuilder:
             indexer = build_rag_indexer(current_environment, client)
             assert memory._embeddings.model_name == indexer._embeddings.model_name == EMBEDDING_MODEL_NAMES[current_environment]
             assert indexer._embeddings._client is client
+
+    def test_the_answer_has_room_for_a_long_reply(self):
+        agent = build_rag_agent(TracingServiceNull(), [], ConfigEnvironment.DEV, ModelClientOllama())
+        assert agent._model._config.max_output_tokens == ANSWER_MAX_OUTPUT_TOKENS
