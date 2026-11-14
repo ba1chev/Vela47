@@ -11,7 +11,8 @@ from app.server.builders import build_deep_agent
 from app.intelligence.messages import MessageHuman
 from app.intelligence.tracing import TracingService
 from app.intelligence.tracing import TraceEventType
-from app.server.builders import SANDBOX_COMPOSE_FILES
+from app.server.builders import SANDBOX_COMPOSE_FILE
+from app.intelligence.model import ModelClientOllama
 from app.intelligence.sandbox import SandboxPoolDocker
 from app.intelligence.agents import OperationSubagentType
 from app.server.config_environment import ConfigEnvironment
@@ -56,7 +57,7 @@ class EvalsRunnerDeepAgent(EvalsRunnerBase[EvalsCaseDeepAgent, EvalsRecordDeepAg
         self._require_ollama()
         self._require_docker()
         self._pool = SandboxPoolDocker(
-            SANDBOX_COMPOSE_FILES[ConfigEnvironment.DEV],
+            SANDBOX_COMPOSE_FILE,
             base_directory = pathlib.Path(tempfile.mkdtemp(prefix = "vela47-eval-"))
         )
         self._pool.start()
@@ -109,7 +110,7 @@ class EvalsRunnerDeepAgent(EvalsRunnerBase[EvalsCaseDeepAgent, EvalsRecordDeepAg
         before = self._run_directories()
         started = time.monotonic()
         try:
-            final = build_deep_agent(tracer, self._pool, WebFetcher(), [], ConfigEnvironment.DEV).execute(MessageHuman(content = case.goal)).content
+            final = build_deep_agent(tracer, self._pool, WebFetcher(), [], ConfigEnvironment.DEV, ModelClientOllama()).execute(MessageHuman(content = case.goal)).content
             crashed = None
         except Exception as error:
             final, crashed = "", f"{type(error).__name__}: {str(error)[:300]}"
