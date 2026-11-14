@@ -25,9 +25,9 @@ class ModelClientBedrock(ModelClientBase):
     counterpart become text, and a request without tools gets them all as text.
 
     An output_schema becomes a JSON schema output format; a model that rejects it is
-    asked again without one, and remembered. Sampling beyond temperature, top_p, stop and
-    the output cap has no Converse field and is left out. Embeddings use the Titan Text
-    Embeddings body, one text per request, several requests at a time."""
+    asked again without one, and remembered. Only temperature, stop and the output cap are
+    sent: Claude refuses temperature and top_p together, and the rest has no Converse
+    field. Embeddings use the Titan body, one text per request, several at a time."""
 
     EMBEDDING_WORKERS = 8
     EMPTY_TEXT = "(empty)"
@@ -123,7 +123,7 @@ class ModelClientBedrock(ModelClientBase):
     def _request(self, config: ModelConfig, messages: list[MessageBase],
         tools: Optional[list[dict]] = None) -> dict:
         system, conversation = self._conversation(messages, bool(tools))
-        inference: dict = {"temperature": config.temperature, "topP": config.top_p}
+        inference: dict = {"temperature": config.temperature}
         if config.max_output_tokens is not None:
             inference["maxTokens"] = config.max_output_tokens
         if config.stop:
