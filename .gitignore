@@ -7,3 +7,4 @@ tests/evals/results
 .terraform
 *.tfstate
 *.tfstate.*
+DOCUMENTATION.md
