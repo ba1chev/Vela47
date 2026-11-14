@@ -1,7 +1,6 @@
 import pathlib
 import tempfile
 
-from app.server.builders import KEEP_ALIVE
 from app.intelligence.web import WebFetcher
 from app.server.builders import MODEL_NAMES
 from app.intelligence.agents import DeepAgent
@@ -10,8 +9,8 @@ from app.server.builders import build_deep_agent
 from app.server.builders import subagent_peering
 from app.intelligence.messages import MessageType
 from app.intelligence.memory import VectorDbMemory
+from app.intelligence.model import ModelClientOllama
 from app.intelligence.sandbox import SandboxEnvLocal
-from app.server.builders import CONTEXT_WINDOW_TOKENS
 from app.intelligence.agents import A2AInteractionType
 from app.intelligence.sandbox import SandboxPoolDocker
 from app.intelligence.tracing import TracingServiceNull
@@ -74,7 +73,7 @@ class TestAgentBuilder:
                 assert mentioned <= set(names(current_tools)), (current_type, current_tool.name)
 
     def test_the_deep_agent_is_assembled_without_contacting_anything(self):
-        agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), [], ConfigEnvironment.DEV)
+        agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), [], ConfigEnvironment.DEV, ModelClientOllama())
         assert isinstance(agent, DeepAgent)
 
     def test_each_type_is_checked_by_the_probes_its_work_calls_for(self):
@@ -105,16 +104,15 @@ class TestAgentBuilder:
             assert "message_worker" not in SUBAGENT_SYSTEM_PROMPT_TEMPLATES[current_type]
 
     def test_the_deep_agent_lets_its_subagents_message_each_other(self):
-        agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), [], ConfigEnvironment.DEV)
+        agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), [], ConfigEnvironment.DEV, ModelClientOllama())
         layer = next(current for current in agent._operation_pipeline._operation_layers if current.operation_type.name == "SUBAGENTS")
         assert layer._peering.peers == SUBAGENT_PEERS
 
     def test_every_environment_has_a_model(self):
         assert set(MODEL_NAMES) == set(ConfigEnvironment)
 
-    def test_the_deep_agent_runs_on_the_model_of_its_environment(self):
+    def test_the_deep_agent_runs_on_the_model_and_the_client_it_is_given(self):
+        client = ModelClientOllama()
         for current_environment in ConfigEnvironment:
-            agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), [], current_environment)
-            assert agent._model._config.model_name == MODEL_NAMES[current_environment]
-            assert agent._model._config.context_window_tokens == CONTEXT_WINDOW_TOKENS[current_environment]
-            assert agent._model._config.keep_alive == KEEP_ALIVE[current_environment]
+            agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), [], current_environment, client)
+            assert agent._model._config.model_name == MODEL_NAMES[current_environment] and agent._model._client is client
