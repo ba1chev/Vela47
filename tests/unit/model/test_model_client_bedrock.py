@@ -136,3 +136,20 @@ class TestModelClientBedrock:
         vectors, tokens = client.embed("amazon.titan-embed-text-v2:0", ["a", "bb ccc", "dddd"], "30m")
         assert vectors == [[1.0, 1.0], [6.0, 1.0], [4.0, 1.0]] and tokens == 4
         assert sorted(text for _, text in runtime.embedded) == ["a", "bb ccc", "dddd"]
+
+    def test_a_model_that_takes_no_temperature_is_asked_again_and_remembered(self):
+        client, runtime = make_client(reject_temperature = True)
+        client.chat(make_config(), [MessageHuman(content = "hi")])
+        client.chat(make_config(), [MessageHuman(content = "again")])
+        assert ["temperature" in current["inferenceConfig"] for current in runtime.requests] == [True, False, False]
+
+    def test_a_refused_temperature_is_not_taken_for_a_refused_output_schema(self):
+        client, runtime = make_client(reject_temperature = True)
+        client.chat(make_config(), [MessageHuman(content = "plan")], output_schema = {"type": "object"})
+        assert [("temperature" in current["inferenceConfig"], "outputConfig" in current) for current in runtime.requests] == [(True, True), (False, True)]
+
+    def test_a_stream_without_temperature_is_asked_again_too(self):
+        events = [{"contentBlockDelta": {"delta": {"text": "Hi"}}}, {"metadata": {"usage": {"inputTokens": 1, "outputTokens": 1}}}]
+        client, runtime = make_client(stream_events = events, reject_temperature = True)
+        assert [current.content for current in client.stream(make_config(), [MessageHuman(content = "hi")])] == ["Hi", ""]
+        assert ["temperature" in current["inferenceConfig"] for current in runtime.requests] == [True, False]
