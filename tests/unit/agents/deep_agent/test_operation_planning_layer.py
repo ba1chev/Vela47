@@ -47,7 +47,25 @@ class TestOperationPlanningLayer:
     def test_the_plan_schema_constrains_the_models_reply(self):
         model = FakeModel([PLAN])
         OperationPlanningLayer(model).execute(OperationContext(goal = MessageHuman(content = "add tests")))
-        assert model.output_schemas == [OperationPlan.model_json_schema()]
+        expected = OperationPlan.model_json_schema()
+        expected["properties"]["steps"]["maxItems"] = OperationPlanningLayer.MAX_STEPS
+        assert model.output_schemas == [expected]
+
+    def test_a_plan_longer_than_the_cap_is_cut(self):
+        steps = [{"index": index, "description": f"look up part {index}", "subagent_type": "RESEARCH"} for index in range(6)]
+        context = OperationContext(goal = MessageHuman(content = "compare six things"))
+        OperationPlanningLayer(FakeModel([json.dumps({"goal": "compare", "steps": steps})])).execute(context)
+        assert [current.index for current in context.plan.steps] == [0, 1, 2, 3]
+
+    def test_a_request_that_needs_no_worker_gets_an_empty_plan(self):
+        context = OperationContext(goal = MessageHuman(content = "hi, I am Yoan"))
+        OperationPlanningLayer(FakeModel([json.dumps({"goal": "Greet Yoan", "steps": []})])).execute(context)
+        assert context.plan.steps == []
+
+    def test_the_prompt_shows_an_empty_plan(self):
+        model = FakeModel([PLAN])
+        OperationPlanningLayer(model).execute(OperationContext(goal = MessageHuman(content = "hi")))
+        assert '"steps": []' in model.calls[0][0][0].content
 
     def test_the_prompt_tells_the_planner_what_history_is_for(self):
         model = FakeModel([PLAN])
