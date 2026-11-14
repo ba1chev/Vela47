@@ -1,12 +1,12 @@
 from app.intelligence.model import ModelConfig
-from app.intelligence.model import ModelFoundation
+from app.intelligence.model import ModelClientOllama
 
 
 def make_options(**fields):
-    return ModelFoundation(ModelConfig(model_name = "qwen3:1.7b", **fields))._build_options()
+    return ModelClientOllama()._build_options(ModelConfig(model_name = "qwen3:1.7b", **fields))
 
 
-class TestModelFoundationOptions:
+class TestModelClientOllamaOptions:
     def test_think_never_travels_among_the_sampling_options(self):
         assert "think" not in make_options(think = True)
         assert "think" not in make_options(think = False)
