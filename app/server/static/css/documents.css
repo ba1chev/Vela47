@@ -1,0 +1,161 @@
+/* The documents panel. */
+
+/* The documents take what they need up to a share of the panel and scroll inside it,
+   so a long list never pushes the conversations out of sight. */
+.knowledge {
+  flex: 0 1 auto;
+  max-height: 44%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+}
+
+.knowledge-actions { display: flex; gap: 2px; }
+
+.upload {
+  position: relative;
+  cursor: pointer;
+}
+
+/* Adding a document by link opens one line under the header: the address and its
+   button, styled like the other inputs but sized for the narrow panel. */
+.link-form {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px 0;
+}
+
+.link-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: rgba(16, 24, 44, .5);
+  color: inherit;
+  font: 12px/1.3 var(--mono);
+  transition: border-color .18s, box-shadow .18s;
+}
+
+.link-form input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.link-form .primary.small { padding: 8px 12px; font-size: 12px; }
+
+/* The file input stays in the page, invisible, rather than hidden: a hidden input
+   cannot take focus, and keyboard users would have no way to upload at all. */
+.upload input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.upload:focus-within { color: var(--accent); background: var(--accent-soft); }
+.upload[data-busy="1"] { pointer-events: none; opacity: .5; }
+
+.usage {
+  display: grid;
+  gap: 7px;
+  padding: 12px 16px 4px;
+}
+
+.usage-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(133, 158, 214, .14);
+  overflow: hidden;
+}
+
+.usage-fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent-3), var(--accent));
+  transition: width .45s cubic-bezier(.2, .8, .2, 1);
+}
+
+/* Close to the limit the bar turns warm, so a failed upload is never a surprise. */
+.usage[data-level="high"] .usage-fill {
+  background: linear-gradient(90deg, var(--agent-test), var(--err));
+}
+
+.usage-text {
+  font: 10.5px/1.3 var(--mono);
+  color: var(--faint);
+}
+
+.knowledge-error { padding: 6px 16px 0; font-size: 12.5px; }
+
+.knowledge-body {
+  position: relative;
+  flex: 1;
+  min-height: 64px;
+  overflow-y: auto;
+}
+
+.knowledge-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.knowledge-item {
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  transition: background .15s;
+  animation: slide .26s cubic-bezier(.2, .8, .2, 1);
+}
+
+.knowledge-item:hover { background: rgba(133, 158, 214, .08); }
+
+.knowledge-info {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 8px 6px 8px 11px;
+}
+
+.knowledge-name {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.knowledge-meta {
+  font: 10.5px/1 var(--mono);
+  color: var(--faint);
+}
+
+/* A document being indexed is listed straight away and breathes until it is stored. */
+.knowledge-item[data-pending="1"] .knowledge-meta {
+  color: var(--accent-3);
+  animation: breathe-text 1.4s ease-in-out infinite;
+}
+
+@keyframes breathe-text {
+  0%, 100% { opacity: .45; }
+  50%      { opacity: 1; }
+}
+
+.knowledge-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+  font-size: 13px;
+  pointer-events: none;
+}
