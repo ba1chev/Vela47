@@ -1,0 +1,85 @@
+/* Design tokens, the page, the particle backdrop and the three-column layout. */
+
+:root {
+  --bg: #141d33;
+  /* Panels are nearly opaque, so text stays legible over the particle field without a
+     backdrop blur: a blur over a canvas that changes every frame is redone by the GPU
+     on every frame, across most of the screen. */
+  --panel: rgba(30, 42, 72, .9);
+  --panel-2: rgba(46, 61, 99, .42);
+  --border: rgba(133, 158, 214, .18);
+  --border-strong: rgba(133, 158, 214, .34);
+  --text: #eff3fd;
+  --muted: #b4c2de;
+  --faint: #8495b8;
+
+  /* Three accents rather than one: a single hue is what made the earlier palette
+     read as flat. Blue leads, violet and teal carry gradients and secondary state. */
+  --accent: #5b8cff;
+  --accent-2: #a46bff;
+  --accent-3: #2fd4c8;
+  --accent-soft: rgba(91, 140, 255, .16);
+  --user-bg: rgba(91, 140, 255, .2);
+
+  --ok: #3ddc97;
+  --err: #ff7f8a;
+
+  /* One hue per subagent type, so the trace carries colour that means something
+     instead of colour applied for decoration. */
+  --agent-research: #2fd4c8;
+  --agent-code: #a46bff;
+  --agent-test: #ffc24b;
+  --agent-review: #ff7eb6;
+
+  --shadow: 0 2px 6px rgba(5, 10, 24, .3), 0 18px 50px rgba(5, 10, 24, .35);
+  --shadow-sm: 0 1px 3px rgba(5, 10, 24, .3);
+
+  --radius: 16px;
+  --radius-sm: 11px;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+
+/* Classes that set display outrank the user-agent [hidden] rule, so without this an
+   element hidden from script would stay painted — the gate over the app, an empty
+   placeholder over a list that has items. */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  color: var(--text);
+  font: 15px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  /* Coloured light washes behind everything. Layered on body rather than as
+     pseudo-elements so they can never land between the canvas and the panels.
+     Deliberately static: animating background-position here shifted each gradient
+     off its tile and exposed the repeat seam as a slow-breathing rectangle. */
+  background:
+    radial-gradient(680px circle at 12% 18%, rgba(91, 140, 255, .22), transparent 62%),
+    radial-gradient(760px circle at 88% 82%, rgba(164, 107, 255, .2), transparent 62%),
+    radial-gradient(560px circle at 72% 12%, rgba(47, 212, 200, .12), transparent 60%),
+    var(--bg);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+#particles-js {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+#particles-js canvas { display: block; }
+
+.app {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr) 320px;
+  width: min(1440px, 100% - 64px);
+  margin-inline: auto;
+  height: 100dvh;
+  gap: 18px;
+  padding-block: 40px;
+}
