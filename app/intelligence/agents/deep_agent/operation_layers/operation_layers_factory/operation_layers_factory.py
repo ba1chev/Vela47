@@ -17,7 +17,7 @@ class OperationLayersFactory(OperationLayersFactoryBase):
     Registry reference:
       PLANNING      -> OperationPlanningLayer(model=<ModelFoundation>)
       DECOMPOSITION -> OperationDecompositionLayer()
-      SUBAGENTS     -> OperationSubagentsLayer(subagent_factory=<...>, sandbox_pool=<...>)
+      SUBAGENTS     -> OperationSubagentsLayer(subagent_factory=<...>, sandbox_pool=<...>, peering=<...>)
       MERGING       -> OperationMergingLayer(model=<ModelFoundation>)"""
 
     def create(self, type: OperationType, **kwargs: Any) -> OperationLayerBase:
