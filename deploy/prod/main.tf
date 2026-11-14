@@ -605,6 +605,9 @@ resource "aws_autoscaling_group" "web" {
     version = "$Latest"
   }
 
+  # The instance reaches ECS only through the NAT gateway, so the gateway and its route go after the instance on destroy
+  depends_on = [aws_nat_gateway.main, aws_route_table_association.private]
+
   # A new launch template version replaces the instance, the old one goes first since there is only one
   instance_refresh {
     strategy = "Rolling"
@@ -690,7 +693,14 @@ resource "aws_ecs_service" "app" {
     container_port   = var.app_container_port
   }
 
-  depends_on = [aws_lb_listener.https, aws_autoscaling_group.web, aws_iam_role_policy.ecs_task]
+  # The ECS agent confirms a stopped task through the NAT gateway; without it a destroy waits on a draining service forever
+  depends_on = [
+    aws_lb_listener.https,
+    aws_autoscaling_group.web,
+    aws_iam_role_policy.ecs_task,
+    aws_nat_gateway.main,
+    aws_route_table_association.private,
+  ]
 }
 
 # Load balancer instance declaration (lives in the public subnets)
@@ -703,6 +713,9 @@ resource "aws_lb" "load_balancer" {
   enable_deletion_protection = var.load_balancer_deletion_protection
   idle_timeout               = var.load_balancer_idle_timeout
   tags                       = local.common_tags
+
+  # The internet gateway can only be detached once no public address is left in the VPC, so the load balancer goes first
+  depends_on = [aws_internet_gateway.main]
 }
 
 # Target group declaration (the server tasks which receive the traffic, by the address of their own interface)
