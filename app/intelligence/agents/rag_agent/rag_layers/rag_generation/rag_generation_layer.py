@@ -21,10 +21,10 @@ class RagGenerationLayer(RagLayerBase):
     last weighs most. The same numbers travel in response_metadata with document, chunk,
     score and excerpt, so a citation can be traced after the conversation is reopened.
 
-    With no passage left, the model only tells the user the documents do not cover the
-    question, which reaches it quoted inside that instruction: given anything that reads
-    as a question, a small model answers from memory and cites a source it never had.
-    That reply arrives whole rather than streamed."""
+    With no passage left the agent still answers, like a general assistant: a greeting
+    or a question about the conversation from the conversation, anything else from the
+    model's own knowledge, said to come from outside the documents and cited to
+    nothing (see RAG_NO_SOURCES_PROMPT). Both answers are streamed the same way."""
 
     EXCERPT_CHARS = 240
 
@@ -66,24 +66,21 @@ class RagGenerationLayer(RagLayerBase):
             for number, current_entry in enumerate(context.passages, start = 1)
         ]
 
-    def _no_sources_reply(self, context: RagContext) -> str:
-        response = self._model.invoke(
-            [MessageHuman(content = RAG_NO_SOURCES_PROMPT.format(question = self._text_of(context.goal.content)))]
-        )
-        return self._text_of(response.content).strip()
-
-    def execute(self, context: RagContext) -> None:
+    def _messages(self, context: RagContext) -> list:
         if not context.passages:
-            reply = self._no_sources_reply(context)
-            self._tracing_service.emit(TraceEventType.ANSWER_CHUNK, "answer", {"text": reply})
-            context.final = MessageAI(content = reply, response_metadata = {"sources": []})
-            return
-
-        messages = [
+            return [
+                MessageSystem(content = RAG_NO_SOURCES_PROMPT),
+                *context.history,
+                MessageHuman(content = self._text_of(context.goal.content))
+            ]
+        return [
             MessageSystem(content = RAG_GENERATION_SYSTEM_PROMPT),
             *context.history,
             MessageHuman(content = self._build_prompt(context))
         ]
+
+    def execute(self, context: RagContext) -> None:
+        messages = self._messages(context)
         parts: list[str] = []
         for current_chunk in self._model.stream(messages):
             parts.append(current_chunk)
