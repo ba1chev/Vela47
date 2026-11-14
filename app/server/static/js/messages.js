@@ -15,11 +15,29 @@ function scrollToEnd(element) {
   pendingScrolls.add(element);
 }
 
+// An agent answers in Markdown. marked turns it into HTML and DOMPurify then strips
+// anything that could run, so neither the model nor a page it read can put a script or
+// a handler into the page. Links open in a new tab. Without the two libraries the
+// answer is shown as plain text.
+function renderAnswer(element, text) {
+  if (typeof marked === "undefined" || typeof DOMPurify === "undefined") {
+    element.textContent = text;
+    return;
+  }
+  element.classList.add("markdown");
+  element.innerHTML = DOMPurify.sanitize(marked.parse(text, { gfm: true }));
+  for (const link of element.querySelectorAll("a")) {
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+  }
+}
+
 function addMessage(text, variant) {
   emptyEl.hidden = true;
   const div = document.createElement("div");
   div.className = `msg ${variant}`;
-  div.textContent = text;
+  if (variant === "ai") renderAnswer(div, text);
+  else div.textContent = text;
   messagesEl.appendChild(div);
   messagesEl.scrollTop = messagesEl.scrollHeight;
   return div;
