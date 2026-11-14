@@ -306,6 +306,8 @@ resource "aws_launch_template" "web" {
     ollama_container_name = var.ollama_container_name
     ollama_volume_name    = var.ollama_volume_name
     ollama_models         = join(" ", var.ollama_models)
+    ollama_max_loaded     = var.ollama_max_loaded_models
+    ollama_num_parallel   = var.ollama_num_parallel
     database_host         = aws_db_instance.database.address
     database_port         = var.rds_port
     database_name         = var.rds_database_name
