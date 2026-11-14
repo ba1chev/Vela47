@@ -109,7 +109,7 @@ class EvalsRunnerDeepAgent(EvalsRunnerBase[EvalsCaseDeepAgent, EvalsRecordDeepAg
         before = self._run_directories()
         started = time.monotonic()
         try:
-            final = build_deep_agent(tracer, self._pool, WebFetcher(), []).execute(MessageHuman(content = case.goal)).content
+            final = build_deep_agent(tracer, self._pool, WebFetcher(), [], ConfigEnvironment.DEV).execute(MessageHuman(content = case.goal)).content
             crashed = None
         except Exception as error:
             final, crashed = "", f"{type(error).__name__}: {str(error)[:300]}"
