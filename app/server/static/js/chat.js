@@ -60,11 +60,12 @@ async function send(message) {
     markActive();
   });
 
-  // The first chunk replaces the thinking dots with a real bubble; the rest append
-  // to its one text node, so the answer is written into the page as the model
-  // produces it without rewriting what is already there.
+  // The first chunk replaces the thinking dots with a real bubble. Markdown can only be
+  // rendered whole, so the chunks are collected and the bubble is rendered again at
+  // most once a frame, however many chunks arrive in between.
   let streamed = null;
-  let streamedText = null;
+  let streamedMarkdown = "";
+  let renderPending = false;
   stream.addEventListener("chunk", (e) => {
     const { text } = JSON.parse(e.data);
     if (!text) return;
@@ -72,18 +73,23 @@ async function send(message) {
       placeholder.remove();
       streamed = addMessage("", "ai");
       streamed.dataset.agent = agent;
-      streamedText = streamed.appendChild(document.createTextNode(""));
     }
-    streamedText.appendData(text);
-    scrollToEnd(messagesEl);
+    streamedMarkdown += text;
+    if (renderPending) return;
+    renderPending = true;
+    requestAnimationFrame(() => {
+      renderPending = false;
+      renderAnswer(streamed, streamedMarkdown);
+      scrollToEnd(messagesEl);
+    });
   });
 
   stream.addEventListener("answer", (e) => {
     const { content, agent: answeredBy, sources } = JSON.parse(e.data);
-    // With chunks the bubble is already complete, so the final frame only has to
-    // cover the case where nothing streamed at all.
+    // The answer is rendered once more in full, since the last chunks may still be
+    // waiting for their frame; without chunks it is the only render.
     if (streamed) {
-      if (!streamed.textContent) streamed.textContent = content || "(empty answer)";
+      renderAnswer(streamed, streamedMarkdown || content || "(empty answer)");
     } else {
       placeholder.remove();
       streamed = addMessage(content || "(empty answer)", "ai");
