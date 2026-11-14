@@ -16,6 +16,7 @@ from tests.fixtures.model.fake_model import FakeModel
 from app.intelligence.agents import RagGenerationLayer
 from app.intelligence.memory import HybridSearchPolicy
 from app.intelligence.agents import RagChunkerRecursive
+from app.intelligence.agents import RAG_NO_SOURCES_PROMPT
 from tests.fixtures.model.fake_embeddings import FakeEmbeddings
 
 TEXT = "Error E1042 means the RDS secret could not be read.\n\nBackups are kept for 14 days.\n\nThe coffee machine is cleaned on Fridays."
@@ -183,23 +184,19 @@ class TestRagGenerationLayer:
         RagGenerationLayer(model).execute(make_context(history = HISTORY, passages = make_entries()[:1]))
         assert [current.content for current in model.calls[0][0][1:3]] == [HISTORY[0].content, HISTORY[1].content]
 
-    def test_without_passages_the_question_only_appears_quoted_in_an_instruction(self):
-        model = FakeModel(["Your documents do not cover it."])
-        context = make_context("What is the capital of France?", history = HISTORY, passages = [])
+    def test_without_passages_the_question_is_answered_with_the_conversation(self):
+        model = FakeModel(["Your name is Yoan."])
+        context = make_context("What is my name?", history = HISTORY, passages = [])
         RagGenerationLayer(model).execute(context)
         messages = model.calls[0][0]
-        assert len(messages) == 1 and messages[0].type is MessageType.HUMAN_MESSAGE
-        assert "«What is the capital of France?»" in messages[0].content
-        assert context.final.response_metadata["sources"] == []
+        assert messages[0].type is MessageType.SYSTEM_MESSAGE and messages[0].content == RAG_NO_SOURCES_PROMPT
+        assert messages[1:-1] == HISTORY and messages[-1].content == "What is my name?"
+        assert context.final.content == "Your name is Yoan. " and context.final.response_metadata["sources"] == []
 
-    def test_without_passages_the_reply_arrives_whole_as_the_model_wrote_it(self):
+    def test_without_passages_the_answer_streams_like_any_other(self):
         tracer = TracingService()
-        model = FakeModel(["  Your documents do not cover it. \n"])
-        context = make_context("When is the party?", passages = [])
-        RagGenerationLayer(model, tracer).execute(context)
-        assert model.output_schemas == [None]
-        assert context.final.content == "Your documents do not cover it."
-        assert [current.payload["text"] for current in tracer.events() if current.type is TraceEventType.ANSWER_CHUNK] == [context.final.content]
+        RagGenerationLayer(FakeModel(["Hello there friend"]), tracer).execute(make_context("hi", passages = []))
+        assert len([current for current in tracer.events() if current.type is TraceEventType.ANSWER_CHUNK]) == 3
 
     def test_every_chunk_is_reported_as_it_streams(self):
         tracer = TracingService()
