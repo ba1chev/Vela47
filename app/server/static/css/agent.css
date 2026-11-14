@@ -1,0 +1,7 @@
+/* The agent picker. */
+
+.agent-picker {
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-2);
+}
