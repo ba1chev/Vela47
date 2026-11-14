@@ -24,10 +24,10 @@ class ModelClientBedrock(ModelClientBase):
     history is mended here: turns of one role are merged, tool blocks without their
     counterpart become text, and a request without tools gets them all as text.
 
-    An output_schema becomes a JSON schema output format; a model that rejects it is
-    asked again without one, and remembered. Only temperature, stop and the output cap are
-    sent: Claude refuses temperature and top_p together, and the rest has no Converse
-    field. Embeddings use the Titan body, one text per request, several at a time."""
+    An output_schema becomes a JSON schema output format, and the temperature is sent
+    with stop and the output cap; a model that rejects either is asked again without it,
+    and remembered (Claude Sonnet 5.5 takes no temperature, and no model gets top_p next
+    to one). Embeddings use the Titan body, one text per request, several at a time."""
 
     EMBEDDING_WORKERS = 8
     EMPTY_TEXT = "(empty)"
@@ -39,6 +39,7 @@ class ModelClientBedrock(ModelClientBase):
             config = Config(retries = {"mode": "standard", "max_attempts": 5}, read_timeout = 300)
         )
         self._without_output_format: set[str] = set()
+        self._without_temperature: set[str] = set()
 
     @property
     def client_type(self) -> ModelClientType:
@@ -123,7 +124,9 @@ class ModelClientBedrock(ModelClientBase):
     def _request(self, config: ModelConfig, messages: list[MessageBase],
         tools: Optional[list[dict]] = None) -> dict:
         system, conversation = self._conversation(messages, bool(tools))
-        inference: dict = {"temperature": config.temperature}
+        inference: dict = {}
+        if config.model_name not in self._without_temperature:
+            inference["temperature"] = config.temperature
         if config.max_output_tokens is not None:
             inference["maxTokens"] = config.max_output_tokens
         if config.stop:
@@ -143,19 +146,33 @@ class ModelClientBedrock(ModelClientBase):
             total_tokens = input_tokens + output_tokens
         )
 
+    def _is_validation(self, error: ClientError, about: str = "") -> bool:
+        details = error.response.get("Error", {})
+        return details.get("Code") == "ValidationException" and about in details.get("Message", "").lower()
+
+    def _send(self, operation: Any, request: dict) -> Any:
+        try:
+            return operation(**request)
+        except ClientError as error:
+            if "temperature" not in request["inferenceConfig"] or not self._is_validation(error, "temperature"):
+                raise
+            self._without_temperature.add(request["modelId"])
+            inference = {key: value for key, value in request["inferenceConfig"].items() if key != "temperature"}
+            return operation(**{**request, "inferenceConfig": inference})
+
     def _converse(self, request: dict, output_schema: Optional[dict]) -> dict:
         if output_schema is None or request["modelId"] in self._without_output_format:
-            return self._runtime.converse(**request)
+            return self._send(self._runtime.converse, request)
         try:
-            return self._runtime.converse(**request, outputConfig = {"textFormat": {
+            return self._send(self._runtime.converse, {**request, "outputConfig": {"textFormat": {
                 "type": "json_schema",
                 "structure": {"jsonSchema": {"schema": json.dumps(output_schema), "name": "reply"}}
-            }})
+            }}})
         except ClientError as error:
-            if error.response.get("Error", {}).get("Code") != "ValidationException":
+            if not self._is_validation(error):
                 raise
             self._without_output_format.add(request["modelId"])
-            return self._runtime.converse(**request)
+            return self._send(self._runtime.converse, request)
 
     def chat(self, config: ModelConfig, messages: list[MessageBase], tools: Optional[list[dict]] = None,
         output_schema: Optional[dict] = None) -> MessageAI:
@@ -173,7 +190,7 @@ class ModelClientBedrock(ModelClientBase):
 
     def stream(self, config: ModelConfig, messages: list[MessageBase]) -> Iterator[MessageAI]:
         usage: dict = {}
-        for event in self._runtime.converse_stream(**self._request(config, messages))["stream"]:
+        for event in self._send(self._runtime.converse_stream, self._request(config, messages))["stream"]:
             text = event.get("contentBlockDelta", {}).get("delta", {}).get("text")
             if text:
                 yield MessageAI(content = text)
