@@ -55,8 +55,8 @@ variable "ec2_instance_ami" {
 
 variable "ec2_instance_type" {
   type        = string
-  default     = "g6.xlarge"
-  description = "EC2 instance type value, g6.xlarge has one NVIDIA L4 with 24 GB for the models"
+  default     = "g6e.xlarge"
+  description = "EC2 instance type value, g6e.xlarge has one NVIDIA L40S with 48 GB, room for the agents' model, the embedding model and a 32K context"
 }
 
 variable "ec2_instance_root_device_name" {
@@ -67,8 +67,8 @@ variable "ec2_instance_root_device_name" {
 
 variable "ec2_instance_root_volume_size" {
   type        = number
-  default     = 100
-  description = "Size of the root volume in GB, it holds the models, the images and the Docker build cache"
+  default     = 150
+  description = "Size of the root volume in GB, it holds the models (about 27 GB), the images and the Docker build cache"
 
   validation {
     condition     = var.ec2_instance_root_volume_size >= 75
@@ -514,6 +514,18 @@ variable "ollama_volume_name" {
 
 variable "ollama_models" {
   type        = list(string)
-  default     = ["qwen3.5:9b", "qwen3-embedding:0.6b"]
-  description = "Models pulled on the first boot, the agents' model and the embedding model"
+  default     = ["qwen3.5:35b-a3b", "qwen3-embedding:8b"]
+  description = "Models pulled on the first boot, the agents' model and the embedding model, the same names the server asks for in PROD"
+}
+
+variable "ollama_max_loaded_models" {
+  type        = number
+  default     = 2
+  description = "Models Ollama keeps in memory at the same time, the agents' model and the embedding model"
+}
+
+variable "ollama_num_parallel" {
+  type        = number
+  default     = 2
+  description = "Requests one model answers at the same time, each one reserves its own context window in GPU memory"
 }
