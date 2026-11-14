@@ -5,7 +5,7 @@ from app.intelligence.agents import PromptManager
 from app.intelligence.messages import MessageHuman
 from app.intelligence.model import ModelFoundation
 from tests.fixtures.agents.echo_agent import EchoAgent
-from tests.fixtures.a2a_interaction.recording_a2a_interaction import RecordingA2AInteraction
+from tests.fixtures.agents.recording_a2a_interaction import RecordingA2AInteraction
 
 
 def make_agent():
