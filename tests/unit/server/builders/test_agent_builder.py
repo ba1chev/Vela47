@@ -15,6 +15,7 @@ from app.intelligence.agents import A2AInteractionType
 from app.intelligence.sandbox import SandboxPoolDocker
 from app.intelligence.tracing import TracingServiceNull
 from app.server.builders import subagent_tool_factories
+from app.server.builders import ANSWER_MAX_OUTPUT_TOKENS
 from app.intelligence.sandbox import SandboxPoolInMemory
 from app.server.builders import SUBAGENT_PROBE_FACTORIES
 from app.intelligence.agents import OperationSubagentType
@@ -116,3 +117,7 @@ class TestAgentBuilder:
         for current_environment in ConfigEnvironment:
             agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), [], current_environment, client)
             assert agent._model._config.model_name == MODEL_NAMES[current_environment] and agent._model._client is client
+
+    def test_the_answer_has_room_for_a_long_report(self):
+        agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), [], ConfigEnvironment.DEV, ModelClientOllama())
+        assert agent._model._config.max_output_tokens == ANSWER_MAX_OUTPUT_TOKENS
