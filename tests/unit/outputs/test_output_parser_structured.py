@@ -26,3 +26,13 @@ class TestOutputParserStructured:
     def test_invalid_schema_raises(self):
         with pytest.raises(ValidationError):
             self.parser.parse(MessageAI(content = json.dumps({"wrong_field": "x"})))
+
+    def test_json_in_a_markdown_code_block_is_unwrapped(self):
+        data = json.dumps({"name": "Yoan", "email": "y@test.com"})
+        for content in (f"```json\n{data}\n```", f"```\n{data}\n```", f"  ```json\n{data}```  "):
+            assert self.parser.parse(MessageAI(content = content)).data.name == "Yoan"
+
+    def test_text_around_a_code_block_is_still_refused(self):
+        data = json.dumps({"name": "Yoan", "email": "y@test.com"})
+        with pytest.raises(ValidationError):
+            self.parser.parse(MessageAI(content = f"Here is the plan:\n```json\n{data}\n```"))
