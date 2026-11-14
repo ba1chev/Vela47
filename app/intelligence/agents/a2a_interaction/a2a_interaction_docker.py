@@ -4,10 +4,10 @@ import subprocess
 from typing import Optional
 
 from app.intelligence.agents import AgentBase
-from app.intelligence.a2a_interaction import A2AInteractionType
-from app.intelligence.a2a_interaction import A2AInteractionBase
-from app.intelligence.a2a_interaction import A2A_DOCKER_SEND_SCRIPT
-from app.intelligence.a2a_interaction import A2A_DOCKER_RECEIVE_SCRIPT
+from app.intelligence.agents import A2AInteractionType
+from app.intelligence.agents import A2AInteractionBase
+from app.intelligence.agents import A2A_DOCKER_SEND_SCRIPT
+from app.intelligence.agents import A2A_DOCKER_RECEIVE_SCRIPT
 
 
 class A2AInteractionDocker(A2AInteractionBase):
