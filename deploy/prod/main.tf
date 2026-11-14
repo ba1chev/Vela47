@@ -354,6 +354,8 @@ resource "aws_ecr_lifecycle_policy" "sandbox" {
 }
 
 # Image declarations (built here for arm64, the Graviton instance and the Lambda function both run on it, then pushed)
+# Without provenance and SBOM attestations BuildKit writes a single image manifest instead of an index around it,
+# the only form Lambda accepts
 resource "docker_image" "app" {
   name = "${aws_ecr_repository.app.repository_url}:${local.app_image_tag}"
 
@@ -361,6 +363,8 @@ resource "docker_image" "app" {
     context    = local.repository
     dockerfile = local.app_dockerfile
     platform   = "linux/arm64"
+    provenance = "false"
+    sbom       = "false"
   }
 }
 
@@ -373,8 +377,10 @@ resource "docker_image" "sandbox" {
   name = "${aws_ecr_repository.sandbox.repository_url}:${local.sandbox_image_tag}"
 
   build {
-    context  = local.sandbox_context
-    platform = "linux/arm64"
+    context    = local.sandbox_context
+    platform   = "linux/arm64"
+    provenance = "false"
+    sbom       = "false"
   }
 }
 
