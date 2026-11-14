@@ -1,0 +1,93 @@
+/* Inputs and buttons shared by every form. */
+
+.field {
+  display: grid;
+  gap: 7px;
+}
+
+.field > span {
+  font: 600 10px/1 var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--muted);
+}
+
+.field input,
+.field select {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: rgba(16, 24, 44, .5);
+  color: inherit;
+  font: inherit;
+  transition: border-color .18s, box-shadow .18s;
+}
+
+.field select {
+  appearance: none;
+  cursor: pointer;
+  padding-right: 34px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 52%, calc(100% - 13px) 52%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.field select option { background: #1e2946; color: var(--text); }
+
+.field input:focus,
+.field select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft), 0 0 20px rgba(91, 140, 255, .18);
+}
+
+/* The same gradient as the send button, so there is one look for "do it". */
+.primary {
+  padding: 12px 16px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform .16s, box-shadow .16s, opacity .16s;
+}
+
+.primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(91, 140, 255, .4);
+}
+
+.primary:disabled { opacity: .45; cursor: default; }
+.primary.small { padding: 9px 14px; font-size: 13px; }
+
+.link {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  transition: color .15s;
+}
+
+.link:hover { color: var(--accent-3); }
+
+.form-error,
+.form-ok {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.form-error { color: var(--err); }
+.form-ok { color: var(--ok); }
