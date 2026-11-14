@@ -3,6 +3,8 @@ import pytest
 from app.intelligence.web import WebFetcher
 from app.intelligence.web import WebAccessError
 from app.intelligence.web import WebAddressGuard
+from app.intelligence.web import WebSearchThrottle
+from tests.fixtures.web.fake_clock import FakeClock
 from app.intelligence.web import WebSearchDuckDuckGo
 from tests.fixtures.web.fake_resolver import FakeResolver
 from app.intelligence.web import WebSearchDuckDuckGoParser
@@ -11,10 +13,14 @@ from tests.fixtures.web.duckduckgo_page import DUCKDUCKGO_PAGE
 from tests.fixtures.web.duckduckgo_page import DUCKDUCKGO_CHALLENGE_PAGE
 
 
-def make_search(page = DUCKDUCKGO_PAGE):
-    server = FakeWebServer({WebSearchDuckDuckGo.SEARCH_URL: FakeWebServer.page(page)})
+def make_search(page = DUCKDUCKGO_PAGE, pages = None, clock = None):
+    clock = clock or FakeClock()
+    answers = list(pages) if pages is not None else None
+    route = (lambda request: FakeWebServer.page(answers.pop(0))(request)) if answers is not None else FakeWebServer.page(page)
+    server = FakeWebServer({WebSearchDuckDuckGo.SEARCH_URL: route})
     fetcher = WebFetcher(WebAddressGuard(FakeResolver()), transport = server.transport)
-    return WebSearchDuckDuckGo(fetcher), server
+    throttle = WebSearchThrottle(min_interval_seconds = 2.0, cool_down_seconds = 60.0, clock = clock, sleep = clock.sleep)
+    return WebSearchDuckDuckGo(fetcher, throttle = throttle), server
 
 
 def parse(page):
@@ -56,8 +62,37 @@ class TestWebSearchDuckDuckGo:
 
     def test_a_challenge_page_is_an_error_not_an_empty_search(self):
         search, _ = make_search(DUCKDUCKGO_CHALLENGE_PAGE)
-        with pytest.raises(WebAccessError, match = "rate limited"):
+        with pytest.raises(WebAccessError, match = "searching is paused"):
             search.search("x")
+
+    def test_searches_are_spaced_apart(self):
+        clock = FakeClock()
+        search, _ = make_search(clock = clock)
+        search.search("one"), search.search("two"), search.search("three")
+        assert clock.sleeps == [2.0, 2.0]
+
+    def test_a_challenge_is_tried_once_more_after_a_pause(self):
+        clock = FakeClock()
+        search, server = make_search(pages = [DUCKDUCKGO_CHALLENGE_PAGE, DUCKDUCKGO_PAGE], clock = clock)
+        assert len(search.search("x")) == 2
+        assert len(server.requests) == 2 and clock.sleeps == [WebSearchDuckDuckGo.RETRY_AFTER_SECONDS]
+
+    def test_a_second_challenge_pauses_searching_without_asking_again(self):
+        clock = FakeClock()
+        search, server = make_search(DUCKDUCKGO_CHALLENGE_PAGE, clock = clock)
+        with pytest.raises(WebAccessError, match = "open the pages you already found with fetch_url"):
+            search.search("x")
+        with pytest.raises(WebAccessError, match = "searching is paused"):
+            search.search("y")
+        assert len(server.requests) == 2
+
+    def test_searching_resumes_once_the_pause_is_over(self):
+        clock = FakeClock()
+        search, server = make_search(pages = [DUCKDUCKGO_CHALLENGE_PAGE, DUCKDUCKGO_CHALLENGE_PAGE, DUCKDUCKGO_PAGE], clock = clock)
+        with pytest.raises(WebAccessError):
+            search.search("x")
+        clock.now += 61
+        assert len(search.search("y")) == 2
 
     def test_a_page_without_results_is_an_empty_list(self):
         search, _ = make_search("<html><body><div class='no-results'>No results.</div></body></html>")
