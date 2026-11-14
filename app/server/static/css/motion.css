@@ -1,0 +1,15 @@
+/* Loaded last, so it overrides every animation above for viewers who ask for less motion. */
+
+@media (prefers-reduced-motion: reduce) {
+  .chat, .trace, .sessions, .gate-card, .modal-card, .account-menu, .session-item,
+  .knowledge-item, .sources, .knowledge-item[data-pending="1"] .knowledge-meta,
+  .chat-head::after, .trace-head::after, .sessions-head::after,
+  .status[data-state="running"],
+  .brand-dot::after, .orb span, .orb::after,
+  .thinking i, .msg, .ev, .ev[data-live="1"] .dot {
+    animation: none;
+  }
+  .thinking i { opacity: .7; }
+  .orb span { opacity: .3; }
+  .sessions, .usage-fill { transition: none; }
+}

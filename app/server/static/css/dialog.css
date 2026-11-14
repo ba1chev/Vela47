@@ -1,0 +1,38 @@
+/* Modal dialogs. */
+
+.modal {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+.modal::backdrop {
+  background: rgba(8, 12, 26, .55);
+  backdrop-filter: blur(4px);
+}
+
+.modal-card {
+  width: min(360px, calc(100vw - 32px));
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+  background: rgba(30, 41, 70, .96);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  animation: rise .22s cubic-bezier(.2, .8, .2, 1);
+}
+
+.modal-card h2 {
+  margin: 0 0 2px;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}

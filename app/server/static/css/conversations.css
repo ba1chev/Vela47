@@ -1,0 +1,81 @@
+/* The list of conversations. */
+
+.session-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.session-item {
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  transition: background .15s, box-shadow .15s;
+  animation: slide .26s cubic-bezier(.2, .8, .2, 1);
+}
+
+.session-item:hover { background: rgba(133, 158, 214, .08); }
+
+.session-item[data-active="1"] {
+  background: var(--accent-soft);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.session-open {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 9px 6px 9px 11px;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.session-title {
+  font-size: 13.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-time {
+  font: 10.5px/1 var(--mono);
+  color: var(--faint);
+}
+
+.session-delete,
+.knowledge-delete {
+  flex: none;
+  margin-right: 6px;
+  opacity: 0;
+}
+
+/* Delete asks twice: the first click turns the button red and asks, the second
+   deletes. A conversation cannot be brought back, so one stray click must not do it. */
+.session-item:hover .session-delete,
+.session-delete:focus-visible,
+.session-delete[data-confirm="1"],
+.knowledge-item:hover .knowledge-delete,
+.knowledge-delete:focus-visible,
+.knowledge-delete[data-confirm="1"] { opacity: 1; }
+
+.session-delete[data-confirm="1"],
+.knowledge-delete[data-confirm="1"] {
+  color: var(--err);
+  background: rgba(255, 127, 138, .12);
+}
+
+/* While an answer is streaming the conversation it belongs to must stay on screen. */
+.app[data-busy="1"] .sessions {
+  opacity: .6;
+  pointer-events: none;
+}
+
+.drawer-toggle { display: none; }

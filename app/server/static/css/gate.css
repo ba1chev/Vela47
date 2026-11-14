@@ -1,0 +1,46 @@
+/* The sign-in gate. */
+
+.gate {
+  position: relative;
+  z-index: 1;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+}
+
+.gate-card {
+  width: min(380px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 30px 28px 22px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  animation: lift .45s cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.gate-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.gate-head h1 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 650;
+  letter-spacing: -.01em;
+}
+
+.gate-lead {
+  margin: -6px 0 4px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.gate-card .primary { margin-top: 2px; }
