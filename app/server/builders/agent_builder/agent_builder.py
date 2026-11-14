@@ -29,6 +29,7 @@ from app.intelligence.sandbox import SandboxPoolDocker
 from app.intelligence.memory import VectorDbMemoryEntry
 from app.intelligence.tracing import TracingServiceBase
 from app.intelligence.agents import OperationPolicyFull
+from app.server.builders import ANSWER_MAX_OUTPUT_TOKENS
 from app.intelligence.agents import OperationSubagentType
 from app.server.config_environment import ConfigEnvironment
 from app.intelligence.agents import OperationSubagentFactory
@@ -97,7 +98,10 @@ def build_deep_agent(tracing_service: TracingServiceBase, sandbox_pool: SandboxP
         model_client
     )
     merging_model = ModelFoundation(
-        ModelConfig(model_name = model_name, temperature = 0.6, context_window_tokens = CONTEXT_WINDOW_TOKENS),
+        ModelConfig(
+            model_name = model_name, temperature = 0.6, context_window_tokens = CONTEXT_WINDOW_TOKENS,
+            max_output_tokens = ANSWER_MAX_OUTPUT_TOKENS
+        ),
         tracing_service,
         model_client
     )
