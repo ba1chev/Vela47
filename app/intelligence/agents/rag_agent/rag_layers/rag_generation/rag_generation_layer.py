@@ -1,5 +1,4 @@
 from typing import Any, Optional
-from pydantic import ValidationError
 
 from app.intelligence.agents import RagContext
 from app.intelligence.messages import MessageAI
@@ -9,7 +8,6 @@ from app.intelligence.model import ModelFoundation
 from app.intelligence.messages import MessageHuman
 from app.intelligence.messages import MessageSystem
 from app.intelligence.tracing import TraceEventType
-from app.intelligence.agents import RagNoSourcesReply
 from app.intelligence.tracing import TracingServiceNull
 from app.intelligence.tracing import TracingServiceBase
 from app.intelligence.agents import RAG_NO_SOURCES_PROMPT
@@ -26,8 +24,7 @@ class RagGenerationLayer(RagLayerBase):
     With no passage left, the model only tells the user the documents do not cover the
     question, which reaches it quoted inside that instruction: given anything that reads
     as a question, a small model answers from memory and cites a source it never had.
-    That reply is a RagNoSourcesReply, which names the question's language first, and
-    arrives whole rather than streamed."""
+    That reply arrives whole rather than streamed."""
 
     EXCERPT_CHARS = 240
 
@@ -71,14 +68,9 @@ class RagGenerationLayer(RagLayerBase):
 
     def _no_sources_reply(self, context: RagContext) -> str:
         response = self._model.invoke(
-            [MessageHuman(content = RAG_NO_SOURCES_PROMPT.format(question = self._text_of(context.goal.content)))],
-            output_schema = RagNoSourcesReply.model_json_schema()
+            [MessageHuman(content = RAG_NO_SOURCES_PROMPT.format(question = self._text_of(context.goal.content)))]
         )
-        content = self._text_of(response.content)
-        try:
-            return RagNoSourcesReply.model_validate_json(content).reply.strip() or content
-        except ValidationError:
-            return content
+        return self._text_of(response.content).strip()
 
     def execute(self, context: RagContext) -> None:
         if not context.passages:
