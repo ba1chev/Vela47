@@ -2,9 +2,14 @@
 
 const REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+// The library redraws the whole canvas every frame and checks every pair of particles
+// for a link, so the cost grows with the square of their number. A fixed count keeps a
+// large monitor from multiplying it (with density on, a 1440p screen got about 290),
+// and drawing at one pixel per CSS pixel instead of the retina ratio draws a quarter
+// of the pixels, which a soft backdrop does not need.
 const CONFIG = {
   particles: {
-    number: { value: 70, density: { enable: true, value_area: 900 } },
+    number: { value: 55, density: { enable: false } },
     color: { value: "#74a9ff" },
     shape: { type: "circle" },
     opacity: {
@@ -15,7 +20,7 @@ const CONFIG = {
     size: { value: 3.2, random: true },
     line_linked: {
       enable: true,
-      distance: 150,
+      distance: 140,
       color: "#4a6fa5",
       opacity: 0.5,
       width: 1,
@@ -41,7 +46,7 @@ const CONFIG = {
     },
     modes: { grab: { distance: 160, line_linked: { opacity: 0.55 } } },
   },
-  retina_detect: true,
+  retina_detect: false,
 };
 
 if (typeof window.particlesJS === "function") {
