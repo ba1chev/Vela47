@@ -71,7 +71,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.database = database
     app.state.chat_session_store = ChatSessionStoreSql(database)
     app.state.knowledge_store = KnowledgeStoreSql(database)
-    app.state.rag_indexer = build_rag_indexer()
+    app.state.rag_indexer = build_rag_indexer(config.environment)
     app.state.web_fetcher = WebFetcher()
     logger.warning(
         "Database ready: %s in %s mode", database.database_type.value, config.environment.value
