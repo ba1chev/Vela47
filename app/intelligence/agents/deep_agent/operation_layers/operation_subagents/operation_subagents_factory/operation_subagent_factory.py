@@ -1,9 +1,12 @@
 from typing import Optional
 
+from app.intelligence.tools import ToolBase
 from app.intelligence.sandbox import SandboxEnv
 from app.intelligence.agents import PromptManager
+from app.intelligence.tools import ToolMessageWorker
 from app.intelligence.agents import OperationSubagent
 from app.intelligence.tracing import TracingServiceBase
+from app.intelligence.agents import SUBAGENT_PEER_PROMPT
 from app.intelligence.agents import OperationSubagentType
 from app.intelligence.agents import OperationSubagentBlueprint
 from app.intelligence.agents import OperationSubagentFactoryBase
@@ -20,15 +23,26 @@ class OperationSubagentFactory(OperationSubagentFactoryBase):
 
     Every call builds a new agent, new tools and a new prompt. That is required, not
     incidental — each task must start from an empty ShortTermMemory, and its tools must
-    act on the sandbox this task was given rather than one a previous task held."""
+    act on the sandbox this task was given rather than one a previous task held. A
+    peer_tool joins the toolset, and SUBAGENT_PEER_PROMPT tells the model when to use it."""
 
     def __init__(self, blueprints: dict[OperationSubagentType, OperationSubagentBlueprint],
         tracing_service: Optional[TracingServiceBase] = None) -> None:
         self._blueprints = dict(blueprints)
         self._tracing_service = tracing_service
 
-    def create(self, type: OperationSubagentType,
-        sandbox_env: SandboxEnv) -> OperationSubagent:
+    def _prompt(self, blueprint: OperationSubagentBlueprint, tools: list[ToolBase],
+        peer_tool: Optional[ToolMessageWorker]) -> str:
+        prompt = blueprint.prompt_template.format(tools = ", ".join(current_tool.name for current_tool in tools))
+        if peer_tool is None:
+            return prompt
+        return prompt + SUBAGENT_PEER_PROMPT.format(
+            peer = peer_tool.peer_name,
+            max_messages = peer_tool.max_messages
+        )
+
+    def create(self, type: OperationSubagentType, sandbox_env: SandboxEnv,
+        peer_tool: Optional[ToolMessageWorker] = None) -> OperationSubagent:
         blueprint = self._blueprints.get(type)
 
         if blueprint is None:
@@ -38,11 +52,10 @@ class OperationSubagentFactory(OperationSubagentFactoryBase):
             )
 
         tools = [current_factory(sandbox_env) for current_factory in blueprint.tool_factories]
+        if peer_tool is not None:
+            tools.append(peer_tool)
         prompt_manager = PromptManager()
-        prompt_manager.register(
-            "role",
-            blueprint.prompt_template.format(tools = ", ".join(current_tool.name for current_tool in tools))
-        )
+        prompt_manager.register("role", self._prompt(blueprint, tools, peer_tool))
 
         return OperationSubagent(
             model = blueprint.model,
