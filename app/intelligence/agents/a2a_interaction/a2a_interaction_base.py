@@ -5,7 +5,7 @@ from app.intelligence.agents import AgentBase
 from app.intelligence.messages import MessageAI
 from app.intelligence.messages import MessageBase
 from app.intelligence.messages import MessageHuman
-from app.intelligence.a2a_interaction import A2AInteractionType
+from app.intelligence.agents import A2AInteractionType
 
 
 class A2AInteractionBase(ABC):
