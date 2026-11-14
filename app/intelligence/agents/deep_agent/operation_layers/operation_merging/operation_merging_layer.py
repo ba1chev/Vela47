@@ -50,7 +50,7 @@ class OperationMergingLayer(OperationLayerBase):
         lines: list[str] = [
             f"The user's request: {context.goal.content}",
             "",
-            "The workers' reports, each under the step it answers:"
+            "The workers' reports, each under the step it answers:" if context.results else "No step was needed for this request."
         ]
         for position, current_result in enumerate(context.results):
             lines.extend([
