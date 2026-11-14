@@ -42,7 +42,7 @@ from app.intelligence.agents import SUBAGENT_SYSTEM_PROMPT_TEMPLATES
 
 MODEL_NAMES = {
     ConfigEnvironment.DEV: "qwen3.5:9b",
-    ConfigEnvironment.PROD: "qwen.qwen3-235b-a22b-2507-v1:0"
+    ConfigEnvironment.PROD: "eu.anthropic.claude-sonnet-5-5"
 }
 SUBAGENT_MAX_ITERATIONS = 6
 SUBAGENT_PROBE_FACTORIES = {
