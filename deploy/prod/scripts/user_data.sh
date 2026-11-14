@@ -38,7 +38,10 @@ docker network inspect ${app_network_name} >/dev/null 2>&1 || docker network cre
 docker volume create ${ollama_volume_name}
 docker rm -f ${ollama_container_name} 2>/dev/null || true
 docker run --detach --name ${ollama_container_name} --restart unless-stopped --gpus all \
-  --network ${app_network_name} --volume ${ollama_volume_name}:/root/.ollama ${ollama_image}
+  --network ${app_network_name} --volume ${ollama_volume_name}:/root/.ollama \
+  --env OLLAMA_MAX_LOADED_MODELS=${ollama_max_loaded} \
+  --env OLLAMA_NUM_PARALLEL=${ollama_num_parallel} \
+  ${ollama_image}
 until docker exec ${ollama_container_name} ollama list >/dev/null 2>&1; do sleep 2; done
 for model in ${ollama_models}; do
   docker exec ${ollama_container_name} ollama pull "$model"
