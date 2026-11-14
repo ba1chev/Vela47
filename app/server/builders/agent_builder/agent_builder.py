@@ -1,5 +1,6 @@
 from typing import Callable
 
+from app.server.builders import KEEP_ALIVE
 from app.intelligence.tools import ToolBase
 from app.intelligence.web import WebFetcher
 from app.intelligence.agents import DeepAgent
@@ -29,6 +30,7 @@ from app.intelligence.memory import VectorDbMemoryEntry
 from app.intelligence.tracing import TracingServiceBase
 from app.intelligence.agents import OperationPolicyFull
 from app.intelligence.agents import OperationSubagentType
+from app.server.config_environment import ConfigEnvironment
 from app.intelligence.agents import OperationSubagentFactory
 from app.intelligence.agents import OperationSubagentPeering
 from app.intelligence.agents import OperationSubagentBlueprint
@@ -38,7 +40,10 @@ from app.intelligence.agents import OperationSubagentProbeSources
 from app.intelligence.agents import OperationSubagentProbeWorkspace
 from app.intelligence.agents import SUBAGENT_SYSTEM_PROMPT_TEMPLATES
 
-MODEL_NAME = "qwen3.5:9b"
+MODEL_NAMES = {
+    ConfigEnvironment.DEV: "qwen3.5:9b",
+    ConfigEnvironment.PROD: "qwen3.5:35b-a3b"
+}
 SUBAGENT_MAX_ITERATIONS = 6
 SUBAGENT_PROBE_FACTORIES = {
     OperationSubagentType.RESEARCH: [OperationSubagentProbeSources],
@@ -83,25 +88,38 @@ def subagent_peering(sandbox_pool: SandboxPoolBase) -> OperationSubagentPeering:
 
 
 def build_deep_agent(tracing_service: TracingServiceBase, sandbox_pool: SandboxPoolBase,
-    web_fetcher: WebFetcher, knowledge_entries: list[VectorDbMemoryEntry]) -> DeepAgent:
+    web_fetcher: WebFetcher, knowledge_entries: list[VectorDbMemoryEntry],
+    environment: ConfigEnvironment) -> DeepAgent:
+    model_name = MODEL_NAMES[environment]
+    context_window_tokens = CONTEXT_WINDOW_TOKENS[environment]
+    keep_alive = KEEP_ALIVE[environment]
     planning_model = ModelFoundation(
-        ModelConfig(model_name = MODEL_NAME, temperature = 0.1, think = False, context_window_tokens = CONTEXT_WINDOW_TOKENS),
+        ModelConfig(
+            model_name = model_name, temperature = 0.1, think = False,
+            context_window_tokens = context_window_tokens, keep_alive = keep_alive
+        ),
         tracing_service
     )
     merging_model = ModelFoundation(
-        ModelConfig(model_name = MODEL_NAME, temperature = 0.6, context_window_tokens = CONTEXT_WINDOW_TOKENS),
+        ModelConfig(
+            model_name = model_name, temperature = 0.6,
+            context_window_tokens = context_window_tokens, keep_alive = keep_alive
+        ),
         tracing_service
     )
 
     tool_factories = subagent_tool_factories(
-        build_knowledge_memory(tracing_service, knowledge_entries), web_fetcher
+        build_knowledge_memory(tracing_service, knowledge_entries, environment), web_fetcher
     )
     blueprints = {
         current_type: OperationSubagentBlueprint(
             tool_factories = tool_factories[current_type],
             prompt_template = SUBAGENT_SYSTEM_PROMPT_TEMPLATES[current_type],
             model = ModelFoundation(
-                ModelConfig(model_name = MODEL_NAME, temperature = 0.3, context_window_tokens = CONTEXT_WINDOW_TOKENS),
+                ModelConfig(
+                    model_name = model_name, temperature = 0.3,
+                    context_window_tokens = context_window_tokens, keep_alive = keep_alive
+                ),
                 tracing_service
             ),
             max_context_window_size = 4 * SUBAGENT_MAX_ITERATIONS,
