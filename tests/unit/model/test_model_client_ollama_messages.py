@@ -1,17 +1,16 @@
-from app.intelligence.model import ModelConfig
 from app.intelligence.messages import MessageAI
 from app.intelligence.messages import MessageTool
 from app.intelligence.messages import MessageHuman
-from app.intelligence.model import ModelFoundation
 from app.intelligence.messages import MessageSystem
+from app.intelligence.model import ModelClientOllama
 from app.intelligence.messages import MessageToolCall
 
 
 def format_messages(messages):
-    return ModelFoundation(ModelConfig(model_name = "qwen3:1.7b"))._format_messages(messages)
+    return ModelClientOllama()._format_messages(messages)
 
 
-class TestModelFoundationMessages:
+class TestModelClientOllamaMessages:
     def test_plain_messages_carry_role_and_content_only(self):
         assert format_messages([MessageSystem(content = "rules"), MessageHuman(content = "hi")]) == [
             {"role": "system", "content": "rules"},
