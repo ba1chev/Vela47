@@ -22,5 +22,7 @@ class TraceEventType(str, Enum):
     SANDBOX_RELEASED = "sandbox_released"
     MODEL_INVOKED = "model_invoked"
     TOOL_EXECUTED = "tool_executed"
+    A2A_STARTED = "a2a_started"
+    A2A_FINISHED = "a2a_finished"
     RUN_FAILED = "run_failed"
     ANSWER_CHUNK = "answer_chunk"
