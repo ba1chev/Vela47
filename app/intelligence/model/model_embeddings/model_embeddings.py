@@ -1,16 +1,17 @@
-import ollama
 from typing import Optional
 from time import perf_counter
 
+from app.intelligence.model import ModelClientBase
 from app.intelligence.tracing import TraceEventType
+from app.intelligence.model import ModelClientOllama
 from app.intelligence.tracing import TracingServiceNull
 from app.intelligence.tracing import TracingServiceBase
 
 
 class ModelEmbeddings:
-    """Generates dense vector representations of text using an Ollama embedding
-    model. Each vector is a fixed-length list of floats whose dimensionality depends on
-    the chosen model.
+    """Generates dense vector representations of text with an embedding model, served
+    by an injected ModelClientBase, a local Ollama server unless told otherwise. Each
+    vector is a fixed-length list of floats whose dimensionality depends on the model.
 
     embed_many() sends texts in batches rather than one request each. Indexing a
     document means embedding dozens of chunks, and a round trip per chunk would dominate
@@ -24,9 +25,10 @@ class ModelEmbeddings:
     BATCH_SIZE = 64
 
     def __init__(self, model_name: str, tracing_service: Optional[TracingServiceBase] = None,
-        keep_alive: str = "30m") -> None:
+        keep_alive: str = "30m", client: Optional[ModelClientBase] = None) -> None:
         self._model_name: str = model_name
         self._keep_alive: str = keep_alive
+        self._client: ModelClientBase = client if client is not None else ModelClientOllama()
         self._tracing_service: TracingServiceBase = (
             tracing_service
             if tracing_service is not None
@@ -43,9 +45,8 @@ class ModelEmbeddings:
         for start in range(0, len(texts), self.BATCH_SIZE):
             batch = texts[start:start + self.BATCH_SIZE]
             began = perf_counter()
-            response = ollama.embed(model = self._model_name, input = batch, keep_alive = self._keep_alive)
-            input_tokens = response.get("prompt_eval_count", 0) or 0
-            vectors.extend(list(current_vector) for current_vector in response["embeddings"])
+            batch_vectors, input_tokens = self._client.embed(self._model_name, batch, self._keep_alive)
+            vectors.extend(batch_vectors)
 
             self._tracing_service.emit(
                 TraceEventType.MODEL_INVOKED,

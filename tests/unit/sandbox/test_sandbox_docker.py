@@ -5,6 +5,7 @@ import tempfile
 
 from app.intelligence.sandbox import SandboxDocker
 from app.intelligence.sandbox import CONTAINER_WORKSPACE_PATH
+from app.intelligence.sandbox import archive_sandbox_directory
 
 
 def make_env(base = None, run_id = "run-a"):
@@ -12,7 +13,7 @@ def make_env(base = None, run_id = "run-a"):
 
 
 def archived_files(env):
-    with tarfile.open(fileobj = io.BytesIO(env._archive())) as archive:
+    with tarfile.open(fileobj = io.BytesIO(archive_sandbox_directory(env.root))) as archive:
         return {
             current.name: archive.extractfile(current).read().decode("utf-8")
             for current in archive.getmembers()

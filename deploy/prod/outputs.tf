@@ -19,22 +19,47 @@ output "public_subnet_ids" {
 }
 
 output "private_subnet_ids" {
-  description = "Subnets of the EC2 instances, one per availability zone."
+  description = "Subnets of the EC2 instance, the server task, the sandbox function and the database, one per availability zone."
   value       = aws_subnet.private[*].id
 }
 
 output "nat_public_ip" {
-  description = "Address the EC2 instances reach the internet from."
+  description = "Address the server task reaches Bedrock and the web from."
   value       = aws_eip.nat.public_ip
 }
 
 output "autoscaling_group_name" {
-  description = "The auto scaling group that runs the EC2 instance. Deploy what is on the branch now with `aws autoscaling start-instance-refresh --auto-scaling-group-name <name>`."
+  description = "The auto scaling group that runs the EC2 instance of the cluster."
   value       = aws_autoscaling_group.web.name
 }
 
+output "ecs_cluster_name" {
+  description = "The ECS cluster. A code change is deployed by terraform apply, which builds and pushes a new image and updates the service."
+  value       = aws_ecs_cluster.main.name
+}
+
+output "ecs_service_name" {
+  description = "The ECS service of the server task. Follow a deploy with `aws ecs describe-services --cluster <cluster> --services <service>`."
+  value       = aws_ecs_service.app.name
+}
+
+output "app_image" {
+  description = "The server image the task runs, pinned by digest."
+  value       = "${aws_ecr_repository.app.repository_url}@${docker_registry_image.app.sha256_digest}"
+}
+
+output "app_log_group_name" {
+  description = "Logs of the server task. Follow them with `aws logs tail <name> --follow`."
+  value       = aws_cloudwatch_log_group.app.name
+}
+
+output "sandbox_function_name" {
+  description = "The Lambda function the TEST subagent runs its commands in."
+  value       = aws_lambda_function.sandbox.function_name
+}
+
 output "target_group_arn" {
-  description = "Target group of the EC2 instances. Check their health with `aws elbv2 describe-target-health --target-group-arn <arn>`."
+  description = "Target group of the server tasks. Check their health with `aws elbv2 describe-target-health --target-group-arn <arn>`."
   value       = aws_lb_target_group.web.arn
 }
 

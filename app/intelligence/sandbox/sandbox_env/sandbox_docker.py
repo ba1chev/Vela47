@@ -1,13 +1,13 @@
-import io
 import shlex
 import pathlib
-import tarfile
 import subprocess
 from typing import Optional
 
 from app.intelligence.sandbox import SandboxEnv
 from app.intelligence.sandbox import SandboxEnvLocal
+from app.intelligence.sandbox import cap_sandbox_output
 from app.intelligence.sandbox import SandboxCommandResult
+from app.intelligence.sandbox import archive_sandbox_directory
 
 
 class SandboxDocker(SandboxEnv):
@@ -23,8 +23,6 @@ class SandboxDocker(SandboxEnv):
     runs in a shell inside the container, never on the host, and long output keeps a
     short head and the full tail."""
 
-    MAX_OUTPUT_CHARS = 8_000
-    KEPT_HEAD_CHARS = 2_000
     COPY_TIMEOUT_SECONDS = 30
     SWEEP_TIMEOUT_SECONDS = 10
 
@@ -54,12 +52,6 @@ class SandboxDocker(SandboxEnv):
     def list_files(self) -> list[str]:
         return self._files.list_files()
 
-    def _archive(self) -> bytes:
-        buffer = io.BytesIO()
-        with tarfile.open(fileobj = buffer, mode = "w") as archive:
-            archive.add(self._files.root, arcname = ".")
-        return buffer.getvalue()
-
     def _copy_in(self) -> Optional[str]:
         workspace = shlex.quote(self._container_directory)
         try:
@@ -68,7 +60,7 @@ class SandboxDocker(SandboxEnv):
                     "docker", "exec", "-i", self._container_name, "sh", "-c",
                     f"rm -rf {workspace} && mkdir -p {workspace} && tar -x -C {workspace}"
                 ],
-                input = self._archive(),
+                input = archive_sandbox_directory(self._files.root),
                 capture_output = True,
                 timeout = self.COPY_TIMEOUT_SECONDS,
                 check = False
@@ -125,16 +117,7 @@ class SandboxDocker(SandboxEnv):
         finally:
             self._sweep()
 
-        output = (completed.stdout or "") + (completed.stderr or "")
-        if len(output) > self.MAX_OUTPUT_CHARS:
-            kept_tail = self.MAX_OUTPUT_CHARS - self.KEPT_HEAD_CHARS
-            output = (
-                output[:self.KEPT_HEAD_CHARS]
-                + f"\n… {len(output) - self.MAX_OUTPUT_CHARS} characters of output cut …\n"
-                + output[-kept_tail:]
-            )
-
         return SandboxCommandResult(
             exit_code = completed.returncode,
-            output = output.strip() or "(no output)"
+            output = cap_sandbox_output((completed.stdout or "") + (completed.stderr or ""))
         )

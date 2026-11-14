@@ -10,6 +10,7 @@ from app.intelligence.web import WebFetcher
 from app.server.builders import build_database
 from app.server.builders import install_security
 from app.server.builders import build_rag_indexer
+from app.server.builders import build_model_client
 from app.server.builders import build_sandbox_pool
 from app.server.knowledge import KnowledgeStoreSql
 from app.server.security import IdentityEntityType
@@ -71,7 +72,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.database = database
     app.state.chat_session_store = ChatSessionStoreSql(database)
     app.state.knowledge_store = KnowledgeStoreSql(database)
-    app.state.rag_indexer = build_rag_indexer(config.environment)
+    app.state.model_client = build_model_client(config)
+    app.state.rag_indexer = build_rag_indexer(config.environment, app.state.model_client)
     app.state.web_fetcher = WebFetcher()
     logger.warning(
         "Database ready: %s in %s mode", database.database_type.value, config.environment.value

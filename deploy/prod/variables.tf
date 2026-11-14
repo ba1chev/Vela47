@@ -49,37 +49,31 @@ variable "private_subnet_cidr_blocks" {
 # EC2 instance variables
 variable "ec2_instance_ami" {
   type        = string
-  default     = "resolve:ssm:/aws/service/deeplearning/ami/x86_64/base-oss-nvidia-driver-gpu-ubuntu-24.04/latest/ami-id"
-  description = "EC2 instance AMI value, the Deep Learning AMI on Ubuntu comes with the NVIDIA driver and Container Toolkit"
+  default     = "resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2023/arm64/recommended/image_id"
+  description = "EC2 instance AMI value, the ECS-optimized Amazon Linux 2023 for arm64 comes with Docker and the ECS agent"
 }
 
 variable "ec2_instance_type" {
   type        = string
-  default     = "g6e.xlarge"
-  description = "EC2 instance type value, g6e.xlarge has one NVIDIA L40S with 48 GB, room for the agents' model, the embedding model and a 32K context"
+  default     = "t4g.medium"
+  description = "EC2 instance type value, t4g.medium has 2 Graviton vCPUs and 4 GB, room for the server task and a second one during a deploy, the models run on Bedrock and the commands in Lambda"
 }
 
 variable "ec2_instance_root_device_name" {
   type        = string
-  default     = "/dev/sda1"
+  default     = "/dev/xvda"
   description = "Root device name of the AMI"
 }
 
 variable "ec2_instance_root_volume_size" {
   type        = number
-  default     = 150
-  description = "Size of the root volume in GB, it holds the models (about 27 GB), the images and the Docker build cache"
+  default     = 30
+  description = "Size of the root volume in GB, it holds the image of the server task"
 
   validation {
-    condition     = var.ec2_instance_root_volume_size >= 75
-    error_message = "The root volume can not be smaller than the 75 GB snapshot of the Deep Learning AMI."
+    condition     = var.ec2_instance_root_volume_size >= 30
+    error_message = "The root volume can not be smaller than the 30 GB snapshot of the ECS-optimized AMI."
   }
-}
-
-variable "ec2_instance_http_port" {
-  type        = number
-  default     = 8000
-  description = "Port on which the application on the EC2 instances listens"
 }
 
 variable "ec2_instance_egress_cidr_ipv4" {
@@ -97,13 +91,13 @@ variable "ec2_instance_egress_ip_protocol" {
 variable "ec2_security_group_name" {
   type        = string
   default     = "ec2-server-instance-sg"
-  description = "Name for the security group of the EC2 instance"
+  description = "Name for the security group of the EC2 instance, it takes no inbound traffic, the tasks on it have security groups of their own"
 }
 
 variable "ec2_instance_metadata_hop_limit" {
   type        = number
-  default     = 2
-  description = "How many network hops the instance metadata (IMDSv2) answers reach, 2 lets a container read the IAM role credentials"
+  default     = 1
+  description = "How many network hops the instance metadata (IMDSv2) answers reach, 1 is enough since the ECS agent uses the host network and tasks get their credentials from ECS"
 
   validation {
     condition     = var.ec2_instance_metadata_hop_limit >= 1 && var.ec2_instance_metadata_hop_limit <= 64
@@ -115,13 +109,7 @@ variable "ec2_instance_metadata_hop_limit" {
 variable "ec2_iam_role_name" {
   type        = string
   default     = "vela47-ec2-role"
-  description = "Name for the IAM role the EC2 instances assume"
-}
-
-variable "ec2_iam_policy_name" {
-  type        = string
-  default     = "vela47-read-secrets"
-  description = "Name for the IAM role policy which lets the EC2 instances read the application and database secrets"
+  description = "Name for the IAM role the EC2 instances assume, it lets the ECS agent register them in the cluster"
 }
 
 variable "ec2_instance_profile_name" {
@@ -151,7 +139,7 @@ variable "ec2_launch_template_min_instances" {
 variable "ec2_launch_template_max_instances" {
   type        = number
   default     = 1
-  description = "Maximum number of EC2 instances running, every instance runs its own GPU, Ollama and sandbox"
+  description = "Maximum number of EC2 instances running"
 }
 
 variable "ec2_launch_template_desired_instances" {
@@ -162,14 +150,14 @@ variable "ec2_launch_template_desired_instances" {
 
 variable "ec2_autoscaling_health_check_grace_period" {
   type        = number
-  default     = 1800
-  description = "Seconds a new instance gets before failed health checks count, the first boot pulls the models and builds the server"
+  default     = 300
+  description = "Seconds a new instance gets before failed health checks count, the ECS-optimized AMI only has to start the ECS agent"
 }
 
 variable "ec2_autoscaling_health_check_type" {
   type        = string
-  default     = "ELB"
-  description = "Health check type of the auto scaling group (EC2 or ELB)"
+  default     = "EC2"
+  description = "Health check type of the auto scaling group (EC2 or ELB), EC2 since the load balancer checks the tasks rather than the instance"
 
   validation {
     condition     = contains(["EC2", "ELB"], var.ec2_autoscaling_health_check_type)
@@ -347,8 +335,8 @@ variable "rds_port" {
 
 variable "rds_multi_az" {
   type        = bool
-  default     = true
-  description = "Whether the RDS instance keeps a standby in another availability zone"
+  default     = false
+  description = "Whether a standby replica runs in another availability zone (set to true for real production, it doubles the price of the database)"
 }
 
 variable "rds_publicly_accessible" {
@@ -451,81 +439,157 @@ variable "app_domain_name" {
   description = "Domain the application is served on over HTTPS"
 }
 
-# Server variables (what user_data starts on the instance)
-variable "app_repository_url" {
-  type        = string
-  default     = "https://github.com/ba1chev/Vela47.git"
-  description = "Public repository the instance clones and builds the server from"
-}
-
-variable "app_repository_branch" {
-  type        = string
-  default     = "main"
-  description = "Branch the instance builds the server from on its first boot"
-}
-
-variable "app_network_name" {
-  type        = string
-  default     = "vela47-app-network"
-  description = "Name for the Docker network the server and Ollama share on the instance"
-}
-
-variable "app_network_subnet" {
-  type        = string
-  default     = "10.112.0.0/16"
-  description = "Value for the Docker network subnet on the instance, it must not overlap the VPC"
-
-  validation {
-    condition     = can(cidrhost(var.app_network_subnet, 0))
-    error_message = "The app_network_subnet must be a valid IPv4 CIDR, e.g. 10.112.0.0/16."
-  }
-}
-
-variable "app_image_name" {
-  type        = string
-  default     = "vela47-app:prod"
-  description = "Name and tag for the server image built on the instance"
-}
-
+# Server variables
 variable "app_container_name" {
   type        = string
+  default     = "app"
+  description = "Name for the server container in the task definition"
+}
+
+variable "app_container_port" {
+  type        = number
+  default     = 8000
+  description = "Port on which the server in the container listens, the load balancer forwards to it"
+}
+
+variable "app_security_group_name" {
+  type        = string
+  default     = "vela47-app-task-sg"
+  description = "Name for the security group of the server task, it takes traffic only from the load balancer"
+}
+
+variable "app_log_group_name" {
+  type        = string
+  default     = "/ecs/vela47-app"
+  description = "CloudWatch log group of the server task"
+}
+
+variable "log_retention_days" {
+  type        = number
+  default     = 14
+  description = "Days the logs of the server task and of the sandbox function are kept"
+}
+
+# ECS variables
+variable "ecs_cluster_name" {
+  type        = string
+  default     = "vela47"
+  description = "Name for the ECS cluster, user_data registers the EC2 instances in it"
+}
+
+variable "ecs_service_name" {
+  type        = string
   default     = "vela47-app"
-  description = "Name for the server container"
+  description = "Name for the ECS service which keeps the server task running"
 }
 
-# Ollama variables
-variable "ollama_image" {
+variable "ecs_task_family" {
   type        = string
-  default     = "ollama/ollama:0.35.1"
-  description = "Ollama image, the same version as in development"
+  default     = "vela47-app"
+  description = "Family of the server task definition"
 }
 
-variable "ollama_container_name" {
+variable "ecs_task_cpu" {
+  type        = number
+  default     = 1024
+  description = "CPU units the server container reserves (1024 is one vCPU)"
+}
+
+variable "ecs_task_memory" {
+  type        = number
+  default     = 1536
+  description = "Memory limit of the server container in MiB, the task is stopped beyond it"
+}
+
+variable "ecs_task_memory_reservation" {
+  type        = number
+  default     = 768
+  description = "Memory in MiB reserved for the server container on the instance, two tasks have to fit during a deploy"
+}
+
+variable "ecs_desired_count" {
+  type        = number
+  default     = 1
+  description = "Number of server tasks running"
+}
+
+variable "ecs_task_role_name" {
   type        = string
-  default     = "vela47-ollama"
-  description = "Name for the Ollama container, the server reaches it by this name"
+  default     = "vela47-app-task-role"
+  description = "Name for the IAM role of the server task, it calls Bedrock and the sandbox function and reads the secrets"
 }
 
-variable "ollama_volume_name" {
+variable "ecs_task_policy_name" {
   type        = string
-  default     = "vela47-ollama-data"
-  description = "Name for the volume which keeps the pulled models"
+  default     = "vela47-app-task-policy"
+  description = "Name for the IAM role policy of the server task"
 }
 
-variable "ollama_models" {
+variable "ecs_task_execution_role_name" {
+  type        = string
+  default     = "vela47-app-task-execution-role"
+  description = "Name for the IAM role ECS uses to pull the image and write the logs of the server task"
+}
+
+# ECR variables
+variable "app_repository_name" {
+  type        = string
+  default     = "vela47-app"
+  description = "Name for the ECR repository of the server image"
+}
+
+variable "sandbox_repository_name" {
+  type        = string
+  default     = "vela47-sandbox"
+  description = "Name for the ECR repository of the sandbox function image"
+}
+
+variable "ecr_kept_images" {
+  type        = number
+  default     = 5
+  description = "How many images each repository keeps, older ones are deleted"
+}
+
+variable "docker_context" {
+  type        = string
+  default     = "desktop-linux"
+  description = "Docker context Terraform builds the images with, Docker Desktop on a Mac has no /var/run/docker.sock"
+}
+
+# Sandbox function variables
+variable "sandbox_function_name" {
+  type        = string
+  default     = "vela47-sandbox"
+  description = "Name for the Lambda function the TEST subagent runs its commands in, the same name the server calls"
+}
+
+variable "sandbox_memory_size" {
+  type        = number
+  default     = 512
+  description = "Memory of the sandbox function in MB, the same limit a sandbox container has in development"
+}
+
+variable "sandbox_timeout" {
+  type        = number
+  default     = 90
+  description = "Seconds the sandbox function may run, a command gets 60 and the rest is for copying the workspace in"
+}
+
+variable "sandbox_security_group_name" {
+  type        = string
+  default     = "vela47-sandbox-sg"
+  description = "Name for the security group of the sandbox function, it allows no traffic in or out"
+}
+
+variable "sandbox_role_name" {
+  type        = string
+  default     = "vela47-sandbox-role"
+  description = "Name for the IAM role of the sandbox function, it may only write its logs and attach to the VPC"
+}
+
+# Bedrock variables
+variable "bedrock_model_ids" {
   type        = list(string)
-  default     = ["qwen3.5:35b-a3b", "qwen3-embedding:8b"]
-  description = "Models pulled on the first boot, the agents' model and the embedding model, the same names the server asks for in PROD"
-}
-
-variable "ollama_max_loaded_models" {
-  type        = number
-  default     = 2
-  description = "Models Ollama keeps in memory at the same time, the agents' model and the embedding model"
-}
-
-variable "ollama_num_parallel" {
-  type        = number
-  default     = 2
-  description = "Requests one model answers at the same time, each one reserves its own context window in GPU memory"
+  default     = ["qwen.qwen3-235b-a22b-2507-v1:0", "amazon.titan-embed-text-v2:0"]
+  description = "Bedrock models the server task may call, the same IDs the server asks for in PROD"
 }
