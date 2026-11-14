@@ -21,13 +21,16 @@ from app.intelligence.web import WebSearchDuckDuckGo
 from app.intelligence.sandbox import SandboxPoolBase
 from app.intelligence.agents import OperationPipeline
 from app.server.builders import CONTEXT_WINDOW_TOKENS
+from app.intelligence.agents import A2AInteractionType
 from app.intelligence.tools import ToolSearchDocuments
 from app.server.builders import build_knowledge_memory
+from app.intelligence.sandbox import SandboxPoolDocker
 from app.intelligence.memory import VectorDbMemoryEntry
 from app.intelligence.tracing import TracingServiceBase
 from app.intelligence.agents import OperationPolicyFull
 from app.intelligence.agents import OperationSubagentType
 from app.intelligence.agents import OperationSubagentFactory
+from app.intelligence.agents import OperationSubagentPeering
 from app.intelligence.agents import OperationSubagentBlueprint
 from app.intelligence.middleware import MiddlewareSlidingWindow
 from app.intelligence.agents import OperationSubagentProbeTests
@@ -43,6 +46,11 @@ SUBAGENT_PROBE_FACTORIES = {
     OperationSubagentType.TEST: [OperationSubagentProbeWorkspace, OperationSubagentProbeTests],
     OperationSubagentType.REVIEW: []
 }
+SUBAGENT_PEERS = {
+    OperationSubagentType.TEST: OperationSubagentType.CODE,
+    OperationSubagentType.REVIEW: OperationSubagentType.CODE
+}
+SUBAGENT_MAX_PEER_MESSAGES = 2
 
 
 def subagent_tool_factories(knowledge_memory: VectorDbMemory,
@@ -60,6 +68,18 @@ def subagent_tool_factories(knowledge_memory: VectorDbMemory,
         OperationSubagentType.TEST: [ToolListFiles, ToolReadFile, ToolWriteTest, ToolRunTests],
         OperationSubagentType.REVIEW: [ToolListFiles, ToolReadFile, ToolSearchFiles]
     }
+
+
+def subagent_peering(sandbox_pool: SandboxPoolBase) -> OperationSubagentPeering:
+    return OperationSubagentPeering(
+        interaction_type = (
+            A2AInteractionType.DOCKER
+            if isinstance(sandbox_pool, SandboxPoolDocker)
+            else A2AInteractionType.HOST
+        ),
+        peers = SUBAGENT_PEERS,
+        max_messages = SUBAGENT_MAX_PEER_MESSAGES
+    )
 
 
 def build_deep_agent(tracing_service: TracingServiceBase, sandbox_pool: SandboxPoolBase,
@@ -97,7 +117,8 @@ def build_deep_agent(tracing_service: TracingServiceBase, sandbox_pool: SandboxP
         merging_model = merging_model,
         subagent_factory = OperationSubagentFactory(blueprints, tracing_service),
         sandbox_pool = sandbox_pool,
-        tracing_service = tracing_service
+        tracing_service = tracing_service,
+        subagent_peering = subagent_peering(sandbox_pool)
     )
 
     return DeepAgent(

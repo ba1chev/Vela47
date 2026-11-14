@@ -22,6 +22,8 @@ from app.intelligence.tools.web_tools.tool_web_search.tool_web_search_input impo
 from app.intelligence.tools.web_tools.tool_web_search.tool_web_search import ToolWebSearch
 from app.intelligence.tools.web_tools.tool_fetch_url.tool_fetch_url_input import ToolFetchUrlInput
 from app.intelligence.tools.web_tools.tool_fetch_url.tool_fetch_url import ToolFetchUrl
+from app.intelligence.tools.a2a_tools.tool_message_worker.tool_message_worker_input import ToolMessageWorkerInput
+from app.intelligence.tools.a2a_tools.tool_message_worker.tool_message_worker import ToolMessageWorker
 from app.intelligence.tools.tool_registry import ToolRegistry
 from app.intelligence.tools.tool_executor import ToolExecutor
 
@@ -49,6 +51,8 @@ __all__ = [
     "ToolWebSearch",
     "ToolFetchUrlInput",
     "ToolFetchUrl",
+    "ToolMessageWorkerInput",
+    "ToolMessageWorker",
     "ToolRegistry",
     "ToolExecutor"
 ]

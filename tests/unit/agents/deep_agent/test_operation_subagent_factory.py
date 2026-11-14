@@ -4,6 +4,7 @@ import tempfile
 
 from app.intelligence.tools import ToolReadFile
 from app.intelligence.tools import ToolWriteFile
+from app.intelligence.tools import ToolMessageWorker
 from app.intelligence.sandbox import SandboxEnvLocal
 from tests.fixtures.model.fake_model import FakeModel
 from app.intelligence.agents import OperationSubagentType
@@ -77,3 +78,20 @@ class TestOperationSubagentFactory:
         first, second = make_env(), SandboxEnvLocal(pathlib.Path(tempfile.mkdtemp()) / "run", identifier = "other")
         assert factory.create(OperationSubagentType.CODE, first)._probes[0]._sandbox_env is first
         assert factory.create(OperationSubagentType.CODE, second)._probes[0]._sandbox_env is second
+
+    def test_a_peer_tool_joins_the_toolset(self):
+        peer_tool = ToolMessageWorker(lambda message: "ok", "CODE")
+        agent = make_factory().create(OperationSubagentType.CODE, make_env(), peer_tool = peer_tool)
+        assert [current.name for current in agent._tool_registry.all()] == ["read_file", "write_file", "message_worker"]
+        assert agent._tool_registry.get("message_worker") is peer_tool
+
+    def test_a_peer_tool_tells_the_prompt_who_it_reaches_and_how_often(self):
+        peer_tool = ToolMessageWorker(lambda message: "ok", "CODE", max_messages = 3)
+        agent = make_factory().create(OperationSubagentType.CODE, make_env(), peer_tool = peer_tool)
+        prompt = agent._prompt_manager.build_system_messages()[0].content
+        assert "Your tools are read_file, write_file, message_worker." in prompt
+        assert "The CODE worker that wrote the code" in prompt and "at most 3 messages" in prompt
+
+    def test_without_a_peer_tool_the_prompt_says_nothing_of_one(self):
+        prompt = make_factory().create(OperationSubagentType.CODE, make_env())._prompt_manager.build_system_messages()[0].content
+        assert "message_worker" not in prompt and "The worker who wrote the code" not in prompt

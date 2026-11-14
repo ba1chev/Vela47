@@ -88,6 +88,8 @@ const RENDER = {
   sandbox_released:  { kind: "sandbox",  depth: 2, skip: true },
   model_invoked:     { kind: "model",    depth: 2 },
   tool_executed:     { kind: "tool",     depth: 2 },
+  a2a_started:       { kind: "a2a",      depth: 2, opens: true },
+  a2a_finished:      { kind: "a2a",      depth: 2, closes: true },
   run_failed:        { kind: "error",    depth: 0 },
 };
 
@@ -763,6 +765,10 @@ function detailFor(event) {
       ].filter(Boolean).join(" · ");
     case "tool_executed":
       return p.status === "error" ? `error: ${p.result || ""}` : (p.result || "");
+    case "a2a_started":
+      return p.message || "";
+    case "a2a_finished":
+      return p.status === "error" ? `failed: ${p.result || ""}` : (p.result || "");
     case "pipeline_finished":
       return p.results ? `${p.results} results merged` : "";
     default:
@@ -783,6 +789,9 @@ function makeRow(event, spec, label) {
   // The label of a subagent event is its type, which the stylesheet turns into a
   // per-type hue so the trace is colour-coded by who did the work.
   if (spec.kind === "subagent") li.dataset.agent = label;
+  // A message between two subagents, "TEST → CODE", takes the hue of the one it reaches,
+  // whose own model calls follow it in the trace.
+  if (spec.kind === "a2a") li.dataset.agent = label.split(" → ").pop();
 
   const dot = document.createElement("span");
   dot.className = "dot";

@@ -6,6 +6,7 @@ from app.intelligence.agents import OperationPolicy
 from app.intelligence.sandbox import SandboxPoolBase
 from app.intelligence.agents import OperationLayerBase
 from app.intelligence.tracing import TracingServiceBase
+from app.intelligence.agents import OperationSubagentPeering
 from app.intelligence.agents import OperationLayersFactoryBase
 from app.intelligence.agents import OperationSubagentFactoryBase
 
@@ -17,17 +18,20 @@ class OperationPolicyFull(OperationPolicy):
     reward opposite settings: planning wants low temperature and reasoning mode
     to produce a schema-valid breakdown, merging wants a model good at prose.
     Passing the same instance twice is fine when that distinction does not
-    matter."""
+    matter. subagent_peering lets later subagents message earlier ones; without it
+    every subagent runs alone."""
 
     def __init__(self, planning_model: ModelFoundation, merging_model: ModelFoundation,
         subagent_factory: OperationSubagentFactoryBase,
         sandbox_pool: SandboxPoolBase,
-        tracing_service: Optional[TracingServiceBase] = None) -> None:
+        tracing_service: Optional[TracingServiceBase] = None,
+        subagent_peering: Optional[OperationSubagentPeering] = None) -> None:
         self._planning_model: ModelFoundation = planning_model
         self._merging_model: ModelFoundation = merging_model
         self._subagent_factory: OperationSubagentFactoryBase = subagent_factory
         self._sandbox_pool: SandboxPoolBase = sandbox_pool
         self._tracing_service: Optional[TracingServiceBase] = tracing_service
+        self._subagent_peering: Optional[OperationSubagentPeering] = subagent_peering
 
     def resolve(self, factory: OperationLayersFactoryBase) -> list[OperationLayerBase]:
         return [
@@ -37,7 +41,8 @@ class OperationPolicyFull(OperationPolicy):
                 OperationType.SUBAGENTS,
                 subagent_factory = self._subagent_factory,
                 sandbox_pool = self._sandbox_pool,
-                tracing_service = self._tracing_service
+                tracing_service = self._tracing_service,
+                peering = self._subagent_peering
             ),
             factory.create(
                 OperationType.MERGING,

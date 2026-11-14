@@ -475,6 +475,7 @@ body {
 }
 
 .ev[data-kind="error"] .name { color: var(--err); }
+.ev[data-kind="a2a"] .name { font-weight: 650; }
 
 .ev .detail {
   display: -webkit-box;

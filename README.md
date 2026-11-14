@@ -94,7 +94,7 @@ Deterministic, no model call. Each step becomes an `OperationTask` with a UUID, 
 
 ### Subagent execution
 
-For each task, a slot is leased from the sandbox pool, a fresh subagent of the task's type is built, and the task runs. A failure is recorded as an error result instead of propagating, so one failed step does not discard the others. The slot is released in a `finally` block. Tasks of one run execute in order and share the run's workspace, so files written by a CODE step are visible to the TEST step after it.
+For each task, a slot is leased from the sandbox pool, a fresh subagent of the task's type is built, and the task runs. A failure is recorded as an error result instead of propagating, so one failed step does not discard the others. The slot is released in a `finally` block, except for a CODE subagent kept for [agent-to-agent messages](#agent-to-agent-messages). Tasks of one run execute in order and share the run's workspace, so files written by a CODE step are visible to the TEST step after it.
 
 `OperationSubagent` is a minimal ReAct loop over a small fixed toolset:
 
@@ -104,6 +104,8 @@ For each task, a slot is leased from the sandbox pool, a fresh subagent of the t
 | CODE | `list_files`, `read_file`, `write_file`, `edit_file` | no | writes files in its workspace |
 | TEST | `list_files`, `read_file`, `write_test`, `run_tests` | no | writes tests, runs pytest in the sandbox |
 | REVIEW | `list_files`, `read_file`, `search_files` | no | no |
+
+TEST and REVIEW also get `message_worker` when a CODE step ran before them in the same run.
 
 Loop rules:
 
@@ -121,6 +123,23 @@ A subagent's report is the model's account of its own work, and with small model
 | `OperationSubagentProbeSources` | RESEARCH | Pages actually returned by `fetch_url` and documents returned by `search_documents`, matched to their tool calls by id, successful results only. A step that only saw search snippets is reported as such. |
 | `OperationSubagentProbeWorkspace` | CODE, TEST | Files created or changed, from SHA-256 snapshots of the workspace before and after the step. |
 | `OperationSubagentProbeTests` | TEST | The headline of a fresh pytest run in the same sandbox after the step, whatever the subagent claimed. |
+
+### Agent-to-agent messages
+
+`app/intelligence/agents/a2a_interaction/`. An `A2AInteractionBase` holds two agents, a left and a right one. `send(sender, message)` carries the text to the other agent, which answers it with its own `execute()`, and carries the answer back. The types differ only in how a text travels:
+
+| Type | Used when | Transport |
+|---|---|---|
+| `A2AInteractionDocker` | the pool is `SandboxPoolDocker` | A network created for the two containers alone (`vela47-a2a-<hex>`, internal, isolated gateway). A one-shot listener in the receiving container and a one-shot sender in the other carry the text on port 4747. The network is removed when the step ends. |
+| `A2AInteractionHost` | the pool has no containers | The text is handed over in the process. |
+
+`OperationSubagentPeering` decides which subagents talk. `build_deep_agent` lets TEST and REVIEW message CODE. The subagents layer keeps the last successful CODE subagent of the run alive, with its memory and its slot, until the layer ends. A later TEST or REVIEW subagent gets `message_worker`, bound to that CODE subagent through an interaction, and a prompt section saying when to use it: send the exact failing case, have the coder fix it, then check the fix with its own tools. The coder receives the message with its earlier work still in memory, changes files in the shared workspace and answers with what it changed.
+
+- The interaction connects on the first message, so a step that sends nothing creates no network, and it is closed when the step ends.
+- One step may send at most 2 messages, since each one runs the coder again.
+- A failed connection or delivery becomes an error tool result, so the step continues without it.
+- A run with a kept coder holds two slots. When the pool has none left, the coder is released and the step runs without `message_worker`.
+- Each exchange is traced as `a2a_started/finished` ("TEST → CODE"), and the step's evidence records how many messages were carried. The test probe runs after the step, so the reported test result already includes the fix.
 
 ### Merging
 
@@ -191,6 +210,7 @@ Tools act on the sandbox of the task they belong to. Because that sandbox only e
 | `search_documents` | Hybrid search over the owner's documents, 4 passages of up to 900 characters |
 | `web_search` | Title, URL and snippet per result (6 by default); reminds the model that snippets are not sources |
 | `fetch_url` | A page, PDF or DOCX as text, read in 4,000-character windows from `start_index` |
+| `message_worker` | Sends a message to the run's CODE subagent and returns its answer, at most 2 per step; see [Agent-to-agent messages](#agent-to-agent-messages) |
 
 ## Sandbox
 
@@ -223,7 +243,7 @@ Leasing is guarded by a lock, and `acquire()` raises when no slot is free instea
 
 Each run gets its own `TracingService`: a lock-protected buffer plus live subscribers, with callbacks invoked outside the lock. Components receive a tracer explicitly and never check whether one is present. `TracingServiceNull` stands in when tracing is off.
 
-Event types: `pipeline_started/finished`, `layer_started/finished`, `subagent_started/finished`, `sandbox_acquired/released`, `model_invoked`, `tool_executed`, `run_failed`, `answer_chunk`. Durations are reported as started/finished pairs, so the UI can show a step as running the moment it begins.
+Event types: `pipeline_started/finished`, `layer_started/finished`, `subagent_started/finished`, `sandbox_acquired/released`, `model_invoked`, `tool_executed`, `a2a_started/finished`, `run_failed`, `answer_chunk`. Durations are reported as started/finished pairs, so the UI can show a step as running the moment it begins.
 
 A model call can produce no event for minutes. When nothing has been sent for 15 seconds, the stream sends an SSE comment, which `EventSource` ignores, so a load balancer or proxy does not close the connection as idle.
 
@@ -237,14 +257,15 @@ The stream endpoint emits five SSE event types:
 | `answer` | the complete answer, the agent name and the RAG sources |
 | `error` | the exception type and message |
 
-The trace panel shows which layer is running and what it produced, each subagent with its instruction, report, evidence and status, every tool call with its result, and every sandbox lease.
+The trace panel shows which layer is running and what it produced, each subagent with its instruction, report, evidence and status, every tool call with its result, every message between subagents with the answer, and every sandbox lease.
 
 ## Agent containment
 
 Validating the output schema says nothing about whether the model followed instructions hidden in a page it read. Vela47 does not rely on the model ignoring injected text. It limits what any model can do with it.
 
 - The only subagent that reads external content (web pages, search results, documents) is RESEARCH, and it has no tool that writes files or runs code.
-- The subagents that write and execute (CODE, TEST) have no network access through their tools, and their commands run in containers on a network that cannot reach the internet, the host or another sandbox.
+- The subagents that write and execute (CODE, TEST) have no network access through their tools, and their commands run in containers on a network that cannot reach the internet, the host or another sandbox. The one exception is the network an agent-to-agent message creates for one step between two containers of the same run, which is internal too and removed afterwards.
+- RESEARCH can neither send nor receive agent-to-agent messages, so text from the web never reaches the subagent that writes code.
 - External text reaches a model only as a tool result, never as a system prompt, and always truncated: 4,000 characters per page window, 900 per passage, 300 per snippet.
 - Fetching cannot reach internal addresses, so an injected "fetch http://169.254.169.254/..." fails at the guard.
 - Documents and conversations are scoped to their owner by policy, and no tool can address another owner's data.
@@ -325,7 +346,7 @@ The system expects a small local model to fail in specific, recurring ways and h
 
 ## Testing and evaluation
 
-**Unit tests.** About 950 tests under `tests/unit/`, offline, in roughly one second. Models, sandboxes, tracers and stores are replaced with fixtures from `tests/fixtures/`. Server tests use `TestClient` without the lifespan, so no containers start.
+**Unit tests.** About 1,050 tests under `tests/unit/`, offline, in roughly one second. Models, sandboxes, tracers and stores are replaced with fixtures from `tests/fixtures/`. Server tests use `TestClient` without the lifespan, so no containers start.
 
 **Live evaluations.** `tests/evals/` runs the real agents against Ollama and Docker, end to end from the question to the final answer. The evals are excluded from the default run by the `evals` marker. Each case runs 3 times (`VELA47_EVALS_RUNS`) and a check passes when at least 2 of the runs pass it. Only objective checks are asserted.
 
@@ -503,7 +524,9 @@ Serverless hosting does not fit this workload. Lambda cannot run Docker containe
 ## Known limitations
 
 - The four-step plan limit is a prompt rule; the plan schema does not enforce it.
-- Subagents within one run execute sequentially. The pool bounds concurrency across runs, and when all 10 slots are leased, `acquire()` raises instead of queueing.
+- Subagents within one run execute sequentially. The pool bounds concurrency across runs, and when all 10 slots are leased, `acquire()` raises instead of queueing. A run that keeps a CODE subagent for agent-to-agent messages holds two slots.
+- Agent-to-agent messages flow from TEST or REVIEW to CODE only, and only inside one run. Whether a subagent asks for a fix is the model's decision.
+- An agent-to-agent network left behind by a crashed server process is not removed on the next start.
 - Vector search is brute force over the owner's chunks on every request. That is fine within the 2 MB quota and is not meant for large corpora.
 - Only RAG answers carry structured source metadata. Deep agent answers name their sources in the text.
 - There is no dedicated prompt-injection classifier; containment is by capability (see [Agent containment](#agent-containment)).
@@ -519,7 +542,6 @@ Serverless hosting does not fit this workload. Lambda cannot run Docker containe
 
 These parts are planned and may not all be completed:
 
-- Agent-to-agent (A2A) communication between subagents. Today each subagent sees only its own task and the user's request.
 - A human-in-the-loop channel over WebSocket, where the orchestrator can ask the user a question mid-run, with confirmation for tools that have external side effects.
 - Enforcing the step limit in the plan schema, and running independent steps in parallel.
 - Cleanup of expired guest data, and Alembic migrations.

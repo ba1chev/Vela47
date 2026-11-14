@@ -3,7 +3,17 @@
 from app.intelligence.agents.prompts.prompt_registry import PROMPT_REGISTRY
 from app.intelligence.agents.prompts.prompt_manager import PromptManager
 from app.intelligence.agents.agent_base import AgentBase
+from app.intelligence.agents.a2a_interaction.a2a_interaction_type import A2AInteractionType
+from app.intelligence.agents.a2a_interaction.a2a_interaction_base import A2AInteractionBase
+from app.intelligence.agents.a2a_interaction.a2a_interaction_scripts.a2a_docker_send_script import A2A_DOCKER_SEND_SCRIPT
+from app.intelligence.agents.a2a_interaction.a2a_interaction_scripts.a2a_docker_receive_script import A2A_DOCKER_RECEIVE_SCRIPT
+from app.intelligence.agents.a2a_interaction.a2a_interaction_docker import A2AInteractionDocker
+from app.intelligence.agents.a2a_interaction.a2a_interaction_host import A2AInteractionHost
+from app.intelligence.agents.a2a_interaction.a2a_interaction_factory.a2a_interaction_registry import A2A_INTERACTION_REGISTRY
+from app.intelligence.agents.a2a_interaction.a2a_interaction_factory.a2a_interaction_factory_base import A2AInteractionFactoryBase
+from app.intelligence.agents.a2a_interaction.a2a_interaction_factory.a2a_interaction_factory import A2AInteractionFactory
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent_type import OperationSubagentType
+from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent_peering import OperationSubagentPeering
 from app.intelligence.agents.deep_agent.operation_layers.operation_planning.operation_step import OperationStep
 from app.intelligence.agents.deep_agent.operation_layers.operation_planning.operation_plan import OperationPlan
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent_result import OperationSubagentResult
@@ -26,6 +36,8 @@ from app.intelligence.agents.deep_agent.prompts.subagent_report_prompt import SU
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagent import OperationSubagent
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_subagents_factory.operation_subagent_factory_base import OperationSubagentFactoryBase
 from app.intelligence.agents.deep_agent.prompts.subagent_task_template import SUBAGENT_TASK_TEMPLATE
+from app.intelligence.agents.deep_agent.prompts.subagent_peer_prompt import SUBAGENT_PEER_PROMPT
+from app.intelligence.agents.deep_agent.prompts.subagent_peer_message_template import SUBAGENT_PEER_MESSAGE_TEMPLATE
 from app.intelligence.agents.deep_agent.operation_layers.operation_subagents.operation_layer_subagents import OperationSubagentsLayer
 from app.intelligence.agents.deep_agent.operation_layers.operation_layers_factory.operation_layers_registry import OPERATION_LAYERS_REGISTRY
 from app.intelligence.agents.deep_agent.operation_layers.operation_layers_factory.operation_layers_factory_base import OperationLayersFactoryBase
@@ -72,7 +84,17 @@ __all__ = [
     "PROMPT_REGISTRY",
     "PromptManager",
     "AgentBase",
+    "A2AInteractionType",
+    "A2AInteractionBase",
+    "A2A_DOCKER_SEND_SCRIPT",
+    "A2A_DOCKER_RECEIVE_SCRIPT",
+    "A2AInteractionDocker",
+    "A2AInteractionHost",
+    "A2A_INTERACTION_REGISTRY",
+    "A2AInteractionFactoryBase",
+    "A2AInteractionFactory",
     "OperationSubagentType",
+    "OperationSubagentPeering",
     "OperationStep",
     "OperationPlan",
     "OperationSubagentResult",
@@ -96,6 +118,8 @@ __all__ = [
     "OperationSubagent",
     "OperationSubagentFactoryBase",
     "SUBAGENT_TASK_TEMPLATE",
+    "SUBAGENT_PEER_PROMPT",
+    "SUBAGENT_PEER_MESSAGE_TEMPLATE",
     "OperationSubagentsLayer",
     "OPERATION_LAYERS_REGISTRY",
     "OperationLayersFactoryBase",
