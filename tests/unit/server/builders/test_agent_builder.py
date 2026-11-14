@@ -3,10 +3,14 @@ import tempfile
 
 from app.intelligence.web import WebFetcher
 from app.intelligence.agents import DeepAgent
+from app.server.builders import SUBAGENT_PEERS
 from app.server.builders import build_deep_agent
+from app.server.builders import subagent_peering
 from app.intelligence.messages import MessageType
 from app.intelligence.memory import VectorDbMemory
 from app.intelligence.sandbox import SandboxEnvLocal
+from app.intelligence.agents import A2AInteractionType
+from app.intelligence.sandbox import SandboxPoolDocker
 from app.intelligence.tracing import TracingServiceNull
 from app.server.builders import subagent_tool_factories
 from app.intelligence.sandbox import SandboxPoolInMemory
@@ -14,6 +18,7 @@ from app.server.builders import SUBAGENT_PROBE_FACTORIES
 from app.intelligence.agents import OperationSubagentType
 from tests.fixtures.model.fake_embeddings import FakeEmbeddings
 from app.intelligence.agents import SUBAGENT_SYSTEM_PROMPT_TEMPLATES
+from tests.fixtures.sandbox.named_sandbox_pool import NamedSandboxPool
 
 
 def make_toolsets(with_documents = True):
@@ -76,3 +81,26 @@ class TestAgentBuilder:
             OperationSubagentType.TEST: ["OperationSubagentProbeWorkspace", "OperationSubagentProbeTests"],
             OperationSubagentType.REVIEW: []
         }
+
+    def test_testers_and_reviewers_can_message_the_coder(self):
+        assert SUBAGENT_PEERS == {
+            OperationSubagentType.TEST: OperationSubagentType.CODE,
+            OperationSubagentType.REVIEW: OperationSubagentType.CODE
+        }
+
+    def test_without_containers_the_messages_stay_in_the_process(self):
+        assert subagent_peering(SandboxPoolInMemory(size = 1)).interaction_type is A2AInteractionType.HOST
+        assert subagent_peering(NamedSandboxPool(size = 1)).interaction_type is A2AInteractionType.HOST
+
+    def test_with_containers_the_messages_cross_them(self):
+        pool = SandboxPoolDocker(pathlib.Path(tempfile.mkdtemp()) / "docker-compose.yaml")
+        assert subagent_peering(pool).interaction_type is A2AInteractionType.DOCKER
+
+    def test_no_prompt_names_the_peer_tool_it_is_only_given_with(self):
+        for current_type in OperationSubagentType:
+            assert "message_worker" not in SUBAGENT_SYSTEM_PROMPT_TEMPLATES[current_type]
+
+    def test_the_deep_agent_lets_its_subagents_message_each_other(self):
+        agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), [])
+        layer = next(current for current in agent._operation_pipeline._operation_layers if current.operation_type.name == "SUBAGENTS")
+        assert layer._peering.peers == SUBAGENT_PEERS
