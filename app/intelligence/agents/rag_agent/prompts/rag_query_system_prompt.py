@@ -12,4 +12,4 @@ LATEST MESSAGE: How often must it be calibrated?
 STANDALONE QUERY:
 How often must the ACME-7 sensor be calibrated?
 
-Reply with the standalone query only, on one line, in the language of the latest message."""
+Reply with the standalone query only, on one line."""
