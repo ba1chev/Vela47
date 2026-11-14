@@ -4,8 +4,8 @@ from app.intelligence.model import ModelConfig
 from app.intelligence.agents import PromptManager
 from app.intelligence.model import ModelFoundation
 from tests.fixtures.agents.echo_agent import EchoAgent
-from app.intelligence.a2a_interaction import A2AInteractionType
-from app.intelligence.a2a_interaction import A2AInteractionDocker
+from app.intelligence.agents import A2AInteractionType
+from app.intelligence.agents import A2AInteractionDocker
 
 
 def make_agent():
