@@ -14,7 +14,7 @@ from app.server.config_environment import ConfigEnvironment
 
 RAG_MODEL_NAMES = {
     ConfigEnvironment.DEV: "qwen3.5:9b",
-    ConfigEnvironment.PROD: "qwen.qwen3-235b-a22b-2507-v1:0"
+    ConfigEnvironment.PROD: "eu.anthropic.claude-sonnet-5-5"
 }
 EMBEDDING_MODEL_NAMES = {
     ConfigEnvironment.DEV: "qwen3-embedding:0.6b",
