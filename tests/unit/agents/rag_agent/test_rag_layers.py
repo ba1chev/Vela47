@@ -13,7 +13,6 @@ from app.intelligence.tracing import TraceEventType
 from app.intelligence.agents import RagRetrievalLayer
 from app.intelligence.agents import RagRerankingLayer
 from tests.fixtures.model.fake_model import FakeModel
-from app.intelligence.agents import RagNoSourcesReply
 from app.intelligence.agents import RagGenerationLayer
 from app.intelligence.memory import HybridSearchPolicy
 from app.intelligence.agents import RagChunkerRecursive
@@ -193,19 +192,14 @@ class TestRagGenerationLayer:
         assert "«What is the capital of France?»" in messages[0].content
         assert context.final.response_metadata["sources"] == []
 
-    def test_without_passages_the_model_names_the_language_before_the_reply(self):
+    def test_without_passages_the_reply_arrives_whole_as_the_model_wrote_it(self):
         tracer = TracingService()
-        model = FakeModel(['{"language": "Bulgarian", "reply": "Документите ви не покриват това."}'])
-        context = make_context("Кога е партито?", passages = [])
+        model = FakeModel(["  Your documents do not cover it. \n"])
+        context = make_context("When is the party?", passages = [])
         RagGenerationLayer(model, tracer).execute(context)
-        assert model.output_schemas == [RagNoSourcesReply.model_json_schema()]
-        assert context.final.content == "Документите ви не покриват това."
-        assert [current.payload["text"] for current in tracer.events() if current.type is TraceEventType.ANSWER_CHUNK] == [context.final.content]
-
-    def test_without_passages_a_reply_that_is_not_json_is_kept_as_written(self):
-        context = make_context("What is the capital of France?", passages = [])
-        RagGenerationLayer(FakeModel(["Your documents do not cover it."])).execute(context)
+        assert model.output_schemas == [None]
         assert context.final.content == "Your documents do not cover it."
+        assert [current.payload["text"] for current in tracer.events() if current.type is TraceEventType.ANSWER_CHUNK] == [context.final.content]
 
     def test_every_chunk_is_reported_as_it_streams(self):
         tracer = TracingService()
