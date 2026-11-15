@@ -5,6 +5,7 @@ from app.intelligence.memory import VectorDBSearchBase
 from app.intelligence.memory import VectorDBSearchType
 from app.intelligence.memory import VectorDBSearchInformedType
 from app.intelligence.memory import VectorDBSearchUninformedType
+from app.intelligence.memory import VectorDBSearchApproximateType
 
 
 class VectorDBSearchFactoryBase(ABC):
@@ -14,6 +15,7 @@ class VectorDBSearchFactoryBase(ABC):
 
     @abstractmethod
     def create(self, type: VectorDBSearchType,
-        algorithm: VectorDBSearchUninformedType | VectorDBSearchInformedType,
+        algorithm: VectorDBSearchUninformedType | VectorDBSearchInformedType
+            | VectorDBSearchApproximateType,
         **kwargs: Any) -> VectorDBSearchBase:
         raise NotImplementedError("Must be implemented")
