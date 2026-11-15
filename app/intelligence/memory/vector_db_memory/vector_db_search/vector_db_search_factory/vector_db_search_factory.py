@@ -6,6 +6,7 @@ from app.intelligence.memory import VECTOR_DB_SEARCH_REGISTRY
 from app.intelligence.memory import VectorDBSearchFactoryBase
 from app.intelligence.memory import VectorDBSearchInformedType
 from app.intelligence.memory import VectorDBSearchUninformedType
+from app.intelligence.memory import VectorDBSearchApproximateType
 
 
 class VectorDBSearchFactory(VectorDBSearchFactoryBase):
@@ -15,7 +16,8 @@ class VectorDBSearchFactory(VectorDBSearchFactoryBase):
     family factory's ValueError."""
 
     def create(self, type: VectorDBSearchType,
-        algorithm: VectorDBSearchUninformedType | VectorDBSearchInformedType,
+        algorithm: VectorDBSearchUninformedType | VectorDBSearchInformedType
+            | VectorDBSearchApproximateType,
         **kwargs: Any) -> VectorDBSearchBase:
         factory = VECTOR_DB_SEARCH_REGISTRY.get(type)
 
