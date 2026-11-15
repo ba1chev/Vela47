@@ -63,6 +63,12 @@ from app.intelligence.memory.vector_db_memory.vector_db_search.vector_db_search_
 from app.intelligence.memory.vector_db_memory.vector_db_search.vector_db_search_informed.vector_db_search_informed_factory.vector_db_search_informed_factory_base import VectorDBSearchInformedFactoryBase
 from app.intelligence.memory.vector_db_memory.vector_db_search.vector_db_search_informed.vector_db_search_informed_factory.vector_db_search_informed_registry import VECTOR_DB_SEARCH_INFORMED_REGISTRY
 from app.intelligence.memory.vector_db_memory.vector_db_search.vector_db_search_informed.vector_db_search_informed_factory.vector_db_search_informed_factory import VectorDBSearchInformedFactory
+from app.intelligence.memory.vector_db_memory.vector_db_search.vector_db_search_approximate.vector_db_search_approximate_types import VectorDBSearchApproximateType
+from app.intelligence.memory.vector_db_memory.vector_db_search.vector_db_search_approximate.vector_db_search_approximate_base import VectorDBSearchApproximateBase
+from app.intelligence.memory.vector_db_memory.vector_db_search.vector_db_search_approximate.vector_db_search_approximate_hnsw import VectorDBSearchApproximateHNSW
+from app.intelligence.memory.vector_db_memory.vector_db_search.vector_db_search_approximate.vector_db_search_approximate_factory.vector_db_search_approximate_factory_base import VectorDBSearchApproximateFactoryBase
+from app.intelligence.memory.vector_db_memory.vector_db_search.vector_db_search_approximate.vector_db_search_approximate_factory.vector_db_search_approximate_registry import VECTOR_DB_SEARCH_APPROXIMATE_REGISTRY
+from app.intelligence.memory.vector_db_memory.vector_db_search.vector_db_search_approximate.vector_db_search_approximate_factory.vector_db_search_approximate_factory import VectorDBSearchApproximateFactory
 from app.intelligence.memory.vector_db_memory.vector_db_search.vector_db_search_factory.vector_db_search_factory_base import VectorDBSearchFactoryBase
 from app.intelligence.memory.vector_db_memory.vector_db_search.vector_db_search_factory.vector_db_search_registry import VECTOR_DB_SEARCH_REGISTRY
 from app.intelligence.memory.vector_db_memory.vector_db_search.vector_db_search_factory.vector_db_search_factory import VectorDBSearchFactory
@@ -133,6 +139,12 @@ __all__ = [
     "VectorDBSearchInformedFactoryBase",
     "VECTOR_DB_SEARCH_INFORMED_REGISTRY",
     "VectorDBSearchInformedFactory",
+    "VectorDBSearchApproximateType",
+    "VectorDBSearchApproximateBase",
+    "VectorDBSearchApproximateHNSW",
+    "VectorDBSearchApproximateFactoryBase",
+    "VECTOR_DB_SEARCH_APPROXIMATE_REGISTRY",
+    "VectorDBSearchApproximateFactory",
     "VectorDBSearchFactoryBase",
     "VECTOR_DB_SEARCH_REGISTRY",
     "VectorDBSearchFactory"
