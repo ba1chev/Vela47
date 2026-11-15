@@ -6,6 +6,8 @@ from app.intelligence.memory import VectorDBSearchInformedType
 from app.intelligence.memory import VectorDBSearchUninformedBFS
 from app.intelligence.memory import VectorDBSearchUninformedType
 from app.intelligence.memory import VectorDBSearchInformedIDAStar
+from app.intelligence.memory import VectorDBSearchApproximateHNSW
+from app.intelligence.memory import VectorDBSearchApproximateType
 
 
 class TestVectorDBSearchFactory:
@@ -22,6 +24,13 @@ class TestVectorDBSearchFactory:
             graph = {}, heuristics = lambda node: 0
         )
         assert isinstance(search, VectorDBSearchInformedIDAStar)
+
+    def test_creates_approximate_search(self):
+        search = VectorDBSearchFactory().create(
+            VectorDBSearchType.APPROXIMATE, VectorDBSearchApproximateType.HIERARCHICAL_NAVIGABLE_SMALL_WORLD,
+            top_k = 3
+        )
+        assert isinstance(search, VectorDBSearchApproximateHNSW)
 
     def test_algorithm_of_other_family_raises(self):
         with pytest.raises(ValueError):
