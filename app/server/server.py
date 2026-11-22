@@ -1,6 +1,5 @@
 import pathlib
 from fastapi import FastAPI, Request
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 
 from app.server.routes import iam_router
@@ -11,11 +10,12 @@ from app.server.routes import knowledge_router
 from app.server.server_lifespan import lifespan
 from app.server.security import AuthorizationError
 from app.server.security import AuthenticationError
+from app.server.static_files import StaticFilesRevalidated
 
 STATIC_DIR = pathlib.Path(__file__).parent / "static"
 
 app = FastAPI(title = "Vela47", lifespan = lifespan)
-app.mount("/static", StaticFiles(directory = STATIC_DIR), name = "static")
+app.mount("/static", StaticFilesRevalidated(directory = STATIC_DIR), name = "static")
 for current_router in (auth_router, iam_router, session_router, chat_router, knowledge_router):
     app.include_router(current_router)
 
@@ -32,4 +32,4 @@ async def on_authorization_error(request: Request, error: AuthorizationError) ->
 
 @app.get("/")
 async def index() -> FileResponse:
-    return FileResponse(STATIC_DIR / "index.html")
+    return FileResponse(STATIC_DIR / "index.html", headers = {"Cache-Control": "no-cache"})
