@@ -13,7 +13,10 @@ const sessionListEl = document.getElementById("session-list");
 const sessionsEmptyEl = document.getElementById("sessions-empty");
 const newChatEl = document.getElementById("new-chat");
 const drawerToggleEl = document.getElementById("drawer-toggle");
-const agentSelectEl = document.getElementById("agent-select");
+const traceToggleEl = document.getElementById("trace-toggle");
+const sessionsEl = document.getElementById("sessions");
+const traceEl = document.getElementById("trace");
+const scrimEl = document.getElementById("scrim");
 
 const knowledgeFileEl = document.getElementById("knowledge-file");
 const uploadLabelEl = document.getElementById("upload-label");
@@ -54,10 +57,20 @@ const createUserSubmitEl = document.getElementById("create-user-submit");
 const messagesEl = document.getElementById("messages");
 const eventsEl = document.getElementById("events");
 const traceEmptyEl = document.getElementById("trace-empty");
+const traceSummaryEl = document.getElementById("trace-summary");
 const emptyEl = document.getElementById("empty");
 const emptyTitleEl = document.getElementById("empty-title");
 const emptyHintEl = document.getElementById("empty-hint");
+const suggestionsEl = document.getElementById("suggestions");
+const jumpEl = document.getElementById("jump");
 const statusEl = document.getElementById("status");
 const formEl = document.getElementById("composer");
 const inputEl = document.getElementById("input");
 const sendEl = document.getElementById("send");
+const agentSwitchEl = document.getElementById("agent-switch");
+
+function makeElement(tag, className) {
+  const element = document.createElement(tag);
+  element.className = className;
+  return element;
+}

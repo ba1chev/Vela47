@@ -7,6 +7,9 @@
      on every frame, across most of the screen. */
   --panel: rgba(30, 42, 72, .9);
   --panel-2: rgba(46, 61, 99, .42);
+  /* Whatever floats over other content (menus, drawers) is fully opaque, so nothing
+     underneath reads through it. */
+  --panel-solid: #1d2846;
   --border: rgba(133, 158, 214, .18);
   --border-strong: rgba(133, 158, 214, .34);
   --text: #eff3fd;
@@ -76,7 +79,7 @@ body {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: 250px minmax(0, 1fr) 320px;
+  grid-template-columns: 272px minmax(0, 1fr) 320px;
   width: min(1440px, 100% - 64px);
   margin-inline: auto;
   height: 100dvh;

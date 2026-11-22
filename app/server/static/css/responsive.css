@@ -1,4 +1,21 @@
-/* Narrower screens: the conversations become a drawer, then the panes stack. */
+/* Narrower screens: the conversations become a drawer, then the trace does too. */
+
+.drawer-toggle,
+.trace-toggle { display: none; }
+
+/* Behind an open drawer: dims the chat and closes the drawer when clicked. */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  background: rgba(8, 12, 26, .6);
+  animation: fade .2s ease-out;
+}
+
+@keyframes fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
 
 /* ---------- medium: conversations become a drawer ---------- */
 
@@ -18,26 +35,73 @@
     top: 14px;
     bottom: 14px;
     left: 14px;
-    width: min(290px, calc(100vw - 28px));
-    background: rgba(30, 41, 70, .95);
+    width: min(300px, calc(100vw - 28px));
+    background: var(--panel-solid);
     transform: translateX(calc(-100% - 28px));
     transition: transform .26s cubic-bezier(.2, .8, .2, 1);
     animation: none;
   }
 
-  .app[data-drawer="open"] .sessions { transform: none; }
+  .app[data-drawer="sessions"] .sessions { transform: none; }
 }
 
-/* ---------- narrow ---------- */
+/* ---------- narrow: the trace becomes a drawer from the right ---------- */
 
 @media (max-width: 880px) {
   .app {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(0, 1fr) minmax(0, 38dvh);
     width: min(1180px, 100% - 24px);
-    padding-block: 14px;
+    padding-block: 12px;
     gap: 12px;
   }
-  .messages { padding: 18px 16px; }
-  .composer { padding: 12px 14px 14px; }
+
+  .chat-head { padding: 12px 14px; gap: 10px; }
+  .messages { padding: 18px 14px; }
+  .composer { padding: 10px 12px 12px; }
+  .composer-hint { display: none; }
+  .msg, .answer { max-width: 100%; }
+
+  .trace-toggle {
+    position: relative;
+    display: grid;
+    place-items: center;
+    padding: 6px;
+    margin-right: -6px;
+  }
+
+  /* A run in progress shows on the button, since the trace itself is out of sight. */
+  .trace-toggle[data-live="1"]::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent-3);
+    animation: glow 1.3s ease-in-out infinite;
+  }
+
+  .trace {
+    position: fixed;
+    z-index: 20;
+    top: 12px;
+    bottom: 12px;
+    right: 12px;
+    width: min(360px, calc(100vw - 24px));
+    background: var(--panel-solid);
+    transform: translateX(calc(100% + 24px));
+    transition: transform .26s cubic-bezier(.2, .8, .2, 1);
+    animation: none;
+  }
+
+  .app[data-drawer="trace"] .trace { transform: none; }
+
+  .identity { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+}
+
+@media (max-width: 480px) {
+  .chat-head h1 { font-size: 14px; }
+  .status { display: none; }
+  .identity { max-width: 110px; }
 }

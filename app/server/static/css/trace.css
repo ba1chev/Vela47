@@ -49,14 +49,74 @@
   pointer-events: none;
 }
 
-.ev {
+.trace-summary {
+  flex: 1;
+  font: 10.5px/1 var(--mono);
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ev-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ev[data-open="0"] > .ev-children { display: none; }
+
+.ev { animation: slide .26s cubic-bezier(.2, .8, .2, 1); }
+
+/* A stored trace is drawn all at once, without every row sliding in. */
+.events[data-replay="1"] .ev { animation: none; }
+
+/* Each level of nesting moves a row right by a step: the run, its layers, the
+   subagents and the steps inside them. */
+.ev-head {
   display: grid;
   grid-template-columns: 12px minmax(0, 1fr) auto;
   gap: 10px;
   align-items: baseline;
-  padding: 7px 14px;
+  width: 100%;
+  padding: 7px 14px 7px calc(14px + var(--depth, 0) * 13px);
+  border: none;
   border-left: 2px solid transparent;
-  animation: slide .26s cubic-bezier(.2, .8, .2, 1);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+button.ev-head { cursor: default; }
+.ev[data-nested="1"] > button.ev-head { cursor: pointer; }
+.ev[data-nested="1"] > button.ev-head:hover { background-color: rgba(133, 158, 214, .06); }
+button.ev-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* A folded group says how many steps it holds, and a caret shows it opens. */
+.ev .count {
+  display: none;
+  margin-left: 7px;
+  font: 10.5px/1 var(--mono);
+  color: var(--faint);
+}
+
+.ev[data-nested="1"][data-open="0"] > .ev-head .count { display: inline; }
+
+.ev[data-nested="1"] > .ev-head .time::after {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 7px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform .15s;
+}
+
+.ev[data-nested="1"][data-open="0"] > .ev-head .time::after {
+  transform: translateY(-1px) rotate(-45deg);
 }
 
 @keyframes slide {
@@ -64,23 +124,20 @@
   to   { opacity: 1; transform: none; }
 }
 
-.ev[data-depth="1"] { padding-left: 26px; }
-.ev[data-depth="2"] { padding-left: 40px; }
-
-.ev[data-kind="layer"] {
+.ev[data-kind="layer"] > .ev-head {
   border-left-color: var(--accent);
-  background: linear-gradient(90deg, var(--accent-soft), transparent);
+  background-image: linear-gradient(90deg, var(--accent-soft), transparent);
 }
 
-.ev[data-kind="error"] {
+.ev[data-kind="error"] > .ev-head {
   border-left-color: var(--err);
-  background: linear-gradient(90deg, rgba(255, 127, 138, .12), transparent);
+  background-image: linear-gradient(90deg, rgba(255, 127, 138, .12), transparent);
 }
 
 /* Each subagent type gets its own hue, set from --agent by the stylesheet below. */
-.ev[data-agent] { border-left-color: var(--agent); }
-.ev[data-agent] .name { color: var(--agent); }
-.ev[data-agent] .dot  { background: var(--agent); }
+.ev[data-agent] > .ev-head { border-left-color: var(--agent); }
+.ev[data-agent] > .ev-head .name { color: var(--agent); }
+.ev[data-agent] > .ev-head .dot  { background: var(--agent); }
 .ev[data-agent="RESEARCH"] { --agent: var(--agent-research); }
 .ev[data-agent="CODE"]     { --agent: var(--agent-code); }
 .ev[data-agent="TEST"]     { --agent: var(--agent-test); }
@@ -95,12 +152,12 @@
   transform: translateY(-1px);
 }
 
-.ev[data-kind="pipeline"] .dot,
-.ev[data-kind="layer"] .dot { background: var(--accent); }
-.ev[data-kind="subagent"] .dot { background: var(--ok); }
-.ev[data-kind="error"] .dot { background: var(--err); }
+.ev[data-kind="pipeline"] > .ev-head .dot,
+.ev[data-kind="layer"] > .ev-head .dot { background: var(--accent); }
+.ev[data-kind="subagent"] > .ev-head .dot { background: var(--ok); }
+.ev[data-kind="error"] > .ev-head .dot { background: var(--err); }
 
-.ev[data-live="1"] .dot {
+.ev[data-live="1"] > .ev-head .dot {
   animation: glow 1.3s ease-in-out infinite;
 }
 
@@ -112,16 +169,18 @@
 .ev .label { min-width: 0; }
 .ev .name { overflow-wrap: anywhere; }
 
-.ev[data-kind="pipeline"] .name,
-.ev[data-kind="layer"] .name { font-weight: 650; }
-.ev[data-kind="subagent"] .name {
+.ev[data-kind="pipeline"] > .ev-head .name,
+.ev[data-kind="layer"] > .ev-head .name { font-weight: 650; }
+.ev[data-kind="subagent"] > .ev-head .name {
   font-weight: 700;
   letter-spacing: .04em;
   font-size: 12px;
 }
 
-.ev[data-kind="error"] .name { color: var(--err); }
-.ev[data-kind="a2a"] .name { font-weight: 650; }
+.ev[data-kind="error"] > .ev-head .name { color: var(--err); }
+.ev[data-kind="a2a"] > .ev-head .name { font-weight: 650; }
+
+.ev .detail:empty { display: none; }
 
 .ev .detail {
   display: -webkit-box;

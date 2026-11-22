@@ -6,10 +6,11 @@
   .chat-head::after, .trace-head::after, .sessions-head::after,
   .status[data-state="running"],
   .brand-dot::after, .orb span, .orb::after,
-  .thinking i, .msg, .ev, .ev[data-live="1"] .dot {
+  .thinking i, .msg, .ev, .ev[data-live="1"] > .ev-head .dot,
+  .answer, .jump, .scrim, .source[data-flash="1"], .trace-toggle[data-live="1"]::after {
     animation: none;
   }
   .thinking i { opacity: .7; }
   .orb span { opacity: .3; }
-  .sessions, .usage-fill { transition: none; }
+  .sessions, .trace, .usage-fill { transition: none; }
 }
