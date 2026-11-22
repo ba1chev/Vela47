@@ -17,3 +17,8 @@ class TestSlidingWindowPolicy:
         result = ops[0].apply(msgs)
         assert len(result) == 2
         assert result[0].content == "3"
+
+    def test_drops_whole_steps_until_the_list_is_below_capacity(self):
+        msgs = [MessageHuman(content = str(i)) for i in range(11)]
+        result = SlidingWindowPolicy(step = 2).resolve(msgs, capacity = 8)[0].apply(msgs)
+        assert [message.content for message in result] == ["4", "5", "6", "7", "8", "9", "10"]
