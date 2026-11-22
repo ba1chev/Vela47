@@ -50,18 +50,13 @@ function makeKnowledgeItem(doc, pending) {
   return li;
 }
 
-function makeElement(tag, className) {
-  const element = document.createElement(tag);
-  element.className = className;
-  return element;
-}
-
 function renderKnowledge(pendingTitle) {
   const items = knowledge.documents.map((current) => makeKnowledgeItem(current, false));
   if (pendingTitle) items.unshift(makeKnowledgeItem({ title: pendingTitle }, true));
   knowledgeListEl.replaceChildren(...items);
   knowledgeEmptyEl.hidden = items.length > 0;
   renderUsage();
+  renderEmptyText();
 }
 
 async function loadKnowledge() {
