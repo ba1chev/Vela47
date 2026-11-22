@@ -606,8 +606,16 @@ resource "aws_autoscaling_group" "web" {
     version = "$Latest"
   }
 
-  # The instance reaches ECS only through the NAT gateway, so the gateway and its route go after the instance on destroy
-  depends_on = [aws_nat_gateway.main, aws_route_table_association.private]
+  # The instance reaches ECS only through the NAT gateway and with the policies of its role, so on destroy the gateway,
+  # its route and the role's policies go after the instance; without them the ECS agent disconnects and a destroy
+  # waits forever on a task stuck in STOPPING
+  depends_on = [
+    aws_nat_gateway.main,
+    aws_route_table_association.private,
+    aws_iam_role_policy_attachment.ec2_container_service,
+    aws_iam_role_policy_attachment.ec2_session_manager,
+    aws_iam_instance_profile.ec2,
+  ]
 
   # A new launch template version replaces the instance, the old one goes first since there is only one
   instance_refresh {
