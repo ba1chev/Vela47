@@ -384,7 +384,7 @@ variable "rds_security_group_name" {
 variable "app_secret_name" {
   type        = string
   default     = "vela47/app"
-  description = "Name for the Secrets Manager secret holding the token signing key and the bootstrapped admin"
+  description = "Name for the Secrets Manager secret holding the token signing key, the bootstrapped admin and the search key"
 }
 
 variable "app_secret_recovery_window_in_days" {
@@ -424,6 +424,13 @@ variable "app_admin_password_length" {
     condition     = var.app_admin_password_length >= 12
     error_message = "The server needs an admin password of at least 12 characters."
   }
+}
+
+variable "app_tavily_api_key" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "Key of the Tavily search API the server searches the web with, empty falls back to DuckDuckGo, set it with TF_VAR_app_tavily_api_key"
 }
 
 # Domain variables

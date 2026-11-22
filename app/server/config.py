@@ -23,9 +23,9 @@ class Config(BaseModel):
     so a test builds one in a line.
 
     Non-secret values come from VELA47_* environment variables. In PROD secrets never
-    do: the token secret and the first admin are read once from an application secret,
-    and no database password is held here at all, since the database reads its
-    RDS-managed secret for every new connection. DEV has a default for every field and
+    do: the token secret, the first admin and the search key are read once from an
+    application secret, and no database password is held here at all, since the
+    database reads its RDS-managed secret for every new connection. DEV has a default for every field and
     runs on SQLite unless a database host is set, then on that PostgreSQL with
     credentials from the environment. PROD requires what it cannot run safely without."""
 
@@ -92,6 +92,13 @@ class Config(BaseModel):
         default = None,
         description = "Password of that admin, at least 12 characters. PROD: 'admin_password' in the "
             "application secret. DEV: VELA47_ADMIN_PASSWORD. Unused once the admin exists."
+    )
+    tavily_api_key: Optional[SecretStr] = Field(
+        default = None,
+        description = "PROD only, optional. Key of the Tavily search API the research subagent "
+            "searches the web with — 'tavily_api_key' in the application secret, an empty value "
+            "counting as none. Without it PROD searches through DuckDuckGo. DEV always does, "
+            "so it has no variable for it."
     )
 
     @model_validator(mode = "after")
@@ -172,6 +179,7 @@ class Config(BaseModel):
         values.update(
             token_secret = app_secret.get("token_secret"),
             admin_username = app_secret.get("admin_username"),
-            admin_password = app_secret.get("admin_password")
+            admin_password = app_secret.get("admin_password"),
+            tavily_api_key = app_secret.get("tavily_api_key") or None
         )
         return cls(**values)

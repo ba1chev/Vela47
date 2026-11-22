@@ -7,4 +7,6 @@ tests/evals/results
 .terraform
 *.tfstate
 *.tfstate.*
+*.tfvars
 DOCUMENTATION.md
+keys.py

@@ -3,6 +3,7 @@ from typing import Callable
 from app.intelligence.tools import ToolBase
 from app.intelligence.web import WebFetcher
 from app.intelligence.agents import DeepAgent
+from app.intelligence.web import WebSearchBase
 from app.intelligence.model import ModelConfig
 from app.intelligence.tools import ToolFetchUrl
 from app.intelligence.tools import ToolReadFile
@@ -18,7 +19,6 @@ from app.intelligence.memory import VectorDbMemory
 from app.intelligence.model import ModelClientBase
 from app.intelligence.model import ModelFoundation
 from app.intelligence.tools import ToolSearchFiles
-from app.intelligence.web import WebSearchDuckDuckGo
 from app.intelligence.sandbox import SandboxPoolBase
 from app.intelligence.agents import OperationPipeline
 from app.server.builders import CONTEXT_WINDOW_TOKENS
@@ -59,9 +59,8 @@ SUBAGENT_PEERS = {
 SUBAGENT_MAX_PEER_MESSAGES = 2
 
 
-def subagent_tool_factories(knowledge_memory: VectorDbMemory,
-    web_fetcher: WebFetcher) -> dict[OperationSubagentType, list[Callable[[SandboxEnv], ToolBase]]]:
-    web_search = WebSearchDuckDuckGo(web_fetcher)
+def subagent_tool_factories(knowledge_memory: VectorDbMemory, web_fetcher: WebFetcher,
+    web_search: WebSearchBase) -> dict[OperationSubagentType, list[Callable[[SandboxEnv], ToolBase]]]:
     document_search = [lambda sandbox_env: ToolSearchDocuments(knowledge_memory)] if len(knowledge_memory) > 0 else []
     return {
         OperationSubagentType.RESEARCH: [
@@ -89,7 +88,7 @@ def subagent_peering(sandbox_pool: SandboxPoolBase) -> OperationSubagentPeering:
 
 
 def build_deep_agent(tracing_service: TracingServiceBase, sandbox_pool: SandboxPoolBase,
-    web_fetcher: WebFetcher, knowledge_entries: list[VectorDbMemoryEntry],
+    web_fetcher: WebFetcher, web_search: WebSearchBase, knowledge_entries: list[VectorDbMemoryEntry],
     environment: ConfigEnvironment, model_client: ModelClientBase) -> DeepAgent:
     model_name = MODEL_NAMES[environment]
     planning_model = ModelFoundation(
@@ -107,7 +106,7 @@ def build_deep_agent(tracing_service: TracingServiceBase, sandbox_pool: SandboxP
     )
 
     tool_factories = subagent_tool_factories(
-        build_knowledge_memory(tracing_service, knowledge_entries, environment, model_client), web_fetcher
+        build_knowledge_memory(tracing_service, knowledge_entries, environment, model_client), web_fetcher, web_search
     )
     blueprints = {
         current_type: OperationSubagentBlueprint(

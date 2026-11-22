@@ -138,3 +138,14 @@ class TestConfig:
         })
         assert "s" * 32 not in repr(config) and "admin-password-long" not in repr(config)
         assert "local-password" not in repr(config)
+
+    def test_prod_reads_the_search_key_from_the_application_secret(self):
+        config = Config.from_environment(PROD, make_reader({"token_secret": "t" * 32, "tavily_api_key": "tvly-key"}))
+        assert config.tavily_api_key.get_secret_value() == "tvly-key"
+
+    def test_prod_with_an_empty_search_key_has_none(self):
+        config = Config.from_environment(PROD, make_reader({"token_secret": "t" * 32, "tavily_api_key": ""}))
+        assert config.tavily_api_key is None
+
+    def test_dev_has_no_search_key(self):
+        assert Config.from_environment({"VELA47_TAVILY_API_KEY": "tvly-key"}).tavily_api_key is None

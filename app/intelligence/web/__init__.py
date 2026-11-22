@@ -9,6 +9,11 @@ from app.intelligence.web.web_search.web_search_base import WebSearchBase
 from app.intelligence.web.web_search.web_search_throttle import WebSearchThrottle
 from app.intelligence.web.web_search.web_search_duckduckgo_parser import WebSearchDuckDuckGoParser
 from app.intelligence.web.web_search.web_search_duckduckgo import WebSearchDuckDuckGo
+from app.intelligence.web.web_search.web_search_tavily import WebSearchTavily
+from app.intelligence.web.web_search.web_search_type import WebSearchType
+from app.intelligence.web.web_search.web_search_factory.web_search_factory_base import WebSearchFactoryBase
+from app.intelligence.web.web_search.web_search_factory.web_search_registry import WEB_SEARCH_REGISTRY
+from app.intelligence.web.web_search.web_search_factory.web_search_factory import WebSearchFactory
 
 __all__ = [
     "WebAccessError",
@@ -20,5 +25,10 @@ __all__ = [
     "WebSearchBase",
     "WebSearchThrottle",
     "WebSearchDuckDuckGoParser",
-    "WebSearchDuckDuckGo"
+    "WebSearchDuckDuckGo",
+    "WebSearchTavily",
+    "WebSearchType",
+    "WebSearchFactoryBase",
+    "WEB_SEARCH_REGISTRY",
+    "WebSearchFactory"
 ]
