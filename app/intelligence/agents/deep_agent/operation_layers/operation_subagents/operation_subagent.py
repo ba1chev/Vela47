@@ -27,7 +27,8 @@ class OperationSubagent(AgentBase):
     answered once with SUBAGENT_ACT_PROMPT, since small models open by announcing what
     they will do. Tool calls written as text are stripped from the report; if nothing is
     left, the last real tool result is passed on. The probes of its type run around the
-    loop, and what they find is kept as evidence beside the report."""
+    loop, and what they find is kept as evidence beside the report. Every task message and
+    tool result is shown to the tools through observe()."""
 
     TOOL_CALL_TEXT = re.compile(r"<tool_call>.*?(</tool_call>|$)", re.DOTALL)
     LAST_RESULT_CHARS = 1200
@@ -56,6 +57,16 @@ class OperationSubagent(AgentBase):
     @property
     def evidence(self) -> list[str]:
         return list(self._evidence)
+
+    def _append_human(self, message: MessageHuman) -> None:
+        super()._append_human(message)
+        for current_tool in self._tool_registry.all():
+            current_tool.observe(message)
+
+    def _append_tool(self, message: MessageTool) -> None:
+        super()._append_tool(message)
+        for current_tool in self._tool_registry.all():
+            current_tool.observe(message)
 
     def execute(self, human_message: MessageHuman) -> MessageAI:
         for current_probe in self._probes:
