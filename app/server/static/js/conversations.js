@@ -62,10 +62,12 @@ async function loadSessions() {
 function clearMessages() {
   messagesEl.replaceChildren(emptyEl);
   emptyEl.hidden = false;
+  messagesEl.dataset.stick = "1";
+  jumpEl.hidden = true;
 }
 
 function startNewChat() {
-  if (stream) return;
+  if (run) return;
   currentSessionId = null;
   clearMessages();
   clearTrace();
@@ -75,7 +77,7 @@ function startNewChat() {
 }
 
 async function openSession(id) {
-  if (stream) return;
+  if (run) return;
   const result = await api(`/api/sessions/${encodeURIComponent(id)}`);
   if (result.status === 401) {
     showGate(EXPIRED);
@@ -89,11 +91,22 @@ async function openSession(id) {
   currentSessionId = id;
   clearMessages();
   clearTrace();
+  let lastAnswer = null;
   for (const message of result.data.messages) {
-    const bubble = addMessage(message.content, message.role === "human" ? "user" : "ai");
-    if (message.role === "ai" && message.agent) bubble.dataset.agent = message.agent;
-    if (message.sources && message.sources.length) renderSources(message.sources);
+    if (message.role === "human") {
+      addMessage(message.content, "user");
+      continue;
+    }
+    const bubble = addAnswer(message.content, message.agent);
+    completeAnswer(bubble, { sources: message.sources || [], trace: message.trace || [] });
+    lastAnswer = bubble.parentElement;
   }
+  // The trace panel shows how the latest answer came about, as it did when it arrived.
+  if (lastAnswer && lastAnswer.trace.length) {
+    renderTrace(lastAnswer.trace);
+    lastAnswer.dataset.traced = "1";
+  }
+  scrollToEnd(messagesEl, true);
   markActive();
   closeDrawer();
   inputEl.focus();
