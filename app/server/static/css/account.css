@@ -56,7 +56,7 @@
   flex-direction: column;
   gap: 2px;
   padding: 8px;
-  background: rgba(30, 41, 70, .94);
+  background: var(--panel-solid);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow);
