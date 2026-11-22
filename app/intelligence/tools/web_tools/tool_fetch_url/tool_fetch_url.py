@@ -1,8 +1,13 @@
+import re
 from typing import Optional
+from urllib.parse import urldefrag
 
 from app.intelligence.tools import ToolBase
 from app.intelligence.web import WebFetcher
 from app.intelligence.loaders import LoaderType
+from app.intelligence.messages import MessageTool
+from app.intelligence.messages import MessageBase
+from app.intelligence.messages import MessageHuman
 from app.intelligence.loaders import LoadersFactory
 from app.intelligence.loaders import LoaderDocument
 from app.intelligence.tools import ToolFetchUrlInput
@@ -16,17 +21,26 @@ class ToolFetchUrl(ToolBase[ToolFetchUrlInput, str]):
     WebFetcher, so only public addresses are reachable, and through the loader its
     content type calls for; the result starts with the title and the final URL to cite.
 
-    A page is fetched once per tool, which is once per task, and kept while the agent
-    pages through it. A page with no text, usually one drawn by JavaScript, is reported
-    as such with a pointer to another source."""
+    It opens only an address the conversation has already shown, exactly as shown: one
+    in the task or in a result of a tool named in link_sources, web_search by default.
+    Links inside fetched pages never count, so text injected into a page cannot make the
+    agent send what it read from the user's documents to an address of its own. A page
+    is fetched once per tool, which is once per task, and kept while the agent pages
+    through it; one with no text is reported as such with a pointer to another source."""
+
+    URL_PATTERN = re.compile(r"https?://[^\s<>\"'`]+")
+    TRAILING_CHARS = ".,;:!?)]}*_"
 
     def __init__(self, web_fetcher: WebFetcher,
-        loaders_factory: Optional[LoadersFactoryBase] = None) -> None:
+        loaders_factory: Optional[LoadersFactoryBase] = None,
+        link_sources: tuple[str, ...] = ("web_search",)) -> None:
         super().__init__()
         self._web_fetcher: WebFetcher = web_fetcher
         self._loaders_factory: LoadersFactoryBase = (
             loaders_factory if loaders_factory is not None else LoadersFactory()
         )
+        self._link_sources: tuple[str, ...] = link_sources
+        self._shown: set[str] = set()
         self._pages: dict[str, tuple[str, LoaderDocument, bool]] = {}
 
     @property
@@ -45,6 +59,18 @@ class ToolFetchUrl(ToolBase[ToolFetchUrlInput, str]):
     def input_schema(self) -> type[ToolFetchUrlInput]:
         return ToolFetchUrlInput
 
+    def _normalize(self, url: str) -> str:
+        return urldefrag(url.strip().rstrip(self.TRAILING_CHARS))[0].rstrip("/")
+
+    def observe(self, message: MessageBase) -> None:
+        shows_links = isinstance(message, MessageHuman) or (
+            isinstance(message, MessageTool) and message.name in self._link_sources
+        )
+        if not shows_links:
+            return
+        text = message.content if isinstance(message.content, str) else str(message.content)
+        self._shown.update(self._normalize(current_url) for current_url in self.URL_PATTERN.findall(text))
+
     def _load(self, url: str) -> tuple[str, LoaderDocument, bool]:
         if url in self._pages:
             return self._pages[url]
@@ -62,7 +88,13 @@ class ToolFetchUrl(ToolBase[ToolFetchUrlInput, str]):
         return self._pages[url]
 
     def execute(self, input: ToolFetchUrlInput) -> str:
-        final_url, document, truncated = self._load(input.url.strip())
+        if self._normalize(input.url) not in self._shown:
+            raise ValueError(
+                f"{input.url.strip()} was not in your task or in a web_search result, and "
+                f"fetch_url opens only those addresses, exactly as they were given. Search "
+                f"for the page with web_search first, then open a result."
+            )
+        final_url, document, truncated = self._load(urldefrag(input.url.strip())[0])
         text = document.text
         if not text:
             reason = (
