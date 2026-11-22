@@ -12,9 +12,11 @@ from app.intelligence.memory import VectorDBSearchInformedType
 
 class VectorDBSearchInformedAStar(VectorDBSearchInformedBase):
     """A* search over a weighted graph. Expands the node with the lowest path cost plus
-    heuristic and keeps only the cheapest known path to every node, so with a heuristic
-    that never overestimates, the path it returns is the cheapest one. Returns the path
-    from start to goal, or an empty list when the goal is unreachable."""
+    heuristic and keeps only the cheapest known path to every node. A node is expanded
+    again whenever a cheaper path to it turns up, so a heuristic that never
+    overestimates is enough for the returned path to be the cheapest one; it need not
+    also be consistent. Returns the path from start to goal, or an empty list when the
+    goal is unreachable."""
 
     def __init__(self, graph: dict[Hashable, list[VectorDBSearchEdge]],
         heuristics: Callable[[Hashable], float]) -> None:
@@ -31,7 +33,6 @@ class VectorDBSearchInformedAStar(VectorDBSearchInformedBase):
 
         sequence = count()
         queue: list[tuple[float, int, Hashable, float]] = []
-        visited: set[Hashable] = set()
         parents: dict[Hashable, Hashable] = {}
         distances: dict[Hashable, float] = {}
 
@@ -40,17 +41,13 @@ class VectorDBSearchInformedAStar(VectorDBSearchInformedBase):
         while queue:
             _, _, current_node, current_distance = heappop(queue)
 
-            if current_node in visited:
+            if current_distance > distances[current_node]:
                 continue
-            visited.add(current_node)
 
             if current_node == goal_state:
                 return reconstruct_path(parents, goal_state)
 
             for current_child_node in self._graph.get(current_node, []):
-                if current_child_node.to in visited:
-                    continue
-
                 child_distance = current_distance + current_child_node.weight
                 if child_distance < distances.get(current_child_node.to, inf):
                     parents[current_child_node.to] = current_node

@@ -1,6 +1,6 @@
 # Inference backends and the sampling configuration that drives them.
 
-from app.intelligence.model.mode_base import ModelBase
+from app.intelligence.model.model_base import ModelBase
 from app.intelligence.model.model_type import ModelType
 from app.intelligence.model.model_config import ModelConfig
 from app.intelligence.model.model_foundation.model_role_map import MODEL_ROLE_MAP

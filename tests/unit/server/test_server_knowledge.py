@@ -201,6 +201,13 @@ class TestServerKnowledge:
         sign_in(client, "ana")
         assert import_url(client, "https://example.org/notes", title = "Notes").json()["document"]["title"] == "Notes"
 
+    def test_a_blank_title_from_the_caller_falls_back_to_the_pages_own(self):
+        page = "<html><head><title>Release notes</title></head><body><p>Hybrid search shipped.</p></body></html>"
+        client = make_client(routes = {"https://example.org/notes": FakeWebServer.page(page)})
+        sign_in(client, "ana")
+        response = import_url(client, "https://example.org/notes", title = "   ")
+        assert response.status_code == 201 and response.json()["document"]["title"] == "Release notes"
+
     def test_a_page_without_a_title_is_listed_under_its_url(self):
         client = make_client(routes = {"https://example.org/plain": FakeWebServer.page("Just text.", "text/plain")})
         sign_in(client, "ana")

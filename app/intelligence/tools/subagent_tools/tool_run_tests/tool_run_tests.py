@@ -19,7 +19,7 @@ class ToolRunTests(ToolBase[ToolRunTestsInput, str]):
     pytest's summary, then the output with its middle cut, keeping more of the end,
     where failures are explained."""
 
-    TIMEOUT_SECONDS = 90
+    TIMEOUT_SECONDS = 60
     HEAD_CHARS = 1_000
     TAIL_CHARS = 3_000
     SUMMARY_PATTERN = re.compile(r"\b\d+ (passed|failed|error|errors|skipped|deselected)\b")

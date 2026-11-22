@@ -1,13 +1,20 @@
 // Talking to the server.
 
 // One place that talks JSON to the server, so every caller gets the same shape back
-// and can tell a 401 — sign in again — from any other failure.
+// and can tell a 401 — sign in again — from any other failure. A request that never
+// reaches the server comes back as status 0 instead of throwing, so no caller is left
+// with its buttons disabled.
 async function api(path, { method = "GET", body } = {}) {
-  const response = await fetch(path, {
-    method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let response;
+  try {
+    response = await fetch(path, {
+      method,
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    return { ok: false, status: 0, data: null };
+  }
   let data = null;
   if (response.status !== 204) {
     try { data = await response.json(); } catch { data = null; }

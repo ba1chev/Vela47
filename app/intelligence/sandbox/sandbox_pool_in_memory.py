@@ -1,5 +1,6 @@
 import pathlib
 import tempfile
+import threading
 
 from app.intelligence.sandbox import SandboxEnv
 from app.intelligence.sandbox import SandboxSlot
@@ -13,11 +14,13 @@ class SandboxPoolInMemory(SandboxPoolBase):
     slots, acquire fails when all are taken — so the subagents layer can be
     built and tested against pool semantics before any container runtime exists.
     Swapping in a Docker-backed pool later changes no caller, because the layer
-    depends on SandboxPoolBase rather than on this class."""
+    depends on SandboxPoolBase rather than on this class. Leasing is guarded by a
+    lock, as in the other pools, because concurrent requests share one pool."""
 
     def __init__(self, size: int = 10, base_directory: pathlib.Path | None = None) -> None:
         self._slots: list[SandboxSlot] = [SandboxSlot(id = index) for index in range(size)]
         self._busy: set[int] = set()
+        self._lock: threading.Lock = threading.Lock()
         self._base_directory: pathlib.Path = (
             pathlib.Path(base_directory)
             if base_directory is not None
@@ -25,17 +28,19 @@ class SandboxPoolInMemory(SandboxPoolBase):
         )
 
     def acquire(self) -> SandboxSlot:
-        for current_slot in self._slots:
-            if current_slot.id not in self._busy:
-                self._busy.add(current_slot.id)
-                return current_slot
+        with self._lock:
+            for current_slot in self._slots:
+                if current_slot.id not in self._busy:
+                    self._busy.add(current_slot.id)
+                    return current_slot
         raise RuntimeError(
             f"No sandbox slot available — all {len(self._slots)} are in use. "
             f"Increase the pool size or reduce how many subagents run at once."
         )
 
     def release(self, slot: SandboxSlot) -> None:
-        self._busy.discard(slot.id)
+        with self._lock:
+            self._busy.discard(slot.id)
 
     def env_for(self, slot: SandboxSlot, run_id: str) -> SandboxEnv:
         return SandboxEnvLocal(

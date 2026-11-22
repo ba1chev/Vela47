@@ -174,7 +174,7 @@ def import_knowledge_url(body: ImportKnowledgeUrlRequest, request: Request) -> d
         )
 
     document = _read(page.url, resolve_loader_type(page.url, page.content_type), page.content, page.encoding)
-    title = (body.title or document.title or page.url).strip()[:200]
+    title = ((body.title or "").strip() or (document.title or "").strip() or page.url)[:200]
     return _ingest(request, owner.entity_id, title, document.text)
 
 

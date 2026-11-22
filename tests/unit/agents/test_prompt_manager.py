@@ -26,6 +26,7 @@ class TestPromptManager:
     def test_remove_nonexistent_is_noop(self):
         pm = PromptManager()
         pm.remove("ghost")
+        assert len(pm) == 0
 
     def test_contains(self):
         pm = PromptManager()

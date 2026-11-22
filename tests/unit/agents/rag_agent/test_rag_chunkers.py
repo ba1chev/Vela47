@@ -20,6 +20,11 @@ class TestRagChunkerRecursive:
         chunks = RagChunkerRecursive(chunk_chars = 120, overlap_chars = 30).chunk(PARAGRAPHS)
         assert len(chunks) > 1 and all(len(current) <= 120 for current in chunks)
 
+    def test_the_overlap_never_pushes_a_chunk_past_the_limit(self):
+        text = "x" * 150 + ". " + "y" * 30 + ". " + "z" * 190
+        chunks = RagChunkerRecursive(chunk_chars = 200, overlap_chars = 40).chunk(text)
+        assert all(len(current) <= 200 for current in chunks)
+
     def test_paragraphs_that_fit_are_never_cut(self):
         chunks = RagChunkerRecursive(chunk_chars = 200, overlap_chars = 0).chunk(PARAGRAPHS)
         for index in range(12):

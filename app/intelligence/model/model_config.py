@@ -3,6 +3,12 @@ from pydantic import BaseModel, Field
 
 
 class ModelConfig(BaseModel):
+    """Which model answers a call and how it samples, as plain data. One instance per
+    role (planning, merging, a subagent, the reranker), so two calls to the same model
+    can still differ in temperature, output cap or reasoning. A backend sends only the
+    fields its provider understands: Bedrock, for one, takes the temperature, the stop
+    sequences and the output cap and leaves the rest out."""
+
     model_name: str = Field(
         description = "Name of the large language model exactly as it appears in `ollama list`, "
             "including the tag (e.g. 'qwen3:4b'). Determines which model handles the request."
