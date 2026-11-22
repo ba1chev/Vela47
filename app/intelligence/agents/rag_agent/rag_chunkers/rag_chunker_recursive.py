@@ -10,8 +10,9 @@ class RagChunkerRecursive(RagChunkerBase):
     greedily, into chunks as long as allowed.
 
     Each chunk after the first starts with the tail of the previous one, as many whole
-    pieces as fit in the overlap, so the overlap never cuts a sentence in half. Separators
-    stay attached to the text they ended, which keeps every chunk a verbatim slice of the
+    pieces as fit in the overlap and still leave room for the next piece, so the overlap
+    never cuts a sentence in half nor pushes a chunk past its length. Separators stay
+    attached to the text they ended, which keeps every chunk a verbatim slice of the
     document — the passage the agent cites is exactly what the document says."""
 
     SEPARATORS = ("\n\n", "\n", ". ", " ")
@@ -46,7 +47,10 @@ class RagChunkerRecursive(RagChunkerBase):
         for current_piece in self._split(text.strip(), self.SEPARATORS):
             if current and sum(map(len, current)) + len(current_piece) > self._chunk_chars:
                 chunks.append("".join(current).strip())
-                while current and sum(map(len, current)) > self._overlap_chars:
+                while current and (
+                    sum(map(len, current)) > self._overlap_chars
+                    or sum(map(len, current)) + len(current_piece) > self._chunk_chars
+                ):
                     current.pop(0)
             current.append(current_piece)
 
