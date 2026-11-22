@@ -65,8 +65,8 @@ class TestToolRunTests:
         assert output.startswith("pytest is not installed")
 
     def test_a_timeout_is_named(self):
-        output = make_tool(result(-1, "Command exceeded 90s", timed_out = True)).execute(ToolRunTestsInput())
-        assert output.startswith("The run was stopped after 90s")
+        output = make_tool(result(-1, "Command exceeded 60s", timed_out = True)).execute(ToolRunTestsInput())
+        assert output.startswith("The run was stopped after 60s")
 
     def test_long_output_keeps_its_end(self):
         long_output = "start\n" + "x" * 10_000 + "\nFAILED tests/test_a.py::test_b - assert 1 == 2\n1 failed in 0.1s"
