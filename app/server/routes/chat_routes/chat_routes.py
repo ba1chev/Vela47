@@ -70,7 +70,8 @@ def chat_stream(request: Request, message: str = Query(min_length = 1),
     else:
         entries = _searchable_entries(request, owner.entity_id)
         build_agent = lambda tracing_service: build_deep_agent(
-            tracing_service, state.sandbox_pool, state.web_fetcher, entries, state.config.environment, state.model_client
+            tracing_service, state.sandbox_pool, state.web_fetcher, state.web_search, entries,
+            state.config.environment, state.model_client
         )
 
     return StreamingResponse(
