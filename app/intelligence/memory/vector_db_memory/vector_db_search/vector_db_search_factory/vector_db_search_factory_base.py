@@ -9,9 +9,9 @@ from app.intelligence.memory import VectorDBSearchApproximateType
 
 
 class VectorDBSearchFactoryBase(ABC):
-    """Abstract factory over both families of search. create() takes the family and
-    the algorithm within it, so a caller can pick any search from two values without
-    knowing which family factory builds it."""
+    """Abstract factory over the three families of search. create() takes the family
+    and the algorithm within it, so a caller can pick any search from two values
+    without knowing which family factory builds it."""
 
     @abstractmethod
     def create(self, type: VectorDBSearchType,
