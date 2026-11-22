@@ -9,6 +9,7 @@ from app.server.config import Config
 from app.intelligence.web import WebFetcher
 from app.server.builders import build_database
 from app.server.builders import install_security
+from app.server.builders import build_web_search
 from app.server.builders import build_rag_indexer
 from app.server.builders import build_model_client
 from app.server.builders import build_sandbox_pool
@@ -75,9 +76,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.model_client = build_model_client(config)
     app.state.rag_indexer = build_rag_indexer(config.environment, app.state.model_client)
     app.state.web_fetcher = WebFetcher()
+    app.state.web_search = build_web_search(config, app.state.web_fetcher)
     logger.warning(
         "Database ready: %s in %s mode", database.database_type.value, config.environment.value
     )
+    logger.warning("Web search: %s", type(app.state.web_search).__name__)
 
     install_security(
         app.state, IdentityAccessStoreSql(database), AuthenticationPasswordHasher(), _token_secret(config)
