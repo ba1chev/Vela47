@@ -1,5 +1,3 @@
-import pathlib
-
 from app.intelligence.memory import ContextWindow
 from app.intelligence.messages import MessageType
 from app.intelligence.memory import ShortTermMemory
@@ -40,3 +38,13 @@ class TestMiddlewareSlidingWindow:
             window = make_window(5, 5)
             middleware.process(window)
             assert len(window.build()) == 3
+
+    def test_the_window_stays_below_capacity_as_the_memory_keeps_growing(self):
+        memory = ShortTermMemory()
+        window = ContextWindow(memory = memory, max_window_size = 8)
+        middleware = MiddlewareSlidingWindow(step = 2)
+        for index in range(20):
+            memory.append_message(str(index), MessageType.HUMAN_MESSAGE)
+            middleware.process(window)
+            assert window.size() < 8
+        assert window.build()[-1].content == "19"
