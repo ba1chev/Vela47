@@ -10,6 +10,7 @@ from app.intelligence.agents import PromptManager
 from app.intelligence.model import ModelFoundation
 from app.server.chat_sessions import ChatSessionStoreSql
 from tests.fixtures.agents.slow_echo_agent import SlowEchoAgent
+from tests.fixtures.agents.tracing_echo_agent import TracingEchoAgent
 
 
 def make_state():
@@ -39,6 +40,28 @@ def stream(delay_seconds, keepalive_seconds):
     return asyncio.run(collect())
 
 
+def stored_trace(tool_result):
+    state = make_state()
+    chat_session = ChatSession(owner_id = "a" * 32, title = "hi")
+
+    async def collect():
+        frames = stream_chat(
+            state, "hi", chat_session, True,
+            lambda tracing_service: TracingEchoAgent(
+                tracing_service,
+                tool_result,
+                model = ModelFoundation(ModelConfig(model_name = "qwen3:1.7b")),
+                prompt_manager = PromptManager(),
+                max_context_window_size = 10
+            ),
+            "deep"
+        )
+        return [current_frame async for current_frame in frames]
+
+    asyncio.run(collect())
+    return state.chat_session_store.get_session(chat_session.id).messages[-1].response_metadata["trace"]
+
+
 class TestChatStream:
     def test_a_silent_agent_keeps_the_stream_alive_with_comments(self):
         frames = stream(delay_seconds = 0.4, keepalive_seconds = 0.1)
@@ -52,3 +75,14 @@ class TestChatStream:
         frames = stream(delay_seconds = 0, keepalive_seconds = 10)
         assert KEEPALIVE_FRAME not in frames
         assert frames[-1].startswith("event: answer")
+
+    def test_the_stored_answer_keeps_the_steps_the_trace_panel_draws(self):
+        trace = stored_trace("short")
+        assert [current["type"] for current in trace] == [
+            "pipeline_started", "model_invoked", "tool_executed", "pipeline_finished"
+        ]
+        assert trace[1]["payload"] == {"total_tokens": 42} and trace[-1]["duration_ms"] == 12.5
+
+    def test_a_long_text_in_the_stored_trace_is_cut_short(self):
+        result = stored_trace("x" * 5000)[2]["payload"]["result"]
+        assert len(result) == 300 and result.endswith("…")
