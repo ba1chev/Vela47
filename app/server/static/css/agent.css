@@ -1,7 +1,63 @@
-/* The agent picker. */
+/* The agent switch above the message box: which agent answers the next message. */
 
-.agent-picker {
-  padding: 14px 14px 12px;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel-2);
+.agent-switch {
+  display: inline-flex;
+  gap: 2px;
+  margin: 0;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(16, 24, 44, .5);
 }
+
+/* The legend names the group for screen readers; the two options speak for themselves. */
+.agent-switch legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.agent-switch label {
+  position: relative;
+  cursor: pointer;
+}
+
+.agent-switch input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+
+.agent-switch span {
+  display: block;
+  padding: 5px 12px;
+  border-radius: 999px;
+  color: var(--faint);
+  font: 600 11px/1.2 var(--mono);
+  letter-spacing: .03em;
+  transition: color .15s, background .15s;
+}
+
+.agent-switch label:hover span { color: var(--muted); }
+
+.agent-switch input:checked + span {
+  color: #fff;
+  background: linear-gradient(135deg, rgba(91, 140, 255, .55), rgba(164, 107, 255, .55));
+}
+
+.agent-switch input[value="rag"]:checked + span {
+  background: linear-gradient(135deg, rgba(47, 212, 200, .45), rgba(91, 140, 255, .5));
+}
+
+.agent-switch input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.agent-switch input:disabled + span { opacity: .55; }
+.agent-switch label:has(input:disabled) { cursor: default; }
