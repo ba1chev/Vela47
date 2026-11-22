@@ -90,7 +90,7 @@ class ModelClientOllama(ModelClientBase):
             format = output_schema
         )
         return MessageAI(
-            content = response["message"]["content"],
+            content = response["message"]["content"] or "",
             tool_calls = self._parse_tool_calls(response["message"]),
             usage_metadata = self._usage(
                 response.get("prompt_eval_count", 0) or 0, response.get("eval_count", 0) or 0
