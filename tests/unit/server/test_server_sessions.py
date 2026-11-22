@@ -61,8 +61,8 @@ class TestServerSessions:
         session = store_session(sign_in(client, "ana"))
         body = client.get(f"/api/sessions/{session.id}").json()
         assert body["messages"] == [
-            {"role": "human", "agent": None, "sources": [], "content": "question"},
-            {"role": "ai", "agent": None, "sources": [], "content": "answer"}
+            {"role": "human", "agent": None, "sources": [], "trace": [], "content": "question"},
+            {"role": "ai", "agent": None, "sources": [], "trace": [], "content": "answer"}
         ]
 
     def test_an_answer_keeps_the_agent_that_wrote_it_and_its_sources(self):
@@ -76,6 +76,16 @@ class TestServerSessions:
         app.state.chat_session_store.create_session(session)
         answer = client.get(f"/api/sessions/{session.id}").json()["messages"][1]
         assert answer["agent"] == "rag" and answer["sources"] == sources
+
+    def test_an_answer_keeps_the_trace_of_the_run_that_wrote_it(self):
+        client = make_client()
+        trace = [{"type": "pipeline_finished", "label": "Pipeline", "payload": {}, "duration_ms": 9.0}]
+        session = ChatSession(owner_id = sign_in(client, "ana"), messages = [
+            MessageHuman(content = "q"),
+            MessageAI(content = "a", name = "deep", response_metadata = {"trace": trace})
+        ])
+        app.state.chat_session_store.create_session(session)
+        assert client.get(f"/api/sessions/{session.id}").json()["messages"][1]["trace"] == trace
 
     def test_reading_someone_elses_conversation_is_403(self):
         client = make_client()
