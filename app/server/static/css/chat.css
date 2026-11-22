@@ -12,6 +12,39 @@
 .empty p { margin: 0 0 10px; font-size: 16px; }
 .empty .hint { font-size: 13.5px; color: var(--faint); margin: 0; }
 
+/* Example questions under the empty state; one click sends it. */
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.suggestion {
+  max-width: 100%;
+  padding: 8px 13px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: rgba(46, 61, 99, .35);
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s, transform .15s;
+}
+
+.suggestion:hover,
+.suggestion:focus-visible {
+  outline: none;
+  color: var(--text);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  transform: translateY(-1px);
+}
+
 .orb {
   position: relative;
   width: 74px;
@@ -85,9 +118,29 @@
 
 .thinking {
   display: inline-flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  color: var(--muted);
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+
+.thinking .dots {
+  display: inline-flex;
   gap: 6px;
   align-items: center;
-  padding: 15px 16px;
+}
+
+.thinking-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thinking-time {
+  font: 11px/1 var(--mono);
+  color: var(--faint);
 }
 
 .thinking i {
@@ -106,15 +159,57 @@
   30%           { opacity: 1;  transform: translateY(-5px) scale(1); }
 }
 
+/* ---------- jump to the latest message ---------- */
+
+.jump {
+  position: absolute;
+  left: 50%;
+  top: -50px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--panel-solid);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  margin-left: -17px;
+  animation: rise .2s cubic-bezier(.2, .8, .2, 1);
+  transition: border-color .15s, color .15s;
+}
+
+.jump:hover { border-color: var(--accent); color: var(--accent); }
+
 /* ---------- composer ---------- */
 
 .composer {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  padding: 12px 18px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--panel-2);
+}
+
+.composer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.composer-hint {
+  font: 10.5px/1 var(--mono);
+  color: var(--faint);
+}
+
+.composer-row {
   display: flex;
   gap: 10px;
   align-items: flex-end;
-  padding: 14px 18px 16px;
-  border-top: 1px solid var(--border);
-  background: var(--panel-2);
 }
 
 .composer textarea {
@@ -138,7 +233,7 @@
   box-shadow: 0 0 0 3px var(--accent-soft), 0 0 20px rgba(91, 140, 255, .18);
 }
 
-.composer button {
+.composer-row button {
   display: grid;
   place-items: center;
   width: 42px;
@@ -152,10 +247,21 @@
   transition: transform .16s, box-shadow .16s, opacity .16s;
 }
 
-.composer button:hover:not(:disabled) {
+.composer-row button:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 6px 18px rgba(91, 140, 255, .4);
 }
 
-.composer button:active:not(:disabled) { transform: translateY(0); }
-.composer button:disabled { opacity: .35; cursor: default; }
+.composer-row button:active:not(:disabled) { transform: translateY(0); }
+.composer-row button:disabled { opacity: .35; cursor: default; }
+
+/* While a run works the send button stops it. */
+#send .icon-stop { display: none; }
+#send[data-mode="stop"] .icon-send { display: none; }
+#send[data-mode="stop"] .icon-stop { display: block; }
+#send[data-mode="stop"] {
+  background: rgba(255, 127, 138, .16);
+  color: var(--err);
+  box-shadow: inset 0 0 0 1px rgba(255, 127, 138, .45);
+}
+#send[data-mode="stop"]:hover { box-shadow: inset 0 0 0 1px var(--err), 0 6px 18px rgba(255, 127, 138, .25); }
