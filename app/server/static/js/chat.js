@@ -31,6 +31,12 @@ async function send(message) {
   // A session can expire while the page is open, and EventSource cannot tell a 401
   // from a dropped connection — so it is checked before every stream instead.
   const check = await api("/api/auth/me");
+  if (check.status === 0) {
+    finish(placeholder);
+    addMessage("The server could not be reached.", "err");
+    setStatus("error", "error");
+    return;
+  }
   if (!check.ok) {
     finish(placeholder);
     setStatus("idle", "idle");
