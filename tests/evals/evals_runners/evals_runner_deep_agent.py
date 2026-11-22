@@ -11,6 +11,7 @@ from app.server.builders import build_deep_agent
 from app.intelligence.messages import MessageHuman
 from app.intelligence.tracing import TracingService
 from app.intelligence.tracing import TraceEventType
+from app.intelligence.web import WebSearchDuckDuckGo
 from app.server.builders import SANDBOX_COMPOSE_FILE
 from app.intelligence.model import ModelClientOllama
 from app.intelligence.sandbox import SandboxPoolDocker
@@ -110,7 +111,7 @@ class EvalsRunnerDeepAgent(EvalsRunnerBase[EvalsCaseDeepAgent, EvalsRecordDeepAg
         before = self._run_directories()
         started = time.monotonic()
         try:
-            final = build_deep_agent(tracer, self._pool, WebFetcher(), [], ConfigEnvironment.DEV, ModelClientOllama()).execute(MessageHuman(content = case.goal)).content
+            final = build_deep_agent(tracer, self._pool, WebFetcher(), WebSearchDuckDuckGo(WebFetcher()), [], ConfigEnvironment.DEV, ModelClientOllama()).execute(MessageHuman(content = case.goal)).content
             crashed = None
         except Exception as error:
             final, crashed = "", f"{type(error).__name__}: {str(error)[:300]}"
