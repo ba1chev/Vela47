@@ -1,22 +1,34 @@
-// The conversation list as a drawer on narrow screens.
+// The panes that slide over the chat on narrow screens: the conversations from the left
+// and the trace from the right, one at a time, over a scrim that closes them.
 
-function openDrawer() {
-  appEl.dataset.drawer = "open";
-  drawerToggleEl.setAttribute("aria-expanded", "true");
+const DRAWERS = {
+  sessions: { toggle: drawerToggleEl, open: "Hide conversations", closed: "Show conversations" },
+  trace: { toggle: traceToggleEl, open: "Hide trace", closed: "Show trace" },
+};
+
+function openDrawer(name = "sessions") {
+  closeDrawer();
+  const drawer = DRAWERS[name];
+  appEl.dataset.drawer = name;
+  drawer.toggle.setAttribute("aria-expanded", "true");
+  drawer.toggle.setAttribute("aria-label", drawer.open);
+  scrimEl.hidden = false;
 }
 
 function closeDrawer() {
   delete appEl.dataset.drawer;
-  drawerToggleEl.setAttribute("aria-expanded", "false");
+  scrimEl.hidden = true;
+  for (const drawer of Object.values(DRAWERS)) {
+    drawer.toggle.setAttribute("aria-expanded", "false");
+    drawer.toggle.setAttribute("aria-label", drawer.closed);
+  }
 }
 
-drawerToggleEl.addEventListener("click", (e) => {
-  e.stopPropagation();
-  if (appEl.dataset.drawer === "open") closeDrawer();
-  else openDrawer();
-});
+function toggleDrawer(name) {
+  if (appEl.dataset.drawer === name) closeDrawer();
+  else openDrawer(name);
+}
 
-document.addEventListener("click", (e) => {
-  if (appEl.dataset.drawer !== "open") return;
-  if (!document.getElementById("sessions").contains(e.target)) closeDrawer();
-});
+drawerToggleEl.addEventListener("click", () => toggleDrawer("sessions"));
+traceToggleEl.addEventListener("click", () => toggleDrawer("trace"));
+scrimEl.addEventListener("click", closeDrawer);
