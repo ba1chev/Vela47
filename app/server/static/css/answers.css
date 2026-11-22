@@ -1,4 +1,59 @@
-/* Answers: who wrote them, and from what. */
+/* Answers: who wrote them, from what, and what can be done with them. */
+
+/* An answer and what belongs to it stay together: the bubble, its sources and the
+   line under it. */
+.answer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 680px;
+  min-width: 0;
+  animation: rise .28s cubic-bezier(.2, .8, .2, 1);
+}
+
+.answer > .msg { animation: none; max-width: 100%; }
+
+/* The answer whose run the trace panel is showing. */
+.answer[data-traced="1"] > .msg.ai { border-color: rgba(91, 140, 255, .42); }
+
+.msg-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding-left: 4px;
+  font: 11px/1 var(--mono);
+  color: var(--faint);
+}
+
+.meta-stats { margin-right: 6px; }
+.meta-stats.stopped { color: var(--agent-test); }
+
+.meta-action {
+  padding: 5px 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--faint);
+  font: inherit;
+  cursor: pointer;
+  transition: color .15s, background .15s;
+}
+
+.meta-action:hover,
+.meta-action:focus-visible {
+  outline: none;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.msg.stopped {
+  background: rgba(255, 194, 75, .08);
+  border: 1px solid rgba(255, 194, 75, .35);
+  color: var(--agent-test);
+  font-size: 13.5px;
+}
 
 .msg.ai[data-agent]::before {
   content: attr(data-agent) " agent";
@@ -13,18 +68,79 @@
 .msg.ai[data-agent="rag"]::before { color: var(--accent-3); }
 
 .sources {
-  max-width: 680px;
-  margin-top: -6px;
-  display: grid;
-  gap: 8px;
-  padding: 11px 13px;
+  align-self: stretch;
   border: 1px solid rgba(47, 212, 200, .22);
   border-radius: var(--radius-sm);
   background: rgba(47, 212, 200, .06);
-  animation: rise .28s cubic-bezier(.2, .8, .2, 1);
 }
 
-.source { display: grid; gap: 3px; }
+.sources-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 13px;
+  font: 600 11px/1.35 var(--mono);
+  color: var(--accent-3);
+  cursor: pointer;
+  list-style: none;
+  overflow-wrap: anywhere;
+}
+
+.sources-summary::-webkit-details-marker { display: none; }
+
+.sources-summary::before {
+  content: "";
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform .15s;
+}
+
+.sources[open] > .sources-summary::before { transform: translateY(-2px) rotate(45deg); }
+.sources-summary:focus-visible { outline: 2px solid var(--accent-3); outline-offset: -2px; border-radius: var(--radius-sm); }
+
+.source {
+  display: grid;
+  gap: 3px;
+  margin: 0 6px 6px;
+  padding: 7px 8px;
+  border-radius: 8px;
+}
+
+.source[data-flash="1"] { animation: flash 1.6s ease-out; }
+
+@keyframes flash {
+  0%, 30% { background: rgba(47, 212, 200, .2); }
+  100%    { background: transparent; }
+}
+
+/* A citation in the answer: a small numbered pill that opens its passage. */
+.cite {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  margin: 0 1px;
+  padding: 0 5px;
+  border: 1px solid rgba(47, 212, 200, .4);
+  border-radius: 999px;
+  background: rgba(47, 212, 200, .1);
+  color: var(--accent-3);
+  font: 600 10.5px/1 var(--mono);
+  vertical-align: 2px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+
+.cite:hover,
+.cite:focus-visible {
+  outline: none;
+  background: rgba(47, 212, 200, .24);
+  border-color: var(--accent-3);
+}
 
 .source-head {
   font: 600 11px/1.35 var(--mono);
