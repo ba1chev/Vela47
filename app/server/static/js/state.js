@@ -1,9 +1,10 @@
-// What the page knows across all of its parts: the open stream, who is signed in,
-// their conversations and their documents.
+// What the page knows across all of its parts: the run in progress and its stream, who
+// is signed in, their conversations and their documents.
 
 const EXPIRED = "Your session has expired — sign in again.";
 
 let stream = null;
+let run = null;
 
 // Who is signed in, as /api/auth/me describes them, and the conversations they own.
 // currentSessionId is null for a chat that has not been sent yet — the server creates
