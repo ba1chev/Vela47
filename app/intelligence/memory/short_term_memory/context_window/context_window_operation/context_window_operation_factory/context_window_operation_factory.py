@@ -19,7 +19,7 @@ class ContextWindowOperationFactory(ContextWindowOperationBaseFactory):
         if cls is None:
             raise ValueError(
                 f"No operation class registered for type '{type}'. "
-                f"Known types: {list(self._registry)}"
+                f"Known types: {list(CONTEXT_WINDOW_OPERATION_REGISTRY)}"
             )
 
         return cls(**kwargs)
