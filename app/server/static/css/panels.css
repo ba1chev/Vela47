@@ -8,7 +8,10 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  overflow: hidden;
+  /* clip, not hidden: a hidden overflow can still be scrolled by the browser, and the
+     header hairline below is four times the panel's width, so a resize or a focus
+     change could slide the whole panel sideways. */
+  overflow: clip;
   animation: lift .45s cubic-bezier(.2, .8, .2, 1) both;
 }
 
