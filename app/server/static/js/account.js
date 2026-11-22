@@ -78,7 +78,7 @@ switchFormEl.addEventListener("submit", async (e) => {
 });
 
 async function signOut() {
-  if (stream) return;
+  if (run) return;
   await api("/api/auth/logout", { method: "POST" });
   clearMessages();
   clearTrace();
