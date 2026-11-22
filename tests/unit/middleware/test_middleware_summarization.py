@@ -33,8 +33,12 @@ class TestMiddlewareSummarization:
         assert [message.content for message in window.build()[1:]] == ["2", "3", "4"]
 
     def test_below_capacity_the_summarizer_is_never_called(self):
-        """Summarising costs a model call, so it must not happen while there is room."""
         window = make_window(3, 10)
         calls = []
         MiddlewareSummarization(n = 2, summarizer = lambda m: calls.append(1) or "s").process(window)
         assert calls == []
+
+    def test_the_window_comes_back_to_the_same_size_however_far_the_memory_grew(self):
+        window = make_window(9, 5)
+        MiddlewareSummarization(n = 2, summarizer = lambda m: "s").process(window)
+        assert [message.content for message in window.build()] == ["s", "6", "7", "8"]
