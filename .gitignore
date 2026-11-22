@@ -9,3 +9,4 @@ tests/evals/results
 *.tfstate.*
 *.tfvars
 DOCUMENTATION.md
+keys.py
