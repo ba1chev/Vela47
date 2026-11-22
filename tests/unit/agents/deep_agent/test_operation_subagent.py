@@ -12,6 +12,7 @@ from app.intelligence.messages import MessageToolCall
 from app.intelligence.agents import OperationSubagent
 from app.intelligence.agents import SUBAGENT_ACT_PROMPT
 from app.intelligence.agents import SUBAGENT_REPORT_PROMPT
+from tests.fixtures.tools.observing_tool import ObservingTool
 from app.intelligence.middleware import MiddlewareSlidingWindow
 from tests.fixtures.agents.recording_probe import RecordingProbe
 from tests.fixtures.model.scripted_tool_model import ScriptedToolModel
@@ -134,3 +135,16 @@ class TestOperationSubagent:
         subagent, _, _ = make_subagent([MessageAI(content = "Done.")])
         subagent.execute(MessageHuman(content = "task"))
         assert subagent.evidence == []
+
+    def test_the_tools_are_shown_the_task_and_every_tool_result(self):
+        observer = ObservingTool(lambda a, b: a + b)
+        subagent = OperationSubagent(
+            model = ScriptedToolModel([call("add", {"a": 2, "b": 3}, "c1"), MessageAI(content = "5")]),
+            prompt_manager = PromptManager(),
+            max_context_window_size = 24,
+            tools = [observer],
+            context_window_middleware = MiddlewareSlidingWindow(step = 2)
+        )
+        subagent.execute(MessageHuman(content = "add 2 and 3"))
+        assert [type(current).__name__ for current in observer.observed] == ["MessageHuman", "MessageTool"]
+        assert observer.observed[0].content == "add 2 and 3" and observer.observed[1].name == "add"
