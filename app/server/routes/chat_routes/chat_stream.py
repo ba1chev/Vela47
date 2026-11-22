@@ -16,6 +16,12 @@ from app.intelligence.tracing import TracingServiceBase
 POLL_INTERVAL_SECONDS = 0.05
 KEEPALIVE_SECONDS = 15.0
 KEEPALIVE_FRAME = ": keep-alive\n\n"
+TRACE_TEXT_CHARS = 300
+UNSTORED_TRACE_EVENTS = {
+    TraceEventType.ANSWER_CHUNK,
+    TraceEventType.SANDBOX_ACQUIRED,
+    TraceEventType.SANDBOX_RELEASED
+}
 
 
 def _frame(event: str, data: dict[str, Any]) -> str:
@@ -31,6 +37,24 @@ def _frame_for(event: TraceEvent) -> str:
     if event.type is TraceEventType.ANSWER_CHUNK:
         return _frame("chunk", {"text": event.payload.get("text", "")})
     return _frame("trace", event.model_dump(mode = "json"))
+
+
+def _shorten(value: Any) -> Any:
+    if isinstance(value, str):
+        return value if len(value) <= TRACE_TEXT_CHARS else value[:TRACE_TEXT_CHARS - 1].rstrip() + "…"
+    if isinstance(value, list):
+        return [_shorten(current) for current in value]
+    if isinstance(value, dict):
+        return {key: _shorten(current) for key, current in value.items()}
+    return value
+
+
+def _stored_trace(events: list[TraceEvent]) -> list[dict[str, Any]]:
+    return [
+        _shorten(current_event.model_dump(mode = "json"))
+        for current_event in events
+        if current_event.type not in UNSTORED_TRACE_EVENTS
+    ]
 
 
 def _remember(state: State, chat_session: ChatSession, is_new: bool, turn: list[MessageBase]) -> None:
@@ -61,8 +85,9 @@ async def stream_chat(state: State, message: str, chat_session: ChatSession, is_
     Which agent answers is decided by the route and arrives as build_agent, a factory
     that takes this run's tracer — the agent has to be built inside the run, since the
     tracer it reports to is created here. Whatever it answers is marked with agent_name
-    before it is stored, so a conversation that moved between agents still shows who
-    wrote each reply, and the answer frame carries the sources a RAG answer cites.
+    and given the run's trace before it is stored, so a conversation that moved between
+    agents still shows who wrote each reply and how, and the answer frame carries the
+    sources a RAG answer cites.
 
     A model call can stay silent for minutes, longer than a load balancer keeps an idle
     connection open, so an SSE comment goes out whenever nothing else has for
@@ -97,7 +122,14 @@ async def stream_chat(state: State, message: str, chat_session: ChatSession, is_
         yield _frame_for(queue.get_nowait())
 
     try:
-        response = (await work).model_copy(update = {"name": agent_name})
+        answer = await work
+        response = answer.model_copy(update = {
+            "name": agent_name,
+            "response_metadata": {
+                **answer.response_metadata,
+                "trace": _stored_trace(tracing_service.events())
+            }
+        })
         await asyncio.to_thread(_remember, state, chat_session, is_new, [human_message, response])
         content = (
             response.content
