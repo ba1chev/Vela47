@@ -292,7 +292,7 @@ resource "aws_db_instance" "database" {
   tags                    = local.common_tags
 }
 
-# Application secret declaration (token signing key and the admin bootstrapped on the first start)
+# Application secret declaration (token signing key, the admin bootstrapped on the first start and the web search key)
 # The server reads it once at startup, VELA47_APP_SECRET_ID points to it
 resource "random_password" "token_secret" {
   length  = var.app_token_secret_length
@@ -316,6 +316,7 @@ resource "aws_secretsmanager_secret_version" "app" {
     token_secret   = random_password.token_secret.result
     admin_username = var.app_admin_username
     admin_password = random_password.admin_password.result
+    tavily_api_key = var.app_tavily_api_key
   })
 }
 
