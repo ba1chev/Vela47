@@ -8,7 +8,5 @@ from app.server.config_environment import ConfigEnvironment
 
 
 def build_rag_indexer(environment: ConfigEnvironment, model_client: ModelClientBase) -> RagIndexer:
-    return RagIndexer(
-        RagChunkersFactory().create(RagChunkerType.RECURSIVE),
-        ModelEmbeddings(EMBEDDING_MODEL_NAMES[environment], client = model_client)
-    )
+    embeddings = ModelEmbeddings(EMBEDDING_MODEL_NAMES[environment], client = model_client)
+    return RagIndexer(RagChunkersFactory().create(RagChunkerType.SEMANTIC, embeddings = embeddings), embeddings)
