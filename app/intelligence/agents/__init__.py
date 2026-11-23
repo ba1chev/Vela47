@@ -54,6 +54,7 @@ from app.intelligence.agents.rag_agent.rag_chunkers.rag_chunker_type import RagC
 from app.intelligence.agents.rag_agent.rag_chunkers.rag_chunker_base import RagChunkerBase
 from app.intelligence.agents.rag_agent.rag_chunkers.rag_chunker_recursive import RagChunkerRecursive
 from app.intelligence.agents.rag_agent.rag_chunkers.rag_chunker_fixed import RagChunkerFixed
+from app.intelligence.agents.rag_agent.rag_chunkers.rag_chunker_semantic import RagChunkerSemantic
 from app.intelligence.agents.rag_agent.rag_chunkers.rag_chunkers_factory.rag_chunkers_registry import RAG_CHUNKERS_REGISTRY
 from app.intelligence.agents.rag_agent.rag_chunkers.rag_chunkers_factory.rag_chunkers_factory_base import RagChunkersFactoryBase
 from app.intelligence.agents.rag_agent.rag_chunkers.rag_chunkers_factory.rag_chunkers_factory import RagChunkersFactory
@@ -135,6 +136,7 @@ __all__ = [
     "RagChunkerBase",
     "RagChunkerRecursive",
     "RagChunkerFixed",
+    "RagChunkerSemantic",
     "RAG_CHUNKERS_REGISTRY",
     "RagChunkersFactoryBase",
     "RagChunkersFactory",

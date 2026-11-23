@@ -13,7 +13,9 @@ class RagChunkersFactory(RagChunkersFactoryBase):
 
     Registry reference:
       RECURSIVE -> RagChunkerRecursive(chunk_chars=<int>, default 800, overlap_chars=<int>, default 120)
-      FIXED     -> RagChunkerFixed(chunk_chars=<int>, default 800, overlap_chars=<int>, default 120)"""
+      FIXED     -> RagChunkerFixed(chunk_chars=<int>, default 800, overlap_chars=<int>, default 120)
+      SEMANTIC  -> RagChunkerSemantic(embeddings=<ModelEmbeddings>, chunk_chars=<int>, default 800,
+                   min_chars=<int>, default 200, and the search weights)"""
 
     def create(self, type: RagChunkerType, **kwargs: Any) -> RagChunkerBase:
         cls = RAG_CHUNKERS_REGISTRY.get(type)
