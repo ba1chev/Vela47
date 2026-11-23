@@ -38,8 +38,8 @@ class TestWebSearchBuilder:
         assert isinstance(build_web_search(prod_config(), WebFetcher()), WebSearchDuckDuckGo)
 
     def test_the_application_secret_terraform_writes_holds_the_key_the_server_reads(self):
-        main = (PROD_TERRAFORM / "main.tf").read_text()
-        secret = re.search(r'resource "aws_secretsmanager_secret_version" "app" \{.*?jsonencode\(\{(.*?)\}\)', main, re.DOTALL)
+        secrets = (PROD_TERRAFORM / "secrets.tf").read_text()
+        secret = re.search(r'resource "aws_secretsmanager_secret_version" "app" \{.*?jsonencode\(\{(.*?)\}\)', secrets, re.DOTALL)
         assert re.search(r"^\s*tavily_api_key\s*=\s*var\.app_tavily_api_key\s*$", secret.group(1), re.MULTILINE)
 
     def test_the_key_is_a_sensitive_variable_that_may_stay_empty(self):
