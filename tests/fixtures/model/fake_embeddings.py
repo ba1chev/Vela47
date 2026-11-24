@@ -11,6 +11,7 @@ class FakeEmbeddings:
     embedded."""
 
     DIMENSIONS = 32
+    model_name = "fake-embeddings"
 
     def __init__(self) -> None:
         self.calls = []
