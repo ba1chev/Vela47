@@ -6,7 +6,9 @@ from app.intelligence.agents import RagIndexer
 from app.server.knowledge import KnowledgeDocument
 from app.server.knowledge import KnowledgeStoreSql
 from app.intelligence.agents import RagChunkerRecursive
+from app.intelligence.agents import RagMetadataAttacher
 from tests.fixtures.model.fake_embeddings import FakeEmbeddings
+from tests.fixtures.agents.fake_topic_register import FAKE_TOPIC_INDEX
 
 TEXT = "Error E1042 means the RDS secret could not be read.\n\nBackups are kept for 14 days."
 
@@ -19,7 +21,7 @@ def make_store(path = None):
 
 def add(store, owner_id = "o1", title = "guide.md", text = TEXT):
     document = KnowledgeDocument(owner_id = owner_id, title = title, size_bytes = len(text.encode()), chunk_count = 0)
-    entries = RagIndexer(RagChunkerRecursive(chunk_chars = 60, overlap_chars = 0), FakeEmbeddings()).index(document.id, title, text)
+    entries = RagIndexer(RagChunkerRecursive(chunk_chars = 60, overlap_chars = 0), FakeEmbeddings(), RagMetadataAttacher(FAKE_TOPIC_INDEX, FakeEmbeddings())).index(document.id, title, text)
     document = document.model_copy(update = {"chunk_count": len(entries)})
     store.add_document(document, entries)
     return document, entries
@@ -43,8 +45,16 @@ class TestKnowledgeStoreSql:
         loaded = store.load_entries("o1")
         assert [current.message.id for current in loaded] == [current.message.id for current in entries]
         assert loaded[1].message.name == "guide.md"
-        assert loaded[1].message.additional_kwargs == {"document_id": document.id, "chunk_index": 1}
+        assert loaded[1].metadata.source.document_id == document.id and loaded[1].metadata.source.chunk_index == 1
         assert loaded[0].vector == entries[0].vector
+
+    def test_entries_load_back_with_the_metadata_they_were_indexed_with(self):
+        store = make_store()
+        _, entries = add(store, text = "# Runbook\n\n## Errors\n" + TEXT)
+        loaded = store.load_entries("o1")
+        assert [current.metadata for current in loaded] == [current.metadata for current in entries]
+        error = next(current for current in loaded if "E1042" in current.message.content)
+        assert error.metadata.section == "Runbook › Errors" and error.metadata.keywords
 
     def test_entries_of_other_owners_are_never_loaded(self):
         store = make_store()
