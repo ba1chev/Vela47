@@ -60,7 +60,7 @@ class ToolSearchDocuments(ToolBase[ToolSearchDocumentsInput, str]):
             content = message.content if isinstance(message.content, str) else str(message.content)
             if len(content) > self.MAX_PASSAGE_CHARS:
                 content = content[:self.MAX_PASSAGE_CHARS].rstrip() + " …"
-            part = message.additional_kwargs.get("chunk_index")
+            part = current_entry.metadata.source.chunk_index if current_entry.metadata is not None else None
             source = message.name or "untitled document"
             label = f"{source}, part {part + 1}" if isinstance(part, int) else source
             passages.append(f"[{index}] {label}\n{content}")
