@@ -1,41 +1,43 @@
 import re
 import math
-import heapq
 from operator import mul
 
 from app.intelligence.model import ModelEmbeddings
 from app.intelligence.agents import RagChunkerBase
 from app.intelligence.agents import RagChunkerType
+from app.intelligence.agents import RagChunkSearchBase
+from app.intelligence.agents import RagChunkSearchType
+from app.intelligence.agents import RagChunkSearchFactory
 
 
 class RagChunkerSemantic(RagChunkerBase):
-    """Cuts text between sentences so that each chunk keeps to one topic, choosing all
-    the cuts of a document together with an A* search over states (next sentence, start
-    of the current chunk). Adding a sentence costs more the less it adds to the summed
-    embedding of its chunk; cutting costs a fixed fee, less where the similarity of the K
-    sentences on either side dips (the TextTiling depth) and less again at a paragraph
-    break. Lengths are hard limits: no chunk is longer than chunk_chars, and none is
-    shorter than min_chars unless the next sentence would not fit.
+    """Cuts text between sentences so that each chunk keeps to one topic. Adding a
+    sentence costs more the less it adds to the summed embedding of its chunk; cutting
+    costs a fixed fee, less where the similarity of the K sentences on either side dips
+    (the TextTiling depth) and less again at a paragraph break. All the cuts of a
+    document are then chosen together by the search SEARCH_TYPE names, which keeps every
+    chunk within chunk_chars and above min_chars (see RagChunkSearchBase).
 
     Every chunk is a verbatim slice of the document. Chunks do not overlap, since a cut
     never falls inside a sentence. The sentences are embedded once per document, on top
     of the chunks the indexer embeds afterwards."""
 
     UNIT_END = re.compile(r"(?<=[.!?…])\s+|\n\s*")
+    SEARCH_TYPE = RagChunkSearchType.A_STAR
 
     def __init__(self, embeddings: ModelEmbeddings, chunk_chars: int = 800, min_chars: int = 200,
         window_sentences: int = 3, extend_weight: float = 1.0, cut_weight: float = 1.0,
         cut_fee: float = 1.2, paragraph_discount: float = 0.8) -> None:
         super().__init__(chunk_chars, 0)
-        if not 0 <= min_chars <= chunk_chars:
-            raise ValueError("The shortest chunk must be between zero and the longest chunk.")
         if window_sentences < 1:
             raise ValueError("The window must hold at least one sentence.")
         if min(extend_weight, cut_weight, cut_fee, paragraph_discount) < 0:
             raise ValueError("Weights, the cut fee and the paragraph discount cannot be negative.")
 
         self._embeddings: ModelEmbeddings = embeddings
-        self._min_chars: int = min_chars
+        self._chunk_search: RagChunkSearchBase = RagChunkSearchFactory().create(
+            self.SEARCH_TYPE, chunk_chars = chunk_chars, min_chars = min_chars
+        )
         self._window_sentences: int = window_sentences
         self._extend_weight: float = extend_weight
         self._cut_weight: float = cut_weight
@@ -113,54 +115,6 @@ class RagChunkerSemantic(RagChunkerBase):
                 norm_squared, index = grown, index + 1
         return costs
 
-    def _search(self, lengths: list[int], cut_costs: list[float],
-        extend_costs: dict[tuple[int, int], float]) -> list[int]:
-        count = len(lengths)
-        remaining = [0] * (count + 1)
-        for index in range(count - 1, -1, -1):
-            remaining[index] = remaining[index + 1] + lengths[index]
-        cheapest_cut = min(cut_costs[1:], default = 0.0)
-
-        def heuristic(index: int, chars: int) -> float:
-            overflow = remaining[index] - (self._chunk_chars - chars)
-            return max(0, math.ceil(overflow / self._chunk_chars)) * cheapest_cut
-
-        best: dict[tuple[int, int], float] = {(1, 0): 0.0}
-        parents: dict[tuple[int, int], tuple[int, int] | None] = {}
-        frontier = [(heuristic(1, lengths[0]), 0.0, 1, 0, None)]
-
-        while frontier:
-            _, cost, index, start, parent = heapq.heappop(frontier)
-            if (index, start) in parents:
-                continue
-            parents[(index, start)] = parent
-            if index == count:
-                break
-
-            chars = remaining[start] - remaining[index]
-            forced = chars + lengths[index] > self._chunk_chars
-            moves = []
-            if not forced:
-                moves.append((index + 1, start, extend_costs[(start, index)], chars + lengths[index]))
-            if forced or (chars >= self._min_chars and remaining[index] >= self._min_chars):
-                moves.append((index + 1, index, cut_costs[index], lengths[index]))
-
-            for next_index, next_start, step, next_chars in moves:
-                total = cost + step
-                if total < best.get((next_index, next_start), math.inf):
-                    best[(next_index, next_start)] = total
-                    heapq.heappush(frontier, (total + heuristic(next_index, next_chars), total,
-                        next_index, next_start, (index, start)))
-        else:
-            raise RuntimeError("No cut of the document keeps every chunk within its length limits.")
-
-        starts: set[int] = set()
-        state = (index, start)
-        while state is not None:
-            starts.add(state[1])
-            state = parents[state]
-        return sorted(starts)
-
     def chunk(self, text: str) -> list[str]:
         units = self._units(text.strip())
         if len(units) <= 1:
@@ -168,7 +122,7 @@ class RagChunkerSemantic(RagChunkerBase):
 
         lengths = [len(current_unit) for current_unit in units]
         vectors = self._vectors(units)
-        starts = self._search(lengths, self._cut_costs(units, vectors), self._extend_costs(lengths, vectors))
+        starts = self._chunk_search.search(lengths, self._cut_costs(units, vectors), self._extend_costs(lengths, vectors))
 
         return [
             "".join(units[start:end]).strip()
