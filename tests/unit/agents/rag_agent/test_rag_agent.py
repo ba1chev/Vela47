@@ -17,7 +17,9 @@ from tests.fixtures.model.fake_model import FakeModel
 from app.intelligence.memory import HybridSearchPolicy
 from app.intelligence.agents import RAG_LAYERS_REGISTRY
 from app.intelligence.agents import RagChunkerRecursive
+from app.intelligence.agents import RagMetadataAttacher
 from tests.fixtures.model.fake_embeddings import FakeEmbeddings
+from tests.fixtures.agents.fake_topic_register import FAKE_TOPIC_INDEX
 
 TEXT = "Error E1042 means the RDS secret could not be read.\n\nBackups are kept for 14 days."
 
@@ -25,7 +27,7 @@ TEXT = "Error E1042 means the RDS secret could not be read.\n\nBackups are kept 
 def make_agent(model, tracer = None):
     embeddings = FakeEmbeddings()
     memory = VectorDbMemory(embeddings)
-    memory.add_entries(RagIndexer(RagChunkerRecursive(chunk_chars = 60, overlap_chars = 0), embeddings).index("d1", "guide.md", TEXT))
+    memory.add_entries(RagIndexer(RagChunkerRecursive(chunk_chars = 60, overlap_chars = 0), embeddings, RagMetadataAttacher(FAKE_TOPIC_INDEX, FakeEmbeddings())).index("d1", "guide.md", TEXT))
     policy = RagPolicyFull(model, model, model, memory, HybridSearchPolicy(), tracer)
     return RagAgent(model, PromptManager(), 6, RagPipeline(policy, tracer), memory, tracer)
 
