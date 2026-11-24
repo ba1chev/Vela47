@@ -60,6 +60,12 @@ from app.intelligence.agents.rag_agent.rag_chunkers.rag_chunk_search.rag_chunk_s
 from app.intelligence.agents.rag_agent.rag_chunkers.rag_chunk_search.rag_chunk_search_factory.rag_chunk_search_registry import RAG_CHUNK_SEARCH_REGISTRY
 from app.intelligence.agents.rag_agent.rag_chunkers.rag_chunk_search.rag_chunk_search_factory.rag_chunk_search_factory_base import RagChunkSearchFactoryBase
 from app.intelligence.agents.rag_agent.rag_chunkers.rag_chunk_search.rag_chunk_search_factory.rag_chunk_search_factory import RagChunkSearchFactory
+from app.intelligence.agents.rag_agent.rag_chunkers.rag_semantic_scoring.rag_semantic_scoring_type import RagSemanticScoringType
+from app.intelligence.agents.rag_agent.rag_chunkers.rag_semantic_scoring.rag_semantic_scoring_base import RagSemanticScoringBase
+from app.intelligence.agents.rag_agent.rag_chunkers.rag_semantic_scoring.rag_semantic_scoring_text_tiling import RagSemanticScoringTextTiling
+from app.intelligence.agents.rag_agent.rag_chunkers.rag_semantic_scoring.rag_semantic_scoring_factory.rag_semantic_scoring_registry import RAG_SEMANTIC_SCORING_REGISTRY
+from app.intelligence.agents.rag_agent.rag_chunkers.rag_semantic_scoring.rag_semantic_scoring_factory.rag_semantic_scoring_factory_base import RagSemanticScoringFactoryBase
+from app.intelligence.agents.rag_agent.rag_chunkers.rag_semantic_scoring.rag_semantic_scoring_factory.rag_semantic_scoring_factory import RagSemanticScoringFactory
 from app.intelligence.agents.rag_agent.rag_chunkers.rag_chunker_semantic import RagChunkerSemantic
 from app.intelligence.agents.rag_agent.rag_chunkers.rag_chunkers_factory.rag_chunkers_registry import RAG_CHUNKERS_REGISTRY
 from app.intelligence.agents.rag_agent.rag_chunkers.rag_chunkers_factory.rag_chunkers_factory_base import RagChunkersFactoryBase
@@ -148,6 +154,12 @@ __all__ = [
     "RAG_CHUNK_SEARCH_REGISTRY",
     "RagChunkSearchFactoryBase",
     "RagChunkSearchFactory",
+    "RagSemanticScoringType",
+    "RagSemanticScoringBase",
+    "RagSemanticScoringTextTiling",
+    "RAG_SEMANTIC_SCORING_REGISTRY",
+    "RagSemanticScoringFactoryBase",
+    "RagSemanticScoringFactory",
     "RagChunkerSemantic",
     "RAG_CHUNKERS_REGISTRY",
     "RagChunkersFactoryBase",
