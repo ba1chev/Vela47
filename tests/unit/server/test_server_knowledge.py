@@ -11,6 +11,7 @@ from app.server.builders import install_security
 from app.server.knowledge import KnowledgeStoreSql
 from app.server.security import IdentityEntityType
 from app.intelligence.agents import RagChunkerRecursive
+from app.intelligence.agents import RagMetadataAttacher
 from app.server.chat_sessions import ChatSessionStoreSql
 from tests.fixtures.web.fake_resolver import FakeResolver
 from tests.fixtures.loaders.pdf_builder import PdfBuilder
@@ -19,6 +20,7 @@ from tests.fixtures.loaders.docx_builder import DocxBuilder
 from app.server.security import AuthenticationPasswordHasher
 from tests.fixtures.web.fake_web_server import FakeWebServer
 from tests.fixtures.model.fake_embeddings import FakeEmbeddings
+from tests.fixtures.agents.fake_topic_register import FAKE_TOPIC_INDEX
 
 PASSWORD = "a-long-enough-password"
 
@@ -35,7 +37,7 @@ def make_client(max_file_bytes = 1000, max_owner_bytes = 1500, max_upload_bytes 
     database.start()
     app.state.chat_session_store = ChatSessionStoreSql(database)
     app.state.knowledge_store = KnowledgeStoreSql(database)
-    app.state.rag_indexer = RagIndexer(RagChunkerRecursive(chunk_chars = 60, overlap_chars = 0), FakeEmbeddings())
+    app.state.rag_indexer = RagIndexer(RagChunkerRecursive(chunk_chars = 60, overlap_chars = 0), FakeEmbeddings(), RagMetadataAttacher(FAKE_TOPIC_INDEX, FakeEmbeddings()))
     for current_name in ["ana", "bob"]:
         app.state.identity_access_service.create_entity(IdentityEntityType.USER, current_name, PASSWORD)
     return TestClient(app)
