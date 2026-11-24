@@ -1,6 +1,8 @@
 from pydantic import Field
+from typing import Optional
 
 from app.intelligence.messages import MessageBase
+from app.intelligence.memory import VectorDbMemoryMetadata
 from app.intelligence.messages import MessageImmutableModel
 
 
@@ -9,7 +11,11 @@ class VectorDbMemoryEntry(MessageImmutableModel):
     stored and retrieved together. The message field holds the original content
     and metadata; the vector field holds the floating-point representation
     produced by ModelEmbeddings. Immutable by design — embeddings are computed
-    once at insertion time and never updated in place."""
+    once at insertion time and never updated in place.
+
+    metadata describes the vector for whoever reads a search result — a document
+    chunk carries its source, section, topic and keywords; a remembered message
+    carries none."""
 
     message: MessageBase = Field(
         description = "The original message whose text was embedded. Carries the full "
@@ -19,4 +25,9 @@ class VectorDbMemoryEntry(MessageImmutableModel):
         description = "Dense embedding of the message content as produced by ModelEmbeddings. "
             "Dimensionality is model-dependent and fixed for a given embedding model. "
             "Used by vector operations such as SEARCH to compute similarity scores."
+    )
+    metadata: Optional[VectorDbMemoryMetadata] = Field(
+        default = None,
+        description = "What is known about the vector beyond its text, worked out when it was "
+            "indexed. None for entries that were never indexed as part of a document."
     )
