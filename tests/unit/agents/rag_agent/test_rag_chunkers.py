@@ -7,6 +7,7 @@ from app.intelligence.agents import RagChunkersFactory
 from app.intelligence.agents import RagChunkerSemantic
 from app.intelligence.agents import RagChunkerRecursive
 from app.intelligence.agents import RAG_CHUNKERS_REGISTRY
+from app.intelligence.agents import RagSemanticScoringType
 from tests.fixtures.model.fake_embeddings import FakeEmbeddings
 
 PARAGRAPHS = "\n\n".join(f"Paragraph {index} says something worth reading about topic {index}." for index in range(12))
@@ -71,16 +72,16 @@ class TestRagChunkerFixed:
 class TestRagChunkerSemantic:
     def test_empty_text_is_no_chunk_and_no_embedding_call(self):
         chunker = make_semantic()
-        assert chunker.chunk("  \n ") == [] and chunker._embeddings.calls == []
+        assert chunker.chunk("  \n ") == [] and chunker._semantic_scoring._embeddings.calls == []
 
     def test_one_sentence_is_one_chunk_without_an_embedding_call(self):
         chunker = make_semantic()
-        assert chunker.chunk("  Just one sentence.  ") == ["Just one sentence."] and chunker._embeddings.calls == []
+        assert chunker.chunk("  Just one sentence.  ") == ["Just one sentence."] and chunker._semantic_scoring._embeddings.calls == []
 
     def test_every_sentence_is_embedded_in_one_call(self):
         chunker = make_semantic(chunk_chars = 1000, min_chars = 60)
         chunker.chunk(SERVERS + " " + BAKING)
-        assert len(chunker._embeddings.calls) == 1 and len(chunker._embeddings.calls[0]) == 8
+        assert len(chunker._semantic_scoring._embeddings.calls) == 1 and len(chunker._semantic_scoring._embeddings.calls[0]) == 8
 
     def test_the_cut_falls_where_the_topic_changes(self):
         chunker = make_semantic(chunk_chars = 1000, min_chars = 60, extend_weight = 3.0)
@@ -107,6 +108,12 @@ class TestRagChunkerSemantic:
         chunker = make_semantic(chunk_chars = 300, min_chars = 120)
         assert chunker._chunk_search.search_type is RagChunkSearchType.A_STAR
         assert (chunker._chunk_search._chunk_chars, chunker._chunk_search._min_chars) == (300, 120)
+
+    def test_the_costs_come_from_the_scoring_its_type_names(self):
+        chunker = make_semantic(chunk_chars = 300, window_sentences = 2, cut_fee = 0.5)
+        assert chunker._semantic_scoring.scoring_type is RagSemanticScoringType.TEXT_TILING
+        assert (chunker._semantic_scoring._chunk_chars, chunker._semantic_scoring._window_sentences) == (300, 2)
+        assert chunker._semantic_scoring._cut_fee == 0.5
 
 
 class TestRagChunkerParameters:
@@ -138,7 +145,7 @@ class TestRagChunkersFactory:
     def test_it_builds_the_semantic_chunker_with_its_embeddings(self):
         embeddings = FakeEmbeddings()
         chunker = RagChunkersFactory().create(RagChunkerType.SEMANTIC, embeddings = embeddings)
-        assert chunker.chunker_type is RagChunkerType.SEMANTIC and chunker._embeddings is embeddings
+        assert chunker.chunker_type is RagChunkerType.SEMANTIC and chunker._semantic_scoring._embeddings is embeddings
 
     def test_an_unknown_type_raises_value_error(self):
         with pytest.raises(ValueError):
