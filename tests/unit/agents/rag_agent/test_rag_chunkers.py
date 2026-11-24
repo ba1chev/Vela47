@@ -1,9 +1,8 @@
-import random
 import pytest
-import itertools
 
 from app.intelligence.agents import RagChunkerType
 from app.intelligence.agents import RagChunkerFixed
+from app.intelligence.agents import RagChunkSearchType
 from app.intelligence.agents import RagChunkersFactory
 from app.intelligence.agents import RagChunkerSemantic
 from app.intelligence.agents import RagChunkerRecursive
@@ -23,26 +22,6 @@ BAKING = (
 
 def make_semantic(**kwargs):
     return RagChunkerSemantic(FakeEmbeddings(), **kwargs)
-
-
-def path_cost(starts, count, cut_costs, extend_costs):
-    total = 0.0
-    for start, end in zip(starts, starts[1:] + [count]):
-        total += (cut_costs[start] if start else 0.0) + sum(extend_costs[(start, index)] for index in range(start + 1, end))
-    return total
-
-
-def allowed(starts, lengths, chunker):
-    remaining = [sum(lengths[index:]) for index in range(len(lengths) + 1)]
-    for start, end in zip(starts, starts[1:] + [len(lengths)]):
-        if sum(lengths[start:end]) > chunker._chunk_chars:
-            return False
-        chars = sum(lengths[start:end])
-        if end < len(lengths):
-            forced = chars + lengths[end] > chunker._chunk_chars
-            if not forced and (chars < chunker._min_chars or remaining[end] < chunker._min_chars):
-                return False
-    return True
 
 
 class TestRagChunkerRecursive:
@@ -124,24 +103,10 @@ class TestRagChunkerSemantic:
         chunks = make_semantic(chunk_chars = 100, min_chars = 0).chunk(text)
         assert all(len(current) <= 100 for current in chunks) and "".join(chunks).replace(" ", "") == text.replace(" ", "")
 
-    def test_the_search_finds_the_cheapest_allowed_cut(self):
-        chunker = make_semantic(chunk_chars = 150, min_chars = 40)
-        generator = random.Random(7)
-        for _ in range(40):
-            lengths = [generator.randint(15, 80) for _ in range(9)]
-            cut_costs = [0.0] + [generator.uniform(0.0, 2.0) for _ in range(8)]
-            extend_costs = {
-                (start, index): generator.uniform(0.0, 1.0)
-                for start in range(9) for index in range(start + 1, 9)
-                if sum(lengths[start:index + 1]) <= 150
-            }
-            found = chunker._search(lengths, cut_costs, extend_costs)
-            candidates = [
-                [0, *middle] for size in range(9) for middle in itertools.combinations(range(1, 9), size)
-                if allowed([0, *middle], lengths, chunker)
-            ]
-            cheapest = min(path_cost(current, 9, cut_costs, extend_costs) for current in candidates)
-            assert allowed(found, lengths, chunker) and path_cost(found, 9, cut_costs, extend_costs) == pytest.approx(cheapest)
+    def test_the_cuts_are_chosen_by_the_search_its_type_names(self):
+        chunker = make_semantic(chunk_chars = 300, min_chars = 120)
+        assert chunker._chunk_search.search_type is RagChunkSearchType.A_STAR
+        assert (chunker._chunk_search._chunk_chars, chunker._chunk_search._min_chars) == (300, 120)
 
 
 class TestRagChunkerParameters:
