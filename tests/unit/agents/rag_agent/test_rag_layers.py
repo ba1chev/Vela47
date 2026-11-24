@@ -16,14 +16,16 @@ from tests.fixtures.model.fake_model import FakeModel
 from app.intelligence.agents import RagGenerationLayer
 from app.intelligence.memory import HybridSearchPolicy
 from app.intelligence.agents import RagChunkerRecursive
+from app.intelligence.agents import RagMetadataAttacher
 from app.intelligence.agents import RAG_NO_SOURCES_PROMPT
 from tests.fixtures.model.fake_embeddings import FakeEmbeddings
+from tests.fixtures.agents.fake_topic_register import FAKE_TOPIC_INDEX
 
 TEXT = "Error E1042 means the RDS secret could not be read.\n\nBackups are kept for 14 days.\n\nThe coffee machine is cleaned on Fridays."
 
 
 def make_entries():
-    return RagIndexer(RagChunkerRecursive(chunk_chars = 60, overlap_chars = 0), FakeEmbeddings()).index("d1", "guide.md", TEXT)
+    return RagIndexer(RagChunkerRecursive(chunk_chars = 60, overlap_chars = 0), FakeEmbeddings(), RagMetadataAttacher(FAKE_TOPIC_INDEX, FakeEmbeddings())).index("d1", "guide.md", TEXT)
 
 
 def make_context(goal = "What does E1042 mean?", **fields):
@@ -178,6 +180,21 @@ class TestRagGenerationLayer:
         sources = context.final.response_metadata["sources"]
         assert [(current["index"], current["chunk_index"], current["score"]) for current in sources] == [(1, 1, 9), (2, 0, None)]
         assert sources[0]["title"] == "guide.md" and sources[0]["document_id"] == "d1"
+
+    def test_each_source_names_the_section_its_passage_sits_in(self):
+        entries = RagIndexer(
+            RagChunkerRecursive(chunk_chars = 60, overlap_chars = 0), FakeEmbeddings(), RagMetadataAttacher(FAKE_TOPIC_INDEX, FakeEmbeddings())
+        ).index("d1", "guide.md", "# Runbook\n\n## Backups\nBackups are kept for 14 days.")
+        context = make_context(passages = [entries[-1]])
+        RagGenerationLayer(FakeModel(["answer"])).execute(context)
+        assert context.final.response_metadata["sources"][0]["section"] == "Runbook › Backups"
+
+    def test_a_passage_without_metadata_still_becomes_a_source(self):
+        entry = make_entries()[0].model_copy(update = {"metadata": None})
+        context = make_context(passages = [entry])
+        RagGenerationLayer(FakeModel(["answer"])).execute(context)
+        source = context.final.response_metadata["sources"][0]
+        assert source["title"] == "guide.md" and source["document_id"] is None and source["section"] is None
 
     def test_history_comes_before_the_question(self):
         model = FakeModel(["answer"])
