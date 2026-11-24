@@ -19,6 +19,8 @@ from app.intelligence.memory.short_term_memory.context_window.context_window_ope
 from app.intelligence.memory.short_term_memory.context_window.context_window_operation.context_window_operation_factory.context_window_operation_factory import ContextWindowOperationFactory
 from app.intelligence.memory.short_term_memory.context_window.context_window_operation.context_window_policy_sliding_window import SlidingWindowPolicy
 from app.intelligence.memory.short_term_memory.context_window.context_window_operation.context_window_policy_summarize_oldest import SummarizeOldestPolicy
+from app.intelligence.memory.vector_db_memory.vector_db_memory_source import VectorDbMemorySource
+from app.intelligence.memory.vector_db_memory.vector_db_memory_metadata import VectorDbMemoryMetadata
 from app.intelligence.memory.vector_db_memory.vector_db_memory_entry import VectorDbMemoryEntry
 from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_type import VectorDbOperationType
 from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation import VectorDbOperation
@@ -93,6 +95,8 @@ __all__ = [
     "ContextWindowOperationFactory",
     "SlidingWindowPolicy",
     "SummarizeOldestPolicy",
+    "VectorDbMemorySource",
+    "VectorDbMemoryMetadata",
     "VectorDbMemoryEntry",
     "VectorDbOperationType",
     "VectorDbOperation",
