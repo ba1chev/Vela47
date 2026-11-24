@@ -5,6 +5,7 @@ from app.server.builders.model_client_builder.model_client_builder import MODEL_
 from app.server.builders.web_search_builder.web_search_builder import WEB_SEARCH_TYPES, build_web_search
 from app.server.builders.rag_agent_builder.rag_agent_builder import RAG_MODEL_NAMES, EMBEDDING_MODEL_NAMES, EMBEDDING_QUERY_TEMPLATES, CONTEXT_WINDOW_TOKENS, ANSWER_MAX_OUTPUT_TOKENS, build_knowledge_memory, build_rag_agent
 from app.server.builders.rag_indexer_builder.rag_indexer_builder import build_rag_indexer
+from app.server.builders.topic_register_builder.topic_register_builder import TOPIC_REGISTER_AWS_REGION, TOPIC_QUERY_TEMPLATES, build_topic_register, topic_register_client
 from app.server.builders.agent_builder.agent_builder import MODEL_NAMES, SUBAGENT_PEERS, SUBAGENT_PROBE_FACTORIES, build_deep_agent, subagent_peering, subagent_tool_factories
 
 __all__ = [
@@ -25,6 +26,10 @@ __all__ = [
     "build_knowledge_memory",
     "build_rag_agent",
     "build_rag_indexer",
+    "TOPIC_REGISTER_AWS_REGION",
+    "TOPIC_QUERY_TEMPLATES",
+    "build_topic_register",
+    "topic_register_client",
     "MODEL_NAMES",
     "SUBAGENT_PEERS",
     "SUBAGENT_PROBE_FACTORIES",

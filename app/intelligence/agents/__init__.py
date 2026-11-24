@@ -70,6 +70,20 @@ from app.intelligence.agents.rag_agent.rag_chunkers.rag_chunker_semantic import 
 from app.intelligence.agents.rag_agent.rag_chunkers.rag_chunkers_factory.rag_chunkers_registry import RAG_CHUNKERS_REGISTRY
 from app.intelligence.agents.rag_agent.rag_chunkers.rag_chunkers_factory.rag_chunkers_factory_base import RagChunkersFactoryBase
 from app.intelligence.agents.rag_agent.rag_chunkers.rag_chunkers_factory.rag_chunkers_factory import RagChunkersFactory
+from app.intelligence.agents.rag_agent.rag_metadata.rag_topic_register.rag_topic_register_utils import encode_topic_vector, decode_topic_vector
+from app.intelligence.agents.rag_agent.rag_metadata.rag_topic_register.rag_topic_register import RAG_TOPIC_REGISTER
+from app.intelligence.agents.rag_agent.rag_metadata.rag_topic_register.rag_topic_index import RagTopicIndex
+from app.intelligence.agents.rag_agent.rag_metadata.rag_topic_register.rag_topic_register_writer import RagTopicRegisterWriter
+from app.intelligence.agents.rag_agent.rag_metadata.rag_metadata_type import RagMetadataType
+from app.intelligence.agents.rag_agent.rag_metadata.rag_metadata_document import RagMetadataDocument
+from app.intelligence.agents.rag_agent.rag_metadata.rag_metadata_extractor_base import RagMetadataExtractorBase
+from app.intelligence.agents.rag_agent.rag_metadata.rag_metadata_extractor_section import RagMetadataExtractorSection
+from app.intelligence.agents.rag_agent.rag_metadata.rag_metadata_extractor_topic import RagMetadataExtractorTopic
+from app.intelligence.agents.rag_agent.rag_metadata.rag_metadata_extractor_keywords import RagMetadataExtractorKeywords
+from app.intelligence.agents.rag_agent.rag_metadata.rag_metadata_extractors_factory.rag_metadata_extractors_registry import RAG_METADATA_EXTRACTORS_REGISTRY
+from app.intelligence.agents.rag_agent.rag_metadata.rag_metadata_extractors_factory.rag_metadata_extractors_factory_base import RagMetadataExtractorsFactoryBase
+from app.intelligence.agents.rag_agent.rag_metadata.rag_metadata_extractors_factory.rag_metadata_extractors_factory import RagMetadataExtractorsFactory
+from app.intelligence.agents.rag_agent.rag_metadata.rag_metadata_attacher import RagMetadataAttacher
 from app.intelligence.agents.rag_agent.rag_indexer import RagIndexer
 from app.intelligence.agents.rag_agent.rag_layers.rag_layer_type import RagLayerType
 from app.intelligence.agents.rag_agent.rag_context import RagContext
@@ -164,6 +178,21 @@ __all__ = [
     "RAG_CHUNKERS_REGISTRY",
     "RagChunkersFactoryBase",
     "RagChunkersFactory",
+    "encode_topic_vector",
+    "decode_topic_vector",
+    "RAG_TOPIC_REGISTER",
+    "RagTopicIndex",
+    "RagTopicRegisterWriter",
+    "RagMetadataType",
+    "RagMetadataDocument",
+    "RagMetadataExtractorBase",
+    "RagMetadataExtractorSection",
+    "RagMetadataExtractorTopic",
+    "RagMetadataExtractorKeywords",
+    "RAG_METADATA_EXTRACTORS_REGISTRY",
+    "RagMetadataExtractorsFactoryBase",
+    "RagMetadataExtractorsFactory",
+    "RagMetadataAttacher",
     "RagIndexer",
     "RagLayerType",
     "RagContext",

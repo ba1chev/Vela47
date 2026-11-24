@@ -19,7 +19,8 @@ class RagGenerationLayer(RagLayerBase):
     events, like the DeepAgent's merging layer. Sources come first, each under its
     number and document title, and the question last, because what a small model reads
     last weighs most. The same numbers travel in response_metadata with document, chunk,
-    score and excerpt, so a citation can be traced after the conversation is reopened.
+    section, score and excerpt, so a citation can be traced after the conversation is
+    reopened.
 
     With no passage left the agent still answers, like a general assistant: a greeting
     or a question about the conversation from the conversation, anything else from the
@@ -54,17 +55,19 @@ class RagGenerationLayer(RagLayerBase):
         return "\n".join(lines)
 
     def _sources(self, context: RagContext) -> list[dict[str, Any]]:
-        return [
-            {
+        sources: list[dict[str, Any]] = []
+        for number, current_entry in enumerate(context.passages, start = 1):
+            metadata = current_entry.metadata
+            sources.append({
                 "index": number,
-                "document_id": current_entry.message.additional_kwargs.get("document_id"),
+                "document_id": metadata.source.document_id if metadata is not None else None,
                 "title": current_entry.message.name,
-                "chunk_index": current_entry.message.additional_kwargs.get("chunk_index"),
+                "chunk_index": metadata.source.chunk_index if metadata is not None else None,
+                "section": metadata.section if metadata is not None else None,
                 "score": context.relevance.get(current_entry.message.id),
                 "excerpt": self._text_of(current_entry.message.content)[:self.EXCERPT_CHARS]
-            }
-            for number, current_entry in enumerate(context.passages, start = 1)
-        ]
+            })
+        return sources
 
     def _messages(self, context: RagContext) -> list:
         if not context.passages:

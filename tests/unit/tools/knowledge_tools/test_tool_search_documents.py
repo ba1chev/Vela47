@@ -2,8 +2,10 @@ from app.intelligence.agents import RagIndexer
 from app.intelligence.memory import VectorDbMemory
 from app.intelligence.tools import ToolSearchDocuments
 from app.intelligence.agents import RagChunkerRecursive
+from app.intelligence.agents import RagMetadataAttacher
 from app.intelligence.tools import ToolSearchDocumentsInput
 from tests.fixtures.model.fake_embeddings import FakeEmbeddings
+from tests.fixtures.agents.fake_topic_register import FAKE_TOPIC_INDEX
 
 GUIDE = (
     "Error E1042 means the RDS secret could not be read.\n\n"
@@ -14,7 +16,7 @@ GUIDE = (
 
 def make_tool(documents = None):
     embeddings = FakeEmbeddings()
-    indexer = RagIndexer(RagChunkerRecursive(chunk_chars = 60, overlap_chars = 0), embeddings)
+    indexer = RagIndexer(RagChunkerRecursive(chunk_chars = 60, overlap_chars = 0), embeddings, RagMetadataAttacher(FAKE_TOPIC_INDEX, FakeEmbeddings()))
     memory = VectorDbMemory(embeddings)
     for current_id, (current_title, current_text) in enumerate((documents or {}).items()):
         memory.add_entries(indexer.index(f"d{current_id}", current_title, current_text))
