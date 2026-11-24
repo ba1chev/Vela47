@@ -8,17 +8,19 @@ from app.server.knowledge import KnowledgeDocument
 from app.intelligence.messages import MessageSystem
 from app.server.knowledge import KnowledgeStoreBase
 from app.intelligence.memory import VectorDbMemoryEntry
+from app.intelligence.memory import VectorDbMemorySource
+from app.intelligence.memory import VectorDbMemoryMetadata
 
 
 class KnowledgeStoreSql(KnowledgeStoreBase):
     """Keeps documents and their chunks in knowledge_documents and knowledge_chunks, over
     SQLite in DEV and PostgreSQL on RDS in PROD.
 
-    Chunks are written back exactly as RagIndexer made them and read back the same way:
-    each as a MessageSystem whose id is the chunk id, whose name is the document's title
-    and whose additional_kwargs carry document_id and chunk_index — so a passage loaded
-    from the database cites the same source it did the moment it was indexed. The title
-    comes from the document row at load time, not from the chunk, so it is stored once.
+    Chunks are written back exactly as RagIndexer made them and read back the same
+    way: each as a MessageSystem whose id is the chunk id and whose name is the
+    document's title, with its metadata in columns of its own — so a passage loaded from
+    the database cites the same source it did the moment it was indexed. The title comes
+    from the document row at load time, not from the chunk, so it is stored once.
 
     A document and its chunks are deleted in one transaction, chunks first, without
     relying on ON DELETE CASCADE, which SQLite ignores unless every connection switches
@@ -37,6 +39,21 @@ class KnowledgeStoreSql(KnowledgeStoreBase):
             created_at = row.created_at
         )
 
+    def _to_metadata(self, row: KnowledgeChunkTable, title: str) -> VectorDbMemoryMetadata:
+        return VectorDbMemoryMetadata(
+            source = VectorDbMemorySource(
+                document_id = row.document_id,
+                title = title,
+                chunk_index = row.chunk_index,
+                start = row.span_start,
+                end = row.span_end
+            ),
+            section = row.section,
+            topic = row.topic,
+            topic_score = row.topic_score,
+            keywords = row.keywords or []
+        )
+
     def add_document(self, document: KnowledgeDocument, entries: list[VectorDbMemoryEntry]) -> None:
         with self._database.transaction() as transaction:
             transaction.add(KnowledgeDocumentTable(
@@ -53,9 +70,15 @@ class KnowledgeStoreSql(KnowledgeStoreBase):
                     id = current_entry.message.id,
                     document_id = document.id,
                     owner_id = document.owner_id,
-                    chunk_index = current_entry.message.additional_kwargs["chunk_index"],
+                    chunk_index = current_entry.metadata.source.chunk_index,
                     content = current_entry.message.content,
-                    vector = current_entry.vector
+                    vector = current_entry.vector,
+                    span_start = current_entry.metadata.source.start,
+                    span_end = current_entry.metadata.source.end,
+                    section = current_entry.metadata.section,
+                    topic = current_entry.metadata.topic,
+                    topic_score = current_entry.metadata.topic_score,
+                    keywords = current_entry.metadata.keywords
                 )
                 for current_entry in entries
             ])
@@ -94,16 +117,9 @@ class KnowledgeStoreSql(KnowledgeStoreBase):
             ).all()
             return [
                 VectorDbMemoryEntry(
-                    message = MessageSystem(
-                        content = current_chunk.content,
-                        id = current_chunk.id,
-                        name = current_title,
-                        additional_kwargs = {
-                            "document_id": current_chunk.document_id,
-                            "chunk_index": current_chunk.chunk_index
-                        }
-                    ),
-                    vector = current_chunk.vector
+                    message = MessageSystem(content = current_chunk.content, id = current_chunk.id, name = current_title),
+                    vector = current_chunk.vector,
+                    metadata = self._to_metadata(current_chunk, current_title)
                 )
                 for current_chunk, current_title in rows
             ]
