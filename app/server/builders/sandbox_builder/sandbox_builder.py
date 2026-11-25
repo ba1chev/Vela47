@@ -10,7 +10,7 @@ from app.intelligence.sandbox import SandboxPoolInMemory
 from app.server.config_environment import ConfigEnvironment
 
 SANDBOX_COMPOSE_FILE = (
-    pathlib.Path(__file__).resolve().parents[4] / "deploy" / "dev" / "images" / "sandbox_image" / "docker-compose.yaml"
+    pathlib.Path(__file__).resolve().parents[4] / "deploy" / "images" / "dev" / "sandbox" / "docker-compose.yaml"
 )
 SANDBOX_FUNCTION_NAME = "vela47-sandbox"
 
