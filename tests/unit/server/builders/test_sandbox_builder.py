@@ -7,7 +7,9 @@ from app.server.builders import SANDBOX_FUNCTION_NAME
 from app.intelligence.sandbox import SandboxPoolLambda
 from app.server.config_environment import ConfigEnvironment
 
-PROD = pathlib.Path(__file__).resolve().parents[4] / "deploy" / "prod"
+DEPLOY = pathlib.Path(__file__).resolve().parents[4] / "deploy"
+PROD_APP = DEPLOY / "terraform" / "environments" / "prod" / "app"
+PROD_SANDBOX_IMAGE = DEPLOY / "images" / "prod" / "sandbox"
 
 
 class ProdConfig:
@@ -40,9 +42,9 @@ class TestSandboxBuilder:
         assert pool.acquire().reference == SANDBOX_FUNCTION_NAME
 
     def test_the_function_the_server_calls_is_the_one_terraform_creates(self):
-        variables = (PROD / "variables.tf").read_text()
+        variables = (PROD_APP / "variables.tf").read_text()
         default = re.search(r'variable "sandbox_function_name" \{.*?default\s*=\s*"([^"]+)"', variables, re.DOTALL)
         assert default.group(1) == SANDBOX_FUNCTION_NAME
 
     def test_the_production_image_has_pytest_for_the_test_subagent(self):
-        assert "pytest" in (PROD / "images" / "sandbox_lambda" / "Dockerfile").read_text()
+        assert "pytest" in (PROD_SANDBOX_IMAGE / "Dockerfile").read_text()
