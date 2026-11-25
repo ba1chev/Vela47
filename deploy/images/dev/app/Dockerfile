@@ -23,7 +23,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-COPY deploy/dev/images/sandbox_image ./deploy/dev/images/sandbox_image
+COPY deploy/images/dev/sandbox ./deploy/images/dev/sandbox
 COPY db ./db
 COPY app ./app
 
