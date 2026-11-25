@@ -5,7 +5,7 @@ import tarfile
 import tempfile
 import importlib.util
 
-HANDLER_PATH = pathlib.Path(__file__).resolve().parents[3] / "deploy" / "prod" / "images" / "sandbox_lambda" / "handler.py"
+HANDLER_PATH = pathlib.Path(__file__).resolve().parents[3] / "deploy" / "images" / "prod" / "sandbox" / "handler.py"
 
 
 def load_handler():
