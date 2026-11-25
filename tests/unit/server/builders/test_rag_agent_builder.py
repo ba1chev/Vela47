@@ -13,7 +13,9 @@ from app.server.builders import ANSWER_MAX_OUTPUT_TOKENS
 from app.server.builders import EMBEDDING_QUERY_TEMPLATES
 from app.server.config_environment import ConfigEnvironment
 
-PROD_VARIABLES = pathlib.Path(__file__).resolve().parents[4] / "deploy" / "prod" / "variables.tf"
+PROD_VARIABLES = (
+    pathlib.Path(__file__).resolve().parents[4] / "deploy" / "terraform" / "environments" / "prod" / "app" / "variables.tf"
+)
 
 
 def prod_allowed_models():
