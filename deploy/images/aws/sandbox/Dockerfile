@@ -4,7 +4,7 @@
 # at build time. Built for arm64, the architecture the function runs on.
 # checkov:skip=CKV_DOCKER_2:A Lambda function has no health check
 # checkov:skip=CKV_DOCKER_3:Lambda runs the function as its own unprivileged user
-FROM public.ecr.aws/lambda/python:3.14@sha256:ada43e932bb0126f892fd935622eaab1199129865d7164ae66a06bcbbd975be0
+FROM public.ecr.aws/lambda/python:3.15@sha256:ff118eaa5fb0e4a322ae28c5b8a7337f5396eaca5f34d613b904b444f8a32dc0
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
