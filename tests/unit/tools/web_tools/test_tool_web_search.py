@@ -1,6 +1,7 @@
 from app.intelligence.tools import ToolWebSearch
 from app.intelligence.web import WebSearchResult
 from app.intelligence.tools import ToolWebSearchInput
+from app.intelligence.security import SecurityPromptType
 from tests.fixtures.web.fake_web_search import FakeWebSearch
 
 RESULTS = [
@@ -33,3 +34,6 @@ class TestToolWebSearch:
 
     def test_no_results_suggests_other_keywords(self):
         assert "found nothing" in ToolWebSearch(FakeWebSearch()).execute(ToolWebSearchInput(query = "zxqv"))
+
+    def test_its_results_come_from_outside_the_run(self):
+        assert ToolWebSearch(FakeWebSearch()).result_threat is SecurityPromptType.INJECTION
