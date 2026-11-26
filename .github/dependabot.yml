@@ -1,0 +1,36 @@
+# Dependency updates, one pull request per ecosystem a week (see docs/dependency_management.md).
+# A pull request that changes what runs on AWS needs a new version in deploy/release.yaml, so an update is merged
+# only after that commit is added to it, and goes out as a patch release like any other change.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directories: ["/", "/deploy/pipeline"]
+    schedule:
+      interval: weekly
+    groups:
+      python:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directories: ["/deploy/images/aws/app", "/deploy/images/aws/sandbox", "/deploy/images/local/app", "/deploy/images/local/database", "/deploy/images/local/sandbox"]
+    schedule:
+      interval: weekly
+    groups:
+      images:
+        patterns: ["*"]
+
+  - package-ecosystem: terraform
+    directories: ["/deploy/terraform/modules/*", "/deploy/terraform/environments/*/*", "/deploy/terraform/environments/*/vpc/*"]
+    schedule:
+      interval: weekly
+    groups:
+      providers:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
