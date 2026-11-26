@@ -43,6 +43,7 @@ env:
   ARTIFACTS_BUCKET: vela47-artifacts
   ENVIRONMENT: ${{ inputs.environment }}
   VERSION: ${{ inputs.version }}
+  PYTHONUNBUFFERED: "1"
   TF_IN_AUTOMATION: "true"
   TF_INPUT: "false"
   TF_VAR_release_version: ${{ inputs.version }}
