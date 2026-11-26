@@ -2,10 +2,13 @@
 
 The workflows hold no AWS keys. Each job that needs AWS asks GitHub for a short-lived OpenID Connect token, and AWS STS exchanges it for temporary credentials of `vela47-role`. The role trusts only this repository, and only `main` and its GitHub environments.
 
-## What was set up by hand
+## Setup
 
-- The identity provider `token.actions.githubusercontent.com` in IAM, audience `sts.amazonaws.com`.
-- The role `vela47-role`, with the trust policy below.
+`deploy/bootstrap.sh` sets up the AWS side once, with administrator credentials in the AWS CLI (see `deployment_order.md`):
+
+- The identity provider `token.actions.githubusercontent.com` in IAM, audience `sts.amazonaws.com`, if the account has none.
+- The role `vela47-role` with the trust policy below, created if missing. Its sessions may last two hours, since a deployment with a canary bake time takes longer than the default hour.
+- The permissions of the role, through `shared/iam`.
 
 ## Trust policy of `vela47-role`
 
@@ -48,12 +51,7 @@ Pull requests, branches other than `main` and forks match none of them, so CI ne
 
 ## Permissions
 
-The permissions are not edited by hand. `deploy/terraform/environments/shared/iam` attaches the policy `vela47-ci` to the role and creates the boundary `vela47-boundary`. Apply it with your own credentials:
-
-```bash
-cd deploy/terraform/environments/shared/iam
-terraform init && terraform apply
-```
+The permissions are not edited by hand. `deploy/terraform/environments/shared/iam` attaches the policy `vela47-ci` to the role and creates the boundary `vela47-boundary`. `deploy/bootstrap.sh` applies it; after a change to it, run the script again or apply the root with your own credentials.
 
 | Area | Allowed |
 |---|---|
@@ -69,7 +67,7 @@ terraform init && terraform apply
 
 The boundary caps every role the pipeline creates at what the environments need: Bedrock, secrets, the sandbox function, ECS, ECR pulls, logs, Session Manager and the night schedule. It denies IAM, STS and Organizations. Even a role the pipeline writes by mistake can never grant more than that, and the pipeline can never widen its own permissions. That only happens through a pull request to `shared/iam` and an apply by hand.
 
-The first deployments may still meet an `AccessDenied` for an action the list missed. The error names the action. Add it in `modules/ci_role` and apply `shared/iam` again.
+The first deployments may still meet an `AccessDenied` for an action the list missed. The error names the action. Add it in `modules/ci_role` and run `deploy/bootstrap.sh` again.
 
 ## GitHub settings
 
