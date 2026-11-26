@@ -12,7 +12,7 @@ from app.intelligence.agents import OperationSubagentFactoryBase
 
 
 class OperationPolicyFull(OperationPolicy):
-    """Runs the complete pipeline — plan, decompose, execute, merge.
+    """Runs the complete pipeline — inspect, plan, decompose, execute, merge.
 
     The planning and merging models are separate parameters because the two jobs
     reward opposite settings: planning wants low temperature and reasoning mode
@@ -35,6 +35,7 @@ class OperationPolicyFull(OperationPolicy):
 
     def resolve(self, factory: OperationLayersFactoryBase) -> list[OperationLayerBase]:
         return [
+            factory.create(OperationType.SECURITY, tracing_service = self._tracing_service),
             factory.create(OperationType.PLANNING, model = self._planning_model),
             factory.create(OperationType.DECOMPOSITION),
             factory.create(
