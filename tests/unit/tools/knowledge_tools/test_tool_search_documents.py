@@ -3,6 +3,7 @@ from app.intelligence.memory import VectorDbMemory
 from app.intelligence.tools import ToolSearchDocuments
 from app.intelligence.agents import RagChunkerRecursive
 from app.intelligence.agents import RagMetadataAttacher
+from app.intelligence.security import SecurityPromptType
 from app.intelligence.tools import ToolSearchDocumentsInput
 from tests.fixtures.model.fake_embeddings import FakeEmbeddings
 from tests.fixtures.agents.fake_topic_register import FAKE_TOPIC_INDEX
@@ -48,3 +49,6 @@ class TestToolSearchDocuments:
         tool.MAX_PASSAGE_CHARS = 50
         output = tool.execute(ToolSearchDocumentsInput(query = "word", top_k = 1))
         assert output.rstrip().endswith("…") and len(output) < 200
+
+    def test_its_passages_were_stored_before_the_run(self):
+        assert make_tool().result_threat is SecurityPromptType.POISONING
