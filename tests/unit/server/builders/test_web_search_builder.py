@@ -8,14 +8,15 @@ from app.intelligence.web import WebSearchTavily
 from app.server.builders import WEB_SEARCH_TYPES
 from app.server.builders import build_web_search
 from app.intelligence.web import WebSearchDuckDuckGo
+from app.server.config_platform import ConfigPlatform
 from app.server.config_environment import ConfigEnvironment
 
 TERRAFORM = pathlib.Path(__file__).resolve().parents[4] / "deploy" / "terraform"
-PROD_APP = TERRAFORM / "environments" / "prod" / "app"
+AWS_ROOTS = [TERRAFORM / "environments" / current / "app" for current in ("dev", "staging", "prod")]
 APP_MODULE = TERRAFORM / "modules" / "app"
 
 
-def prod_config(tavily_api_key = None):
+def aws_config(tavily_api_key = None):
     return Config(
         environment = ConfigEnvironment.PROD,
         database = {"host": "db", "secret_id": "rds!db"},
@@ -26,18 +27,18 @@ def prod_config(tavily_api_key = None):
 
 
 class TestWebSearchBuilder:
-    def test_every_environment_has_a_search_engine(self):
-        assert set(WEB_SEARCH_TYPES) == set(ConfigEnvironment)
+    def test_every_platform_has_a_search_engine(self):
+        assert set(WEB_SEARCH_TYPES) == set(ConfigPlatform)
 
-    def test_development_searches_through_duckduckgo(self):
-        assert WEB_SEARCH_TYPES[ConfigEnvironment.DEV] is WebSearchType.DUCKDUCKGO
+    def test_local_searches_through_duckduckgo(self):
+        assert WEB_SEARCH_TYPES[ConfigPlatform.LOCAL] is WebSearchType.DUCKDUCKGO
         assert isinstance(build_web_search(Config(), WebFetcher()), WebSearchDuckDuckGo)
 
-    def test_production_with_a_key_searches_through_tavily(self):
-        assert isinstance(build_web_search(prod_config("tvly-key"), WebFetcher()), WebSearchTavily)
+    def test_aws_with_a_key_searches_through_tavily(self):
+        assert isinstance(build_web_search(aws_config("tvly-key"), WebFetcher()), WebSearchTavily)
 
-    def test_production_without_a_key_falls_back_to_duckduckgo(self):
-        assert isinstance(build_web_search(prod_config(), WebFetcher()), WebSearchDuckDuckGo)
+    def test_aws_without_a_key_falls_back_to_duckduckgo(self):
+        assert isinstance(build_web_search(aws_config(), WebFetcher()), WebSearchDuckDuckGo)
 
     def test_the_application_secret_terraform_writes_holds_the_key_the_server_reads(self):
         secrets = (APP_MODULE / "secrets.tf").read_text()
@@ -45,6 +46,7 @@ class TestWebSearchBuilder:
         assert re.search(r"^\s*tavily_api_key\s*=\s*var\.tavily_api_key\s*$", secret.group(1), re.MULTILINE)
 
     def test_the_key_is_a_sensitive_variable_that_may_stay_empty(self):
-        variables = (PROD_APP / "variables.tf").read_text()
-        block = re.search(r'variable "tavily_api_key" \{(.*?)\n\}', variables, re.DOTALL).group(1)
-        assert re.search(r"sensitive\s*=\s*true", block) and re.search(r'default\s*=\s*""', block)
+        for current_root in AWS_ROOTS:
+            variables = (current_root / "variables.tf").read_text()
+            block = re.search(r'variable "tavily_api_key" \{(.*?)\n\}', variables, re.DOTALL).group(1)
+            assert re.search(r"sensitive\s*=\s*true", block) and re.search(r'default\s*=\s*""', block)
