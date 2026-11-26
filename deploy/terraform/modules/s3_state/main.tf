@@ -10,6 +10,11 @@ resource "aws_s3_bucket" "this" {
   lifecycle {
     prevent_destroy = true
   }
+
+  #checkov:skip=CKV_AWS_18:Access logging would need a second bucket; every write comes from Terraform and is in CloudTrail
+  #checkov:skip=CKV_AWS_144:A single-region project, a lost state can be rebuilt by importing the resources
+  #checkov:skip=CKV_AWS_145:AES256 avoids the per-request price of KMS
+  #checkov:skip=CKV2_AWS_62:Nothing reacts to a state change
 }
 
 resource "aws_s3_bucket_versioning" "this" {
