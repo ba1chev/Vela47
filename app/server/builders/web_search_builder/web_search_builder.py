@@ -5,18 +5,18 @@ from app.intelligence.web import WebFetcher
 from app.intelligence.web import WebSearchType
 from app.intelligence.web import WebSearchBase
 from app.intelligence.web import WebSearchFactory
-from app.server.config_environment import ConfigEnvironment
+from app.server.config_platform import ConfigPlatform
 
 WEB_SEARCH_TYPES = {
-    ConfigEnvironment.DEV: WebSearchType.DUCKDUCKGO,
-    ConfigEnvironment.PROD: WebSearchType.TAVILY
+    ConfigPlatform.LOCAL: WebSearchType.DUCKDUCKGO,
+    ConfigPlatform.AWS: WebSearchType.TAVILY
 }
 
 logger = logging.getLogger("vela47")
 
 
 def build_web_search(config: Config, web_fetcher: WebFetcher) -> WebSearchBase:
-    search_type = WEB_SEARCH_TYPES[config.environment]
+    search_type = WEB_SEARCH_TYPES[config.platform]
     if search_type is WebSearchType.TAVILY:
         if config.tavily_api_key is not None:
             return WebSearchFactory().create(search_type, api_key = config.tavily_api_key.get_secret_value())
