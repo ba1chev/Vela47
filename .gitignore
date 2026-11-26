@@ -10,3 +10,5 @@ tests/evals/results
 *.tfvars
 DOCUMENTATION.md
 keys.py
+tfplan
+*.tfplan
