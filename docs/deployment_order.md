@@ -4,13 +4,14 @@ The Terraform of the AWS environments is split into root modules, each with its 
 
 ## Once per account (by hand)
 
-Applied with your own administrator credentials, never by the pipeline:
+`deploy/bootstrap.sh` does all of it, run once with administrator credentials in the AWS CLI, never by the pipeline. It asks before every apply (`--yes` skips the questions) and is safe to run again:
 
-1. `shared/s3_state`: the state bucket. Its own state starts local and is migrated into the bucket afterwards (see its README).
-2. `shared/iam`: the permissions of `vela47-role` and the permissions boundary. The role and the GitHub identity provider must already exist (`open_id_connect.md`).
-3. `shared/artifacts` and `shared/ecr`: the artifacts bucket and the image repositories. Order between them does not matter.
+1. The GitHub OpenID Connect provider, if the account has none, and the role `vela47-role` with the trust policy of this repository and two-hour sessions (`open_id_connect.md`).
+2. `shared/s3_state`: the state bucket. Its own state starts local and is moved into the bucket right after.
+3. `shared/iam`: the permissions of `vela47-role` and the permissions boundary.
+4. `shared/artifacts` and `shared/ecr`: the artifacts bucket and the image repositories.
 
-Only then can the first release be delivered.
+It ends with what only GitHub can hold: the variable `AWS_ROLE_ARN`, the secret `TAVILY_API_KEY`, the environments and the branch protection. Only then can the first release be delivered.
 
 ## Every deployment of a release into one environment
 

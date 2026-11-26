@@ -43,7 +43,7 @@ dev is as cheap as the architecture allows: one t4g.small that ECS scales to 0 o
 
 The root modules read each other's outputs through `terraform_remote_state`, so they are applied in this order and destroyed in reverse (`docs/deployment_order.md`):
 
-1. `shared/s3_state`, `shared/iam`, `shared/artifacts`, `shared/ecr`: once, by hand
+1. `shared/s3_state`, `shared/iam`, `shared/artifacts`, `shared/ecr`: once, by hand, with `deploy/bootstrap.sh`
 2. `<environment>/vpc/eu-central-1`
 3. `<environment>/database`
 4. `<environment>/app`, with `-var release_version=<version>` naming a release in the artifacts bucket

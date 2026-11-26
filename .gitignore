@@ -12,3 +12,4 @@ DOCUMENTATION.md
 keys.py
 tfplan
 *.tfplan
+*_override.tf
