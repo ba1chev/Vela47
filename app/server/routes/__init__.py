@@ -8,6 +8,7 @@ from app.server.routes.chat_routes.chat_stream import KEEPALIVE_FRAME, stream_ch
 from app.server.routes.chat_routes.chat_agent_type import ChatAgentType
 from app.server.routes.chat_routes.chat_routes import chat_router
 from app.server.routes.knowledge_routes.knowledge_routes import knowledge_router
+from app.server.routes.health_routes.health_routes import health_router
 
 __all__ = [
     "SESSION_COOKIE",
@@ -21,5 +22,6 @@ __all__ = [
     "stream_chat",
     "ChatAgentType",
     "chat_router",
-    "knowledge_router"
+    "knowledge_router",
+    "health_router"
 ]
