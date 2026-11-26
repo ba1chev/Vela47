@@ -4,15 +4,16 @@ import subprocess
 
 from app.server.config import Config
 from app.intelligence.sandbox import SandboxPoolBase
+from app.server.config_platform import ConfigPlatform
 from app.intelligence.sandbox import SandboxPoolDocker
 from app.intelligence.sandbox import SandboxPoolLambda
 from app.intelligence.sandbox import SandboxPoolInMemory
 from app.server.config_environment import ConfigEnvironment
 
 SANDBOX_COMPOSE_FILE = (
-    pathlib.Path(__file__).resolve().parents[4] / "deploy" / "images" / "dev" / "sandbox" / "docker-compose.yaml"
+    pathlib.Path(__file__).resolve().parents[4] / "deploy" / "images" / "local" / "sandbox" / "docker-compose.yaml"
 )
-SANDBOX_FUNCTION_NAME = "vela47-sandbox"
+SANDBOX_FUNCTION_NAME_TEMPLATE = "vela47-{environment}-sandbox"
 
 logger = logging.getLogger("vela47")
 
@@ -26,9 +27,13 @@ def _docker_is_available() -> bool:
         return False
 
 
+def sandbox_function_name(environment: ConfigEnvironment) -> str:
+    return SANDBOX_FUNCTION_NAME_TEMPLATE.format(environment = environment.value)
+
+
 def build_sandbox_pool(config: Config, size: int) -> SandboxPoolBase:
-    if config.environment is ConfigEnvironment.PROD:
-        return SandboxPoolLambda(SANDBOX_FUNCTION_NAME, config.aws_region, size)
+    if config.platform is ConfigPlatform.AWS:
+        return SandboxPoolLambda(sandbox_function_name(config.environment), config.aws_region, size)
 
     if _docker_is_available():
         return SandboxPoolDocker(SANDBOX_COMPOSE_FILE)
