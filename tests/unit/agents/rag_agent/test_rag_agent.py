@@ -46,8 +46,8 @@ class TestRagLayersFactory:
 
 
 class TestRagPipeline:
-    def test_the_full_policy_runs_four_layers(self):
-        assert len(RagPipeline(RagPolicyFull(FakeModel(), FakeModel(), FakeModel(), VectorDbMemory(FakeEmbeddings()), HybridSearchPolicy()))) == 4
+    def test_the_full_policy_runs_five_layers(self):
+        assert len(RagPipeline(RagPolicyFull(FakeModel(), FakeModel(), FakeModel(), VectorDbMemory(FakeEmbeddings()), HybridSearchPolicy()))) == 5
 
     def test_every_layer_is_traced_by_name_with_what_it_produced(self):
         tracer = TracingService()
@@ -55,7 +55,8 @@ class TestRagPipeline:
             MessageHuman(content = "What does E1042 mean?")
         )
         finished = {current.label: current.payload for current in tracer.events() if current.type is TraceEventType.LAYER_FINISHED}
-        assert list(finished) == ["Query", "Retrieval", "Reranking", "Generation"]
+        assert list(finished) == ["Query", "Retrieval", "Security", "Reranking", "Generation"]
+        assert finished["Security"]["flagged"] == 0
         assert finished["Retrieval"]["candidates"] == 2 and finished["Reranking"]["passages"] == 1
         assert finished["Reranking"]["reranked"] is True
 
