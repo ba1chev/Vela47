@@ -4,9 +4,8 @@ from typing import Iterator, Optional
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from db import TableBase
 from db import DatabaseType
-from db import TABLE_REGISTRY
+from db import DatabaseMigrator
 
 
 class DatabaseBase(ABC):
@@ -14,11 +13,10 @@ class DatabaseBase(ABC):
     started once, shut down on the way out. Subclasses differ only in how the SQLAlchemy
     engine is built.
 
-    start() creates every registered table that is missing and leaves the rest, in one
-    transaction behind _lock_schema(), so servers starting together create them once.
-    That holds while the schema grows by whole tables; changing a column will need
-    migrations. transaction() is the only way in and a unit of work: committed when the
-    block ends, rolled back when it raises."""
+    start() migrates the schema to the newest revision (see DatabaseMigrator) in one
+    transaction behind _lock_schema(), so servers starting together migrate it once.
+    transaction() is the only way in and a unit of work: committed when the block ends,
+    rolled back when it raises."""
 
     def __init__(self) -> None:
         self._engine: Optional[Engine] = None
@@ -44,10 +42,7 @@ class DatabaseBase(ABC):
         engine = self._create_engine()
         with engine.begin() as connection:
             self._lock_schema(connection)
-            TableBase.metadata.create_all(
-                connection,
-                tables = [current_table.__table__ for current_table in TABLE_REGISTRY.values()]
-            )
+            DatabaseMigrator(connection).upgrade()
         self._engine = engine
         self._session_factory = sessionmaker(engine, expire_on_commit = False)
 
