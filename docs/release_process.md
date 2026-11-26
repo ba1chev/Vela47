@@ -42,7 +42,7 @@ summary: One line on what the release changes
 - MINOR: new behaviour, new resources or capacity, an expand migration.
 - PATCH: a fix or a dependency update.
 
-A pull request that changes what runs on AWS (`app/`, `db/`, `requirements.txt`, `deploy/images/aws/`, `deploy/pipeline/`, `deploy/terraform/modules/`, `deploy/terraform/environments/{dev,staging,prod}/`) must raise the version above the newest tag. Documentation, tests and the local environment need no release. CI checks all of this (`ReleaseRules`).
+A pull request that changes what runs on AWS (`app/`, `db/`, `requirements.txt`, `deploy/images/aws/`, `deploy/pipeline/`, `deploy/terraform/modules/`, `deploy/terraform/environments/{dev,staging,prod}/`) must raise the version above the newest tag. Documentation, tests, the local environment and the shared roots with their modules (`s3_state`, `s3`, `ecr`, `ci_role`, applied by `deploy/bootstrap.sh`) need no release. CI checks all of this (`ReleaseRules`).
 
 ## Continuous integration
 

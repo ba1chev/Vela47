@@ -9,6 +9,10 @@ RELEASED_FILES = ("requirements.txt",)
 AWS_ENVIRONMENT_PREFIXES = tuple(f"deploy/terraform/environments/{current}/" for current in ("dev", "staging", "prod"))
 INFRASTRUCTURE_PREFIXES = ("deploy/terraform/modules/",) + AWS_ENVIRONMENT_PREFIXES
 LOCAL_ONLY_MODULES = ("deploy/terraform/modules/docker_app/", "deploy/terraform/modules/docker_database/")
+ACCOUNT_ONLY_MODULES = tuple(
+    f"deploy/terraform/modules/{current}/" for current in ("s3_state", "s3", "ecr", "ci_role")
+)
+UNRELEASED_MODULES = LOCAL_ONLY_MODULES + ACCOUNT_ONLY_MODULES
 MIGRATION_PREFIX = "db/migrations/versions/"
 CODE_PREFIXES = ("app/", "db/")
 
@@ -20,7 +24,8 @@ class ReleaseRules:
     need an infrastructure change and migrations a database change, and a new release
     declares only changes it makes. A breaking change or a contract migration ships
     without code and as a new major version, so a release never removes something the
-    release before it still uses."""
+    release before it still uses. The modules of the local environment and of the shared
+    roots are never deployed, so they need no release."""
 
     def __init__(self, manifest: ReleaseManifest, changed_paths: list[str],
         base_manifest: Optional[ReleaseManifest], released_version: Optional[tuple[int, int, int]]) -> None:
@@ -42,13 +47,13 @@ class ReleaseRules:
     @property
     def releases(self) -> bool:
         return bool(
-            self._changed(RELEASED_PREFIXES + AWS_ENVIRONMENT_PREFIXES, LOCAL_ONLY_MODULES)
+            self._changed(RELEASED_PREFIXES + AWS_ENVIRONMENT_PREFIXES, UNRELEASED_MODULES)
             or any(current in RELEASED_FILES for current in self._changed_paths)
         )
 
     def violations(self) -> list[str]:
         manifest = self._manifest
-        infrastructure = self._changed(INFRASTRUCTURE_PREFIXES, LOCAL_ONLY_MODULES)
+        infrastructure = self._changed(INFRASTRUCTURE_PREFIXES, UNRELEASED_MODULES)
         migrations = self._changed((MIGRATION_PREFIX,))
         code = self._changed(CODE_PREFIXES, (MIGRATION_PREFIX,))
         found = []
