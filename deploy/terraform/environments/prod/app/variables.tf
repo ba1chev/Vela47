@@ -10,27 +10,86 @@ variable "tags" {
   default = {
     owner       = "ba1chev"
     project     = "vela47"
-    environment = "production"
+    environment = "prod"
     created_by  = "terraform"
   }
-}
-
-variable "state_bucket" {
-  description = "Bucket of the Terraform state of the environment, created by global/s3_state"
-  type        = string
-  default     = "vela47-terraform-state"
 }
 
 variable "name" {
   description = "Prefix of the name of every resource of the application"
   type        = string
-  default     = "vela47"
+  default     = "vela47-prod"
+}
+
+variable "state_bucket" {
+  description = "Bucket of the Terraform state, created by shared/s3_state"
+  type        = string
+  default     = "vela47-terraform-state"
+}
+
+variable "artifacts_bucket" {
+  description = "Bucket of the releases, created by shared/artifacts"
+  type        = string
+  default     = "vela47-artifacts"
+}
+
+variable "environment" {
+  description = "Environment the server runs as, VELA47_ENVIRONMENT"
+  type        = string
+  default     = "prod"
+}
+
+variable "release_version" {
+  description = "Version of the release to deploy, its release.yaml in the artifacts bucket names the images. Set by the deployment workflow, or with -var release_version=<version>"
+  type        = string
 }
 
 variable "instance_type" {
-  description = "Type of the EC2 instance, t4g.medium has 2 Graviton vCPUs and 4 GB, room for the server task and a second one during a deploy"
+  description = "Type of the EC2 instances, a Graviton type that fits two server tasks"
   type        = string
   default     = "t4g.medium"
+}
+
+variable "instance_min_count" {
+  description = "Fewest EC2 instances the capacity provider may scale to"
+  type        = number
+  default     = 2
+}
+
+variable "instance_max_count" {
+  description = "Most EC2 instances the capacity provider may scale to"
+  type        = number
+  default     = 4
+}
+
+variable "task_desired_count" {
+  description = "Number of server tasks running"
+  type        = number
+  default     = 2
+}
+
+variable "deployment_strategy" {
+  description = "How a new release replaces the running tasks, ROLLING or CANARY"
+  type        = string
+  default     = "CANARY"
+}
+
+variable "log_retention_days" {
+  description = "Days the logs of the server tasks and the sandbox function are kept"
+  type        = number
+  default     = 30
+}
+
+variable "load_balancer_deletion_protection" {
+  description = "Protects the load balancer from deletion"
+  type        = bool
+  default     = true
+}
+
+variable "secret_recovery_window_in_days" {
+  description = "Days a deleted application secret can still be restored, 0 deletes it at once"
+  type        = number
+  default     = 7
 }
 
 variable "zone_name" {
@@ -52,26 +111,14 @@ variable "admin_username" {
 }
 
 variable "tavily_api_key" {
-  description = "Key of the Tavily search API the server searches the web with, empty falls back to DuckDuckGo, set it with TF_VAR_tavily_api_key"
+  description = "Key of the Tavily search API the server searches the web with, empty falls back to DuckDuckGo. The deployment workflow sets it from the TAVILY_API_KEY secret of the GitHub environment"
   type        = string
   default     = ""
   sensitive   = true
 }
 
 variable "bedrock_model_ids" {
-  description = "Bedrock models the server task may call, the same IDs the server asks for in PROD, an eu. prefix is a cross-region inference profile that keeps the requests in EU regions"
+  description = "Bedrock models the server task may call, the same IDs the server asks for on AWS, an eu. prefix is a cross-region inference profile that keeps the requests in EU regions"
   type        = list(string)
   default     = ["eu.anthropic.claude-sonnet-5-5", "amazon.titan-embed-text-v2:0"]
-}
-
-variable "sandbox_function_name" {
-  description = "Name of the Lambda function the TEST subagent runs its commands in, the same name the server calls"
-  type        = string
-  default     = "vela47-sandbox"
-}
-
-variable "docker_context" {
-  description = "Docker context Terraform builds the images with, Docker Desktop on a Mac has no /var/run/docker.sock"
-  type        = string
-  default     = "desktop-linux"
 }
