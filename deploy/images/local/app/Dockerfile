@@ -5,7 +5,7 @@
 # repository. Ollama is not in the image: it runs on the host, where it has the GPU.
 # checkov:skip=CKV_DOCKER_2:Terraform gives the container its health check (modules/docker_app)
 # checkov:skip=CKV_DOCKER_3:The server drives the host's Docker socket, which needs root; local only
-FROM docker:29.8.1-cli@sha256:018edbc908e08fcc9dbf029c812c34251e9b4719e6f71ca0e5eae2a987d014ca AS docker_cli
+FROM docker:29.10.0-cli@sha256:34507eb5069d8be82c95dd3b6987d4250fd5fee49b82e2509b7d7a7030740d6d AS docker_cli
 
 FROM python:3.15-slim@sha256:63bb298d2b7b88f176f51b5189f54ce6535c997682ea70885d2132f5d473a8a5
 
