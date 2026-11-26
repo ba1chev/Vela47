@@ -3,10 +3,11 @@ import pytest
 from app.intelligence.web import WebFetcher
 from app.intelligence.tools import ToolFetchUrl
 from app.intelligence.web import WebAccessError
+from app.intelligence.web import WebAddressGuard
 from app.intelligence.messages import MessageTool
 from app.intelligence.messages import MessageHuman
-from app.intelligence.web import WebAddressGuard
 from app.intelligence.tools import ToolFetchUrlInput
+from app.intelligence.security import SecurityPromptType
 from tests.fixtures.web.fake_resolver import FakeResolver
 from tests.fixtures.loaders.pdf_builder import PdfBuilder
 from tests.fixtures.web.fake_web_server import FakeWebServer
@@ -106,3 +107,6 @@ class TestToolFetchUrl:
         tool, server = make_tool({"https://example.org/notes": FakeWebServer.page(ARTICLE)})
         tool.execute(ToolFetchUrlInput(url = "https://example.org/notes#secret"))
         assert "secret" not in str(server.requests)
+
+    def test_its_pages_come_from_outside_the_run(self):
+        assert make_tool({})[0].result_threat is SecurityPromptType.INJECTION
