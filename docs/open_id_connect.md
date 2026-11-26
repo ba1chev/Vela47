@@ -75,5 +75,5 @@ The first deployments may still meet an `AccessDenied` for an action the list mi
 
 - Repository variable `AWS_ROLE_ARN`: `arn:aws:iam::<account-id>:role/vela47-role`.
 - Environments `dev`, `staging`, `prod`, deployment branches limited to `main`. `staging` and `prod` have required reviewers.
-- Environment secret `TAVILY_API_KEY` in each environment that should search the web through Tavily. Without it, the server falls back to DuckDuckGo.
+- Repository secret `TAVILY_API_KEY` (Settings → Secrets and variables → Actions → Secrets). Both jobs of a deployment read it: the preview has no environment, so it cannot see an environment secret. Without it, the server falls back to DuckDuckGo.
 - Branch protection on `main`: pull requests only, the CI jobs required.
