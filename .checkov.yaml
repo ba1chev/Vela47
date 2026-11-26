@@ -1,0 +1,12 @@
+# checkov settings for CI and pre-commit. A check that does not fit this project is skipped where it applies,
+# with a #checkov:skip comment and its reason next to the resource, never here, so every exception is reviewed in place.
+framework:
+  - terraform
+  - dockerfile
+  - github_actions
+compact: true
+quiet: true
+skip-path:
+  - \.terraform/
+  - \.venv/
+  - tests/
