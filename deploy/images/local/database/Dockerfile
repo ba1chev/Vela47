@@ -4,7 +4,7 @@
 # VELA47_DATABASE_SSL_MODE=disable against it.
 # checkov:skip=CKV_DOCKER_2:Terraform gives the container its health check (modules/docker_database)
 # checkov:skip=CKV_DOCKER_3:The PostgreSQL image drops to its postgres user itself
-FROM postgres:17-alpine@sha256:f9cf3e1f0066f0eb0c48707d864f0ac5941e9ff454a072077d97a4d278d07d73
+FROM postgres:18-alpine@sha256:0115267ab5a509022df9319c77be365cef335adb71556c75f60f5360ee247e71
 
 ENV POSTGRES_DB=vela47 \
     POSTGRES_USER=vela47
