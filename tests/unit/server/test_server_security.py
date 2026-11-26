@@ -57,8 +57,8 @@ class TestServerSecurity:
     def test_the_cookie_is_not_marked_secure_over_plain_http(self):
         assert "secure" not in make_client().post("/api/auth/guest").headers["set-cookie"].lower()
 
-    def test_the_cookie_is_always_secure_in_prod_because_tls_ends_at_the_load_balancer(self):
-        config = Config.model_construct(environment = ConfigEnvironment.PROD)
+    def test_the_cookie_is_always_secure_on_aws_because_tls_ends_at_the_load_balancer(self):
+        config = Config.model_construct(environment = ConfigEnvironment.DEV)
         assert "secure" in make_client(config).post("/api/auth/guest").headers["set-cookie"].lower()
 
     def test_the_token_is_never_in_the_response_body(self):
