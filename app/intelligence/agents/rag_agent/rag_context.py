@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, SerializeAsAny
 from app.intelligence.messages import MessageAI
 from app.intelligence.messages import MessageBase
 from app.intelligence.messages import MessageHuman
+from app.intelligence.security import SecurityVerdict
 from app.intelligence.memory import VectorDbMemoryEntry
 
 
@@ -12,7 +13,8 @@ class RagContext(BaseModel):
     """The single mutable object threaded through every layer of a RagPipeline — the
     RAG counterpart of OperationContext, with the same rule: each layer reads what its
     predecessors filled and writes the one field it owns. Query writes query, retrieval
-    writes candidates, reranking writes passages and relevance, generation writes final.
+    writes candidates, security writes security, reranking writes passages and relevance,
+    generation writes final.
 
     Keeping the whole state in one place is what lets generation cite a passage by the
     same number reranking judged it under, and what lets the trace report how many
@@ -42,6 +44,12 @@ class RagContext(BaseModel):
         default_factory = list,
         description = "Passages the hybrid search returned, best first. Many and approximate on "
             "purpose: retrieval casts the net, reranking decides."
+    )
+    security: list[SerializeAsAny[SecurityVerdict]] = Field(
+        default_factory = list,
+        description = "What the security layer found in the question, the history and the "
+            "candidates, one flagged verdict each. Empty when it found nothing or did not run; "
+            "nothing is refused for it, since the layer only watches."
     )
     passages: list[VectorDbMemoryEntry] = Field(
         default_factory = list,
