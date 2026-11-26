@@ -100,7 +100,7 @@ data "aws_iam_policy_document" "ci" {
 
   statement {
     sid       = "ReleasesAndDeployments"
-    actions   = ["s3:GetObject", "s3:PutObject"]
+    actions   = ["s3:GetObject", "s3:GetObjectVersion", "s3:GetObjectTagging", "s3:GetObjectVersionTagging", "s3:PutObject"]
     resources = ["arn:aws:s3:::${var.artifacts_bucket}/*"]
   }
 
