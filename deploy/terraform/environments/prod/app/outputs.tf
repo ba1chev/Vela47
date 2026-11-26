@@ -3,38 +3,28 @@ output "url" {
   value       = "https://${module.app.route53_record_fqdn}"
 }
 
+output "release_version" {
+  description = "Version of the release the server tasks run"
+  value       = local.release.version
+}
+
 output "lb_dns_name" {
   description = "DNS name of the load balancer, the target of the alias record of the application domain"
   value       = module.app.lb_dns_name
 }
 
-output "lb_target_group_arn" {
-  description = "ARN of the target group of the server tasks. Check their health with `aws elbv2 describe-target-health --target-group-arn <arn>`"
-  value       = module.app.lb_target_group_arn
-}
-
-output "autoscaling_group_name" {
-  description = "Name of the auto scaling group which runs the EC2 instance of the cluster"
-  value       = module.app.autoscaling_group_name
-}
-
 output "ecs_cluster_name" {
-  description = "Name of the ECS cluster. A code change is deployed by terraform apply, which builds and pushes a new image and updates the service"
+  description = "Name of the ECS cluster"
   value       = module.app.ecs_cluster_name
 }
 
 output "ecs_service_name" {
-  description = "Name of the ECS service of the server task. Follow a deploy with `aws ecs describe-services --cluster <cluster> --services <service>`"
+  description = "Name of the ECS service of the server tasks. Follow a deployment with `aws ecs list-service-deployments --cluster <cluster> --service <service>`"
   value       = module.app.ecs_service_name
 }
 
-output "ecr_image_app_uri" {
-  description = "URI of the server image the task runs, pinned by digest"
-  value       = module.app.ecr_image_app_uri
-}
-
 output "cloudwatch_log_group_app_name" {
-  description = "Name of the log group of the server task. Follow it with `aws logs tail <name> --follow`"
+  description = "Name of the log group of the server tasks. Follow it with `aws logs tail <name> --follow`"
   value       = module.app.cloudwatch_log_group_app_name
 }
 
