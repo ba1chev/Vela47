@@ -10,13 +10,13 @@ variable "tags" {
   default = {
     owner       = "ba1chev"
     project     = "vela47"
-    environment = "production"
+    environment = "shared"
     created_by  = "terraform"
   }
 }
 
 variable "state_bucket" {
-  description = "Bucket of the Terraform state of the environment, created by global/s3_state"
+  description = "Bucket of the Terraform state of every root module, local excepted"
   type        = string
   default     = "vela47-terraform-state"
 }
