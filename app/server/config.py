@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, SecretStr, model_validator
 from db import DatabaseConfig
 from db import DatabaseCredentials
 from app.server.config_secrets import read_secret
+from app.server.config_platform import ConfigPlatform
 from app.server.config_environment import ConfigEnvironment
 
 DATABASE_VARIABLES = {
@@ -22,35 +23,41 @@ class Config(BaseModel):
     reads the environment or Secrets Manager. The rest of the server is handed a Config,
     so a test builds one in a line.
 
-    Non-secret values come from VELA47_* environment variables. In PROD secrets never
-    do: the token secret, the first admin and the search key are read once from an
-    application secret, and no database password is held here at all, since the
-    database reads its RDS-managed secret for every new connection. DEV has a default for every field and
-    runs on SQLite unless a database host is set, then on that PostgreSQL with
-    credentials from the environment. PROD requires what it cannot run safely without."""
+    Non-secret values come from VELA47_* environment variables. On AWS secrets never do:
+    the token secret, the first admin and the search key are read once from an
+    application secret, and no database password is held here at all, since the database
+    reads its RDS-managed secret for every new connection. LOCAL has a default for every
+    field and runs on SQLite unless a database host is set. AWS requires what it cannot
+    run safely without."""
 
     model_config = {"frozen": True}
 
     environment: ConfigEnvironment = Field(
-        default = ConfigEnvironment.DEV,
-        description = "Where the server runs — VELA47_ENVIRONMENT, 'dev' or 'prod'. Decides the "
-            "database backend and where secrets are read from."
+        default = ConfigEnvironment.LOCAL,
+        description = "Where the server runs — VELA47_ENVIRONMENT, 'local', 'dev', 'staging' or "
+            "'prod'. Its platform decides the database backend and where secrets are read from."
+    )
+    version: Optional[str] = Field(
+        default = None,
+        description = "Release the server was built from — VELA47_VERSION, set by the deployment "
+            "and reported by the health endpoint, so a deployment can tell which release answers. "
+            "Unset when the server runs from a working tree."
     )
     database: DatabaseConfig = Field(
         default_factory = DatabaseConfig,
-        description = "Where the database is and how to reach it. DEV: the SQLite file, "
-            "VELA47_SQLITE_PATH. PROD: VELA47_DATABASE_HOST, _PORT, _NAME, _SSL_MODE and "
+        description = "Where the database is and how to reach it. LOCAL: the SQLite file, "
+            "VELA47_SQLITE_PATH. AWS: VELA47_DATABASE_HOST, _PORT, _NAME, _SSL_MODE and "
             "_SECRET_ID, of which the host and the secret are required."
     )
     database_credentials: Optional[DatabaseCredentials] = Field(
         default = None,
-        description = "DEV only, required once a database host is set. User and password of the "
+        description = "LOCAL only, required once a database host is set. User and password of the "
             "local PostgreSQL — VELA47_DATABASE_USERNAME and VELA47_DATABASE_PASSWORD. Its "
-            "password never rotates, so it is held here; PROD never holds one."
+            "password never rotates, so it is held here; AWS never holds one."
     )
     aws_region: Optional[str] = Field(
         default = None,
-        description = "PROD only, required. Region of the secrets — VELA47_AWS_REGION, falling back "
+        description = "AWS only, required. Region of the secrets — VELA47_AWS_REGION, falling back "
             "to AWS_REGION and AWS_DEFAULT_REGION."
     )
     knowledge_max_file_bytes: int = Field(
@@ -79,42 +86,46 @@ class Config(BaseModel):
     )
     token_secret: Optional[SecretStr] = Field(
         default = None,
-        description = "Key that signs session tokens, at least 32 bytes. PROD: 'token_secret' in the "
-            "application secret, required. DEV: VELA47_TOKEN_SECRET, optional — without it a key "
+        description = "Key that signs session tokens, at least 32 bytes. AWS: 'token_secret' in the "
+            "application secret, required. LOCAL: VELA47_TOKEN_SECRET, optional — without it a key "
             "is generated per run and every restart signs everyone out."
     )
     admin_username: Optional[str] = Field(
         default = None,
-        description = "Name of the admin to create on start if no entity has it yet. PROD: "
-            "'admin_username' in the application secret. DEV: VELA47_ADMIN_USERNAME."
+        description = "Name of the admin to create on start if no entity has it yet. AWS: "
+            "'admin_username' in the application secret. LOCAL: VELA47_ADMIN_USERNAME."
     )
     admin_password: Optional[SecretStr] = Field(
         default = None,
-        description = "Password of that admin, at least 12 characters. PROD: 'admin_password' in the "
-            "application secret. DEV: VELA47_ADMIN_PASSWORD. Unused once the admin exists."
+        description = "Password of that admin, at least 12 characters. AWS: 'admin_password' in the "
+            "application secret. LOCAL: VELA47_ADMIN_PASSWORD. Unused once the admin exists."
     )
     tavily_api_key: Optional[SecretStr] = Field(
         default = None,
-        description = "PROD only, optional. Key of the Tavily search API the research subagent "
+        description = "AWS only, optional. Key of the Tavily search API the research subagent "
             "searches the web with — 'tavily_api_key' in the application secret, an empty value "
-            "counting as none. Without it PROD searches through DuckDuckGo. DEV always does, "
+            "counting as none. Without it AWS searches through DuckDuckGo. LOCAL always does, "
             "so it has no variable for it."
     )
 
+    @property
+    def platform(self) -> ConfigPlatform:
+        return self.environment.platform
+
     @model_validator(mode = "after")
-    def validate_development(self) -> Self:
-        if self.environment is not ConfigEnvironment.DEV:
+    def validate_local(self) -> Self:
+        if self.platform is not ConfigPlatform.LOCAL:
             return self
 
         if self.database.host is not None and self.database_credentials is None:
             raise ValueError(
-                "DEV with a database host needs VELA47_DATABASE_USERNAME and VELA47_DATABASE_PASSWORD."
+                "LOCAL with a database host needs VELA47_DATABASE_USERNAME and VELA47_DATABASE_PASSWORD."
             )
         return self
 
     @model_validator(mode = "after")
-    def validate_production(self) -> Self:
-        if self.environment is not ConfigEnvironment.PROD:
+    def validate_aws(self) -> Self:
+        if self.platform is not ConfigPlatform.AWS:
             return self
 
         missing = [
@@ -128,13 +139,13 @@ class Config(BaseModel):
             if current_value is None
         ]
         if missing:
-            raise ValueError(f"PROD cannot start without {', '.join(missing)}.")
+            raise ValueError(f"{self.environment.value} cannot start without {', '.join(missing)}.")
         return self
 
     @classmethod
     def from_environment(cls, environ: Mapping[str, str] = os.environ,
         secret_reader: Callable[[str, str], dict[str, str]] = read_secret) -> "Config":
-        environment = ConfigEnvironment(environ.get("VELA47_ENVIRONMENT", ConfigEnvironment.DEV.value))
+        environment = ConfigEnvironment(environ.get("VELA47_ENVIRONMENT", ConfigEnvironment.LOCAL.value))
         region = (
             environ.get("VELA47_AWS_REGION")
             or environ.get("AWS_REGION")
@@ -142,6 +153,7 @@ class Config(BaseModel):
         )
         values: dict[str, Any] = {
             "environment": environment,
+            "version": environ.get("VELA47_VERSION") or None,
             "database": DatabaseConfig(**{
                 current_field: environ[current_variable]
                 for current_field, current_variable in DATABASE_VARIABLES.items()
@@ -153,7 +165,7 @@ class Config(BaseModel):
             "knowledge_max_owner_bytes": int(environ.get("VELA47_KNOWLEDGE_MAX_OWNER_BYTES", 2 * 1024 * 1024))
         }
 
-        if environment is ConfigEnvironment.DEV:
+        if environment.platform is ConfigPlatform.LOCAL:
             database_username = environ.get("VELA47_DATABASE_USERNAME")
             database_password = environ.get("VELA47_DATABASE_PASSWORD")
             values.update(
@@ -171,8 +183,8 @@ class Config(BaseModel):
         app_secret_id = environ.get("VELA47_APP_SECRET_ID")
         if not app_secret_id or not region:
             raise ValueError(
-                "PROD reads its secrets from AWS Secrets Manager and needs VELA47_APP_SECRET_ID "
-                "and a region (VELA47_AWS_REGION) to find them."
+                f"{environment.value} reads its secrets from AWS Secrets Manager and needs "
+                "VELA47_APP_SECRET_ID and a region (VELA47_AWS_REGION) to find them."
             )
 
         app_secret = secret_reader(app_secret_id, region)
