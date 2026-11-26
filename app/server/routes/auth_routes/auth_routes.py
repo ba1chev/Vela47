@@ -5,8 +5,8 @@ from fastapi import APIRouter, Request, Response
 from app.server.routes import caller
 from app.server.routes import SESSION_COOKIE
 from app.server.requests import SignInRequest
+from app.server.config_platform import ConfigPlatform
 from app.server.security import IdentityAccessRoleSession
-from app.server.config_environment import ConfigEnvironment
 
 auth_router = APIRouter(prefix = "/api/auth")
 
@@ -27,9 +27,9 @@ def _open_session(request: Request, response: Response,
     """Hands a freshly assumed role session to the browser as a cookie, which is what
     lets EventSource carry it — EventSource cannot set an Authorization header. HttpOnly
     keeps page scripts from ever reading the token, and SameSite=Strict keeps other
-    sites from making the browser send it. Secure is always on in PROD, where TLS ends at
+    sites from making the browser send it. Secure is always on on AWS, where TLS ends at
     the load balancer and the request reaching the server is plain HTTP even though the
-    browser's was not; in DEV it follows the scheme, staying off on plain-HTTP localhost,
+    browser's was not; on LOCAL it follows the scheme, staying off on plain-HTTP localhost,
     where some browsers refuse to store a Secure cookie at all."""
     response.set_cookie(
         SESSION_COOKIE,
@@ -38,7 +38,7 @@ def _open_session(request: Request, response: Response,
         httponly = True,
         samesite = "strict",
         secure = (
-            request.app.state.config.environment is ConfigEnvironment.PROD
+            request.app.state.config.platform is ConfigPlatform.AWS
             or request.url.scheme == "https"
         ),
         path = "/"
