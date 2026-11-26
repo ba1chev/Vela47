@@ -15,6 +15,11 @@ updates:
     directories: ["/deploy/images/aws/app", "/deploy/images/aws/sandbox", "/deploy/images/local/app", "/deploy/images/local/database", "/deploy/images/local/sandbox"]
     schedule:
       interval: weekly
+    # The local PostgreSQL follows the major version of RDS (engine_version in modules/database), and a new major
+    # version does not start on the data of the old one, so it moves only together with RDS, by hand
+    ignore:
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]
     groups:
       images:
         patterns: ["*"]
