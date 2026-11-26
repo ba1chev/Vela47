@@ -1,0 +1,184 @@
+# Continuous deployment of one release into one AWS environment. Called by the delivery workflow for dev, staging and
+# prod in turn, or started by hand to redeploy or roll back to any stored release:
+#   gh workflow run deployment.yaml -f environment=prod -f version=<version>
+# It runs the Terraform and the scripts of the release itself, from releases/<version>/deploy.tar.gz, never from the
+# branch. The deploy job uses the GitHub environment of the same name, whose required reviewers approve staging and
+# prod after reading the preview. See docs/deployment_order.md for the order of the steps and why.
+name: Deployment
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: dev, staging or prod
+        type: string
+        required: true
+      version:
+        description: Version of a stored release
+        type: string
+        required: true
+  # checkov:skip=CKV_GHA_7:The inputs only choose a release that was already built and stored, they build nothing
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to deploy to
+        type: choice
+        options: [dev, staging, prod]
+        required: true
+      version:
+        description: Version of a stored release, e.g. the previous one of deployments/<environment>/current.yaml for a rollback
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deployment-${{ inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: eu-central-1
+  ARTIFACTS_BUCKET: vela47-artifacts
+  ENVIRONMENT: ${{ inputs.environment }}
+  VERSION: ${{ inputs.version }}
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  TF_VAR_release_version: ${{ inputs.version }}
+
+jobs:
+  preview:
+    name: Preview
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: aws-actions/configure-aws-credentials@45666896f5d8e0f10ae255413f3a4cdd03bdc8f5 # v6.3.1
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+      - name: Fetch the release
+        run: |
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::'$VERSION' is not a release version"; exit 1; }
+          aws s3 cp "s3://$ARTIFACTS_BUCKET/releases/$VERSION/deploy.tar.gz" - | tar -xz
+          aws s3 cp "s3://$ARTIFACTS_BUCKET/releases/$VERSION/release.yaml" "$RUNNER_TEMP/release.yaml"
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15"
+      - run: pip install -r deploy/pipeline/requirements.txt
+      - name: Check the promotion
+        run: python -m deploy.pipeline.commands.check_promotion --environment "$ENVIRONMENT" --version "$VERSION"
+      - name: Check that the environment asks for an approval
+        if: inputs.environment != 'dev'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          rules="$(gh api "repos/$GITHUB_REPOSITORY/environments/$ENVIRONMENT" --jq '[.protection_rules[]?.type] | join(",")' 2>/dev/null || echo missing)"
+          if [[ "$rules" != *required_reviewers* ]]; then
+            echo "::error::The GitHub environment $ENVIRONMENT has no required reviewers ($rules), so nothing would stop this deployment. Add them first (docs/open_id_connect.md)."
+            exit 1
+          fi
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.17.2
+          terraform_wrapper: false
+      - name: Plan every root module
+        env:
+          TF_VAR_tavily_api_key: ${{ secrets.TAVILY_API_KEY }}
+        run: |
+          echo "## $VERSION → $ENVIRONMENT" >> "$GITHUB_STEP_SUMMARY"
+          pending=""
+          for root in vpc/eu-central-1 database app; do
+            code=0
+            deploy/pipeline/terraform_root.sh plan "$ENVIRONMENT" "$root" "$RUNNER_TEMP/release.yaml" || code=$?
+            if [ "$code" -eq 3 ] && [ -n "$pending" ]; then
+              echo "**${root%%/*}**: planned once $pending is applied" >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+            [ "$code" -eq 0 ] || exit "$code"
+            [ "$(cat "$RUNNER_TEMP/${root%%/*}.changes")" = "true" ] && pending="${pending:+$pending, }${root%%/*}"
+          done
+          true
+
+  deploy:
+    name: Deploy
+    needs: preview
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ steps.app.outputs.url }}
+    steps:
+      - uses: aws-actions/configure-aws-credentials@45666896f5d8e0f10ae255413f3a4cdd03bdc8f5 # v6.3.1
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+          role-duration-seconds: 7200
+      - name: Fetch the release
+        id: fetch
+        run: |
+          aws s3 cp "s3://$ARTIFACTS_BUCKET/releases/$VERSION/deploy.tar.gz" - | tar -xz
+          aws s3 cp "s3://$ARTIFACTS_BUCKET/releases/$VERSION/release.yaml" "$RUNNER_TEMP/release.yaml"
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15"
+      - run: pip install -r deploy/pipeline/requirements.txt
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.17.2
+          terraform_wrapper: false
+      - name: Start a database stopped for the night
+        run: |
+          identifier="vela47-$ENVIRONMENT"
+          status="$(aws rds describe-db-instances --db-instance-identifier "$identifier" --query 'DBInstances[0].DBInstanceStatus' --output text 2>/dev/null || echo missing)"
+          echo "Database $identifier: $status"
+          [ "$status" = "stopped" ] && aws rds start-db-instance --db-instance-identifier "$identifier" > /dev/null
+          [ "$status" = "missing" ] || aws rds wait db-instance-available --db-instance-identifier "$identifier"
+      - name: Apply the network
+        run: deploy/pipeline/terraform_root.sh apply "$ENVIRONMENT" vpc/eu-central-1 "$RUNNER_TEMP/release.yaml"
+      - name: Apply the database
+        run: deploy/pipeline/terraform_root.sh apply "$ENVIRONMENT" database "$RUNNER_TEMP/release.yaml"
+      - name: Snapshot the database before the new release migrates it
+        if: inputs.environment != 'dev'
+        run: |
+          identifier="vela47-$ENVIRONMENT"
+          snapshot="$identifier-${VERSION//./-}-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          aws rds wait db-instance-available --db-instance-identifier "$identifier"
+          aws rds create-db-snapshot --db-instance-identifier "$identifier" --db-snapshot-identifier "$snapshot" \
+            --tags Key=release,Value="$VERSION" > /dev/null
+          aws rds wait db-snapshot-available --db-snapshot-identifier "$snapshot"
+          echo "Snapshot $snapshot" >> "$GITHUB_STEP_SUMMARY"
+      - name: Apply the server
+        id: app
+        env:
+          TF_VAR_tavily_api_key: ${{ secrets.TAVILY_API_KEY }}
+        run: |
+          echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%S+00:00)" >> "$GITHUB_OUTPUT"
+          deploy/pipeline/terraform_root.sh apply "$ENVIRONMENT" app "$RUNNER_TEMP/release.yaml"
+          directory="deploy/terraform/environments/$ENVIRONMENT/app"
+          echo "url=$(terraform -chdir="$directory" output -raw url)" >> "$GITHUB_OUTPUT"
+          echo "cluster=$(terraform -chdir="$directory" output -raw ecs_cluster_name)" >> "$GITHUB_OUTPUT"
+          echo "service=$(terraform -chdir="$directory" output -raw ecs_service_name)" >> "$GITHUB_OUTPUT"
+      - name: Follow the rollout and smoke test it
+        env:
+          CLUSTER: ${{ steps.app.outputs.cluster }}
+          SERVICE: ${{ steps.app.outputs.service }}
+          URL: ${{ steps.app.outputs.url }}
+          STARTED_AT: ${{ steps.app.outputs.started_at }}
+        run: |
+          python -m deploy.pipeline.commands.follow_rollout \
+            --cluster "$CLUSTER" --service "$SERVICE" --url "$URL" --version "$VERSION" --started-at "$STARTED_AT"
+      - name: Record the deployment
+        if: always() && steps.fetch.outcome == 'success'
+        env:
+          OUTCOME: ${{ job.status == 'success' && 'succeeded' || 'failed' }}
+        run: |
+          commit="$(python -c "import yaml, sys; print(yaml.safe_load(open(sys.argv[1]))['commit'])" "$RUNNER_TEMP/release.yaml")"
+          python -m deploy.pipeline.commands.record_deployment \
+            --environment "$ENVIRONMENT" \
+            --version "$VERSION" \
+            --commit "$commit" \
+            --outcome "$OUTCOME"
