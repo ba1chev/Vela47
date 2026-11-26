@@ -122,3 +122,8 @@ class TestAgentBuilder:
     def test_the_answer_has_room_for_a_long_report(self):
         agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), WebSearchDuckDuckGo(WebFetcher()), [], ConfigEnvironment.DEV, ModelClientOllama())
         assert agent._model._config.max_output_tokens == ANSWER_MAX_OUTPUT_TOKENS
+
+    def test_the_deep_agent_inspects_what_it_starts_from_before_it_plans(self):
+        agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), WebSearchDuckDuckGo(WebFetcher()), [], ConfigEnvironment.DEV, ModelClientOllama())
+        layers = [current.operation_type.name for current in agent._operation_pipeline._operation_layers]
+        assert layers == ["SECURITY", "PLANNING", "DECOMPOSITION", "SUBAGENTS", "MERGING"]

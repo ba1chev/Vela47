@@ -1,6 +1,7 @@
 from app.intelligence.tools import ToolBase
 from app.intelligence.web import WebSearchBase
 from app.intelligence.tools import ToolWebSearchInput
+from app.intelligence.security import SecurityPromptType
 
 
 class ToolWebSearch(ToolBase[ToolWebSearchInput, str]):
@@ -35,6 +36,10 @@ class ToolWebSearch(ToolBase[ToolWebSearchInput, str]):
     @property
     def input_schema(self) -> type[ToolWebSearchInput]:
         return ToolWebSearchInput
+
+    @property
+    def result_threat(self) -> SecurityPromptType:
+        return SecurityPromptType.INJECTION
 
     def execute(self, input: ToolWebSearchInput) -> str:
         results = self._web_search.search(input.query, input.max_results)

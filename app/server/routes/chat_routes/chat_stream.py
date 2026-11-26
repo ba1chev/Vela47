@@ -1,5 +1,6 @@
 import json
 import asyncio
+import logging
 from datetime import datetime, timezone
 from starlette.datastructures import State
 from typing import Any, AsyncIterator, Callable
@@ -22,6 +23,8 @@ UNSTORED_TRACE_EVENTS = {
     TraceEventType.SANDBOX_ACQUIRED,
     TraceEventType.SANDBOX_RELEASED
 }
+
+logger = logging.getLogger("vela47")
 
 
 def _frame(event: str, data: dict[str, Any]) -> str:
@@ -55,6 +58,18 @@ def _stored_trace(events: list[TraceEvent]) -> list[dict[str, Any]]:
         for current_event in events
         if current_event.type not in UNSTORED_TRACE_EVENTS
     ]
+
+
+def _log_finding(chat_session: ChatSession, event: TraceEvent) -> None:
+    if event.type is not TraceEventType.SECURITY_FLAGGED:
+        return
+    logger.warning(
+        "Security finding in conversation %s of %s: %s (%s)",
+        chat_session.id,
+        chat_session.owner_id,
+        event.label,
+        ", ".join(event.payload.get("matches", {}))
+    )
 
 
 def _remember(state: State, chat_session: ChatSession, is_new: bool, turn: list[MessageBase]) -> None:
@@ -91,7 +106,10 @@ async def stream_chat(state: State, message: str, chat_session: ChatSession, is_
 
     A model call can stay silent for minutes, longer than a load balancer keeps an idle
     connection open, so an SSE comment goes out whenever nothing else has for
-    keepalive_seconds. EventSource ignores comments."""
+    keepalive_seconds. EventSource ignores comments.
+
+    Every security finding of the run is also written to the server's log as it happens,
+    one line naming the conversation, its owner and the signatures, never the text."""
     yield _frame("session", {"id": chat_session.id, "title": chat_session.title, "new": is_new})
 
     loop = asyncio.get_running_loop()
@@ -100,6 +118,7 @@ async def stream_chat(state: State, message: str, chat_session: ChatSession, is_
     tracing_service.subscribe(
         lambda event: loop.call_soon_threadsafe(queue.put_nowait, event)
     )
+    tracing_service.subscribe(lambda event: _log_finding(chat_session, event))
 
     agent = build_agent(tracing_service)
     agent.restore(chat_session.messages)

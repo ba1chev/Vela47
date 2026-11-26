@@ -7,6 +7,7 @@ from app.intelligence.messages import MessageBase
 from app.intelligence.agents import OperationPlan
 from app.intelligence.agents import OperationTask
 from app.intelligence.messages import MessageHuman
+from app.intelligence.security import SecurityVerdict
 from app.intelligence.agents import OperationSubagentResult
 
 
@@ -41,6 +42,12 @@ class OperationContext(BaseModel):
             "DeepAgent. Planning reads them to understand a follow-up such as 'now make it "
             "faster', and merging reads them so the answer continues the conversation instead "
             "of starting it over. Subagents never see them — their isolation is the point."
+    )
+    security: list[SerializeAsAny[SecurityVerdict]] = Field(
+        default_factory = list,
+        description = "What the security layer found in the goal and the history, one flagged "
+            "verdict each. Empty when it found nothing or did not run; nothing is refused for "
+            "it, since the layer only watches."
     )
     plan: Optional[OperationPlan] = Field(
         default = None,

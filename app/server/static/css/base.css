@@ -26,6 +26,7 @@
 
   --ok: #3ddc97;
   --err: #ff7f8a;
+  --warn: #ff9f5a;
 
   /* One hue per subagent type, so the trace carries colour that means something
      instead of colour applied for decoration. */

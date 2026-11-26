@@ -13,6 +13,7 @@ from app.intelligence.loaders import LoaderDocument
 from app.intelligence.tools import ToolFetchUrlInput
 from app.intelligence.loaders import LoadersFactoryBase
 from app.intelligence.loaders import resolve_loader_type
+from app.intelligence.security import SecurityPromptType
 
 
 class ToolFetchUrl(ToolBase[ToolFetchUrlInput, str]):
@@ -58,6 +59,10 @@ class ToolFetchUrl(ToolBase[ToolFetchUrlInput, str]):
     @property
     def input_schema(self) -> type[ToolFetchUrlInput]:
         return ToolFetchUrlInput
+
+    @property
+    def result_threat(self) -> SecurityPromptType:
+        return SecurityPromptType.INJECTION
 
     def _normalize(self, url: str) -> str:
         return urldefrag(url.strip().rstrip(self.TRAILING_CHARS))[0].rstrip("/")

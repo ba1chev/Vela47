@@ -7,14 +7,13 @@ from app.intelligence.agents import OperationLayersFactoryBase
 
 
 class OperationLayersFactory(OperationLayersFactoryBase):
-    """Concrete factory that maps each OperationType to its corresponding
-    OperationLayerBase subclass and delegates construction to it. Additional
-    keyword arguments are forwarded verbatim, so the policy can supply each
-    layer's own dependencies — a model for the stages that call one, a subagent
-    factory and sandbox pool for the stage that runs agents — without the
-    factory needing to know about them explicitly.
+    """Concrete factory that maps each OperationType to its OperationLayerBase subclass
+    and delegates construction to it. Keyword arguments are forwarded verbatim, so the
+    policy supplies each layer's own dependencies — a tracer, a model, a subagent factory
+    and sandbox pool — without the factory knowing which layer takes which.
 
     Registry reference:
+      SECURITY      -> OperationSecurityLayer(tracing_service=<TracingServiceBase>)
       PLANNING      -> OperationPlanningLayer(model=<ModelFoundation>)
       DECOMPOSITION -> OperationDecompositionLayer()
       SUBAGENTS     -> OperationSubagentsLayer(subagent_factory=<...>, sandbox_pool=<...>, peering=<...>)

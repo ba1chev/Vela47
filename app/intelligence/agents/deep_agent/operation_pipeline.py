@@ -36,6 +36,7 @@ class OperationPipeline:
 
     def _summarize(self, context: OperationContext) -> dict[str, Any]:
         return {
+            "flagged": len(context.security),
             "steps": len(context.plan.steps) if context.plan is not None else 0,
             "tasks": len(context.tasks),
             "results": len(context.results),

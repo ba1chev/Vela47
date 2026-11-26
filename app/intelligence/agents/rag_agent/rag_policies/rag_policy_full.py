@@ -11,7 +11,7 @@ from app.intelligence.memory import VectorDbOperationPolicy
 
 
 class RagPolicyFull(RagPolicy):
-    """Runs the complete RAG pipeline — query, retrieve, rerank, generate.
+    """Runs the complete RAG pipeline — query, retrieve, inspect, rerank, generate.
 
     The three models are separate parameters for the same reason the DeepAgent's are:
     rewriting a query and scoring passages want a low temperature and short, exact
@@ -46,6 +46,7 @@ class RagPolicyFull(RagPolicy):
                 retrieval_policy = self._retrieval_policy,
                 candidates = self._candidates
             ),
+            factory.create(RagLayerType.SECURITY, tracing_service = self._tracing_service),
             factory.create(
                 RagLayerType.RERANKING,
                 model = self._reranking_model,
