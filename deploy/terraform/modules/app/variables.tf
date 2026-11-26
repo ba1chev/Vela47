@@ -1,7 +1,17 @@
 # General variables
 variable "name" {
-  description = "Prefix of the name of every resource of the application"
+  description = "Prefix of the name of every resource of the application, vela47-<environment>"
   type        = string
+}
+
+variable "environment" {
+  description = "Environment the server runs as, VELA47_ENVIRONMENT"
+  type        = string
+
+  validation {
+    condition     = contains(["dev", "staging", "prod"], var.environment)
+    error_message = "The environment must be dev, staging or prod."
+  }
 }
 
 variable "region" {
@@ -9,27 +19,9 @@ variable "region" {
   type        = string
 }
 
-variable "repository_path" {
-  description = "Absolute path of the repository root, the context the server image is built from"
+variable "permissions_boundary_arn" {
+  description = "Permissions boundary of every IAM role the module creates, the most any of them may ever be allowed"
   type        = string
-}
-
-variable "app_dockerfile" {
-  description = "Dockerfile of the server image, relative to repository_path"
-  type        = string
-  default     = "deploy/images/prod/app/Dockerfile"
-}
-
-variable "sandbox_context" {
-  description = "Directory the sandbox function image is built from, relative to repository_path"
-  type        = string
-  default     = "deploy/images/prod/sandbox"
-}
-
-variable "ecr_kept_images" {
-  description = "How many images each ECR repository keeps, older ones are deleted"
-  type        = number
-  default     = 5
 }
 
 variable "log_retention_days" {
@@ -38,9 +30,40 @@ variable "log_retention_days" {
   default     = 14
 }
 
+# Release variables (from the release.yaml of the release being deployed)
+variable "release_version" {
+  description = "Version of the release, VELA47_VERSION, the health endpoint reports it"
+  type        = string
+}
+
+variable "app_image" {
+  description = "Server image of the release, an ECR URI pinned by digest"
+  type        = string
+
+  validation {
+    condition     = can(regex("@sha256:[0-9a-f]{64}$", var.app_image))
+    error_message = "The app_image must be pinned by digest (<repository>@sha256:<digest>)."
+  }
+}
+
+variable "sandbox_image" {
+  description = "Sandbox function image of the release, an ECR URI pinned by digest"
+  type        = string
+
+  validation {
+    condition     = can(regex("@sha256:[0-9a-f]{64}$", var.sandbox_image))
+    error_message = "The sandbox_image must be pinned by digest (<repository>@sha256:<digest>)."
+  }
+}
+
 # Network variables (outputs of the vpc and database root modules)
 variable "vpc_id" {
   description = "VPC every resource of the application lives in"
+  type        = string
+}
+
+variable "vpc_cidr_block" {
+  description = "CIDR of the VPC, the load balancer only sends traffic into it"
   type        = string
 }
 
@@ -50,7 +73,7 @@ variable "public_subnet_ids" {
 }
 
 variable "private_subnet_ids" {
-  description = "Private subnets of the EC2 instance, the server task and the sandbox function"
+  description = "Private subnets of the EC2 instances, the server tasks and the sandbox function"
   type        = list(string)
 }
 
@@ -76,7 +99,7 @@ variable "database_secret_arn" {
 }
 
 variable "database_security_group_id" {
-  description = "Security group of the RDS instance, the server task adds its ingress rule to it"
+  description = "Security group of the RDS instance, the server tasks add their ingress rule to it"
   type        = string
 }
 
@@ -88,7 +111,7 @@ variable "instance_ami" {
 }
 
 variable "instance_type" {
-  description = "Type of the EC2 instances, it has to be a Graviton (arm64) type, and fit the server task and a second one during a deploy"
+  description = "Type of the EC2 instances, a Graviton (arm64) type that fits two server tasks"
   type        = string
 }
 
@@ -99,7 +122,7 @@ variable "instance_root_device_name" {
 }
 
 variable "instance_root_volume_size" {
-  description = "Size of the root volume in GB, it holds the image of the server task"
+  description = "Size of the root volume in GB, it holds the images of the server tasks"
   type        = number
   default     = 30
 
@@ -116,27 +139,30 @@ variable "instance_metadata_hop_limit" {
 }
 
 variable "instance_min_count" {
-  description = "Minimum number of EC2 instances running"
+  description = "Fewest EC2 instances the capacity provider may scale to, 0 lets an environment with no tasks run no instance"
   type        = number
-  default     = 1
 }
 
 variable "instance_max_count" {
-  description = "Maximum number of EC2 instances running"
+  description = "Most EC2 instances the capacity provider may scale to, room for a second set of tasks during a canary deployment"
   type        = number
-  default     = 1
-}
-
-variable "instance_desired_count" {
-  description = "Desired number of EC2 instances running"
-  type        = number
-  default     = 1
 }
 
 variable "instance_health_check_grace_period" {
   description = "Seconds a new instance gets before failed health checks count, the ECS-optimized AMI only has to start the ECS agent"
   type        = number
   default     = 300
+}
+
+variable "instance_max_lifetime" {
+  description = "Seconds an instance may run before it is replaced by one from the newest AMI, which is how the instances get patched"
+  type        = number
+  default     = 1209600
+
+  validation {
+    condition     = var.instance_max_lifetime == 0 || (var.instance_max_lifetime >= 86400 && var.instance_max_lifetime <= 31536000)
+    error_message = "The instance_max_lifetime must be 0 or between 86400 (a day) and 31536000 (a year) seconds."
+  }
 }
 
 # Server task variables
@@ -165,7 +191,7 @@ variable "task_memory" {
 }
 
 variable "task_memory_reservation" {
-  description = "Memory in MiB reserved for the server container on the instance, two tasks have to fit during a deploy"
+  description = "Memory in MiB reserved for the server container on the instance, two tasks have to fit during a deployment"
   type        = number
   default     = 768
 }
@@ -173,18 +199,58 @@ variable "task_memory_reservation" {
 variable "task_desired_count" {
   description = "Number of server tasks running"
   type        = number
-  default     = 1
 }
 
 variable "task_health_check_grace_period" {
-  description = "Seconds a new server task gets before failed load balancer health checks count"
+  description = "Seconds a new server task gets before failed load balancer health checks count, it migrates the schema on start"
   type        = number
-  default     = 60
+  default     = 120
+}
+
+variable "task_stop_timeout" {
+  description = "Seconds a stopping server task gets to finish the answers it streams before it is killed, uvicorn gives up after 100"
+  type        = number
+  default     = 120
+}
+
+# Deployment variables
+variable "deployment_strategy" {
+  description = "How a new release replaces the running tasks: ROLLING, or CANARY through the blue and green target groups"
+  type        = string
+
+  validation {
+    condition     = contains(["ROLLING", "CANARY"], var.deployment_strategy)
+    error_message = "The deployment_strategy must be ROLLING or CANARY."
+  }
+}
+
+variable "canary_percent" {
+  description = "Share of the traffic the new tasks get first in a CANARY deployment"
+  type        = number
+  default     = 10
+}
+
+variable "canary_bake_time_minutes" {
+  description = "Minutes a CANARY deployment watches its alarms with canary_percent of the traffic before it moves the rest"
+  type        = number
+  default     = 5
+}
+
+variable "bake_time_minutes" {
+  description = "Minutes a CANARY deployment keeps the old tasks after all traffic moved, the window for an instant rollback and the smoke test"
+  type        = number
+  default     = 10
+}
+
+variable "alarm_5xx_threshold" {
+  description = "Errors a minute from the server tasks that set off the 5xx alarm, two minutes in a row"
+  type        = number
+  default     = 5
 }
 
 # Load balancer variables
 variable "load_balancer_deletion_protection" {
-  description = "Protects the load balancer from deletion (true for real production)"
+  description = "Protects the load balancer from deletion"
   type        = bool
   default     = false
 }
@@ -215,13 +281,13 @@ variable "load_balancer_ssl_policy" {
 variable "load_balancer_health_check_path" {
   description = "Path the load balancer checks the server tasks on"
   type        = string
-  default     = "/"
+  default     = "/api/health"
 }
 
 variable "load_balancer_deregistration_delay" {
-  description = "Seconds the load balancer lets requests to a stopping task finish"
+  description = "Seconds the load balancer lets requests to a stopping task finish, as long as the task gets to stop"
   type        = number
-  default     = 30
+  default     = 120
 }
 
 # Domain variables
@@ -287,13 +353,8 @@ variable "bedrock_model_ids" {
   type        = list(string)
 }
 
-variable "sandbox_function_name" {
-  description = "Name of the Lambda function the TEST subagent runs its commands in, the server calls it by this name"
-  type        = string
-}
-
 variable "sandbox_memory_size" {
-  description = "Memory of the sandbox function in MB, the same limit a sandbox container has in development"
+  description = "Memory of the sandbox function in MB, the same limit a sandbox container has locally"
   type        = number
   default     = 512
 }
