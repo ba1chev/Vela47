@@ -54,3 +54,8 @@ class TestReleaseRules:
 
     def test_the_first_release_has_nothing_to_compare_with(self):
         assert violations(make_manifest("1.0.0", "additive", "expand"), [MODULE, MIGRATION], base_version = None, released = None) == []
+
+    def test_the_modules_of_the_shared_roots_are_applied_by_hand_and_need_no_release(self):
+        changed = ["deploy/terraform/modules/ci_role/main.tf", "deploy/terraform/modules/ecr/main.tf"]
+        rules = ReleaseRules(make_manifest("1.0.0"), changed, make_manifest("1.0.0"), (1, 0, 0))
+        assert not rules.releases and rules.violations() == []
