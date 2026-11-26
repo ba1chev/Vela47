@@ -26,7 +26,7 @@ resource "docker_network" "this" {
 
 # Image declaration (built from the repository root, rebuilt when a file it is built from changes)
 resource "docker_image" "this" {
-  name = "${local.name}:dev"
+  name = "${local.name}:local"
 
   build {
     context    = var.repository_path
@@ -61,7 +61,7 @@ resource "docker_container" "this" {
 
   # The database image has no SSL, and its user vela47 is fixed there
   env = [
-    "VELA47_ENVIRONMENT=dev",
+    "VELA47_ENVIRONMENT=local",
     "VELA47_DATABASE_HOST=${var.database_host}",
     "VELA47_DATABASE_SSL_MODE=disable",
     "VELA47_DATABASE_USERNAME=vela47",
