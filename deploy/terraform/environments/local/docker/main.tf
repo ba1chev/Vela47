@@ -6,7 +6,7 @@ module "docker_database" {
   source = "../../../modules/docker_database"
 
   name              = var.name
-  image_context     = "${local.repository_path}/deploy/images/dev/database"
+  image_context     = "${local.repository_path}/deploy/images/local/database"
   network_subnet    = var.database_network_subnet
   network_gateway   = var.database_network_gateway
   container_address = var.database_container_address
