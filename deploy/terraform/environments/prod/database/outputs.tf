@@ -1,3 +1,13 @@
+output "db_instance_identifier" {
+  description = "Identifier of the RDS instance, the deployment snapshots it before a migration"
+  value       = module.database.db_instance_identifier
+}
+
+output "db_instance_arn" {
+  description = "ARN of the RDS instance"
+  value       = module.database.db_instance_arn
+}
+
 output "db_instance_address" {
   description = "Host name of the RDS instance, VELA47_DATABASE_HOST. It follows the primary through a failover"
   value       = module.database.db_instance_address
