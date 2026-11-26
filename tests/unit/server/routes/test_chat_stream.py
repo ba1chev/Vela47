@@ -11,6 +11,7 @@ from app.intelligence.agents import PromptManager
 from app.intelligence.model import ModelFoundation
 from app.server.chat_sessions import ChatSessionStoreSql
 from tests.fixtures.agents.slow_echo_agent import SlowEchoAgent
+from tests.fixtures.agents.failing_echo_agent import FailingEchoAgent
 from tests.fixtures.agents.tracing_echo_agent import TracingEchoAgent
 from tests.fixtures.agents.flagging_echo_agent import FlaggingEchoAgent
 
@@ -138,3 +139,44 @@ class TestChatStreamSecurity:
     def test_a_clean_run_logs_nothing(self):
         _, _, logged, stored = stream_flagging("Backups run every night.")
         assert logged == [] and stored == []
+
+
+def stream_failing():
+    state = make_state()
+    chat_session = ChatSession(owner_id = "a" * 32, title = "hi")
+    handler = logging.handlers.BufferingHandler(100)
+    logger = logging.getLogger("vela47")
+    logger.addHandler(handler)
+
+    async def collect():
+        frames = stream_chat(
+            state, "hi", chat_session, True,
+            lambda tracing_service: FailingEchoAgent(
+                model = ModelFoundation(ModelConfig(model_name = "qwen3:1.7b")),
+                prompt_manager = PromptManager(),
+                max_context_window_size = 10
+            ),
+            "deep"
+        )
+        return [current_frame async for current_frame in frames]
+
+    try:
+        frames = asyncio.run(collect())
+    finally:
+        logger.removeHandler(handler)
+    return state, chat_session, frames, handler.buffer
+
+
+class TestChatStreamFailure:
+    def test_the_browser_gets_the_error_of_a_failed_run(self):
+        _, _, frames, _ = stream_failing()
+        assert frames[-1].startswith("event: error") and "RuntimeError: the model went away" in frames[-1]
+
+    def test_a_failed_run_is_logged_with_its_traceback(self):
+        _, chat_session, _, records = stream_failing()
+        assert [current.getMessage() for current in records] == [f"Run failed in conversation {chat_session.id} of {'a' * 32}"]
+        assert records[0].exc_info[0] is RuntimeError
+
+    def test_a_failed_run_stores_no_conversation(self):
+        state, chat_session, _, _ = stream_failing()
+        assert state.chat_session_store.get_session(chat_session.id) is None
