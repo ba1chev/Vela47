@@ -109,7 +109,8 @@ async def stream_chat(state: State, message: str, chat_session: ChatSession, is_
     keepalive_seconds. EventSource ignores comments.
 
     Every security finding of the run is also written to the server's log as it happens,
-    one line naming the conversation, its owner and the signatures, never the text."""
+    one line naming the conversation, its owner and the signatures, never the text, and a
+    run that fails leaves its traceback there, since the browser only gets its message."""
     yield _frame("session", {"id": chat_session.id, "title": chat_session.title, "new": is_new})
 
     loop = asyncio.get_running_loop()
@@ -161,4 +162,5 @@ async def stream_chat(state: State, message: str, chat_session: ChatSession, is_
             "sources": response.response_metadata.get("sources", [])
         })
     except Exception as e:
+        logger.exception("Run failed in conversation %s of %s", chat_session.id, chat_session.owner_id)
         yield _frame("error", {"message": f"{type(e).__name__}: {e}"})
