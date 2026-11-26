@@ -66,12 +66,12 @@ def chat_stream(request: Request, message: str = Query(min_length = 1),
     if agent is ChatAgentType.RAG:
         authorize(request, IdentityAccessAction.KNOWLEDGE_SEARCH, format_knowledge_collection_vrn(owner.entity_id))
         entries = state.knowledge_store.load_entries(owner.entity_id)
-        build_agent = lambda tracing_service: build_rag_agent(tracing_service, entries, state.config.environment, state.model_client)
+        build_agent = lambda tracing_service: build_rag_agent(tracing_service, entries, state.config.platform, state.model_client)
     else:
         entries = _searchable_entries(request, owner.entity_id)
         build_agent = lambda tracing_service: build_deep_agent(
             tracing_service, state.sandbox_pool, state.web_fetcher, state.web_search, entries,
-            state.config.environment, state.model_client
+            state.config.platform, state.model_client
         )
 
     return StreamingResponse(
