@@ -32,3 +32,20 @@ variable "private_subnet_cidr_blocks" {
     error_message = "An RDS subnet group needs at least 2 private subnets in different availability zones."
   }
 }
+
+variable "nat_type" {
+  description = "How the private subnets reach the internet: a managed NAT gateway, or a NAT instance at a tenth of the price"
+  type        = string
+  default     = "gateway"
+
+  validation {
+    condition     = contains(["gateway", "instance"], var.nat_type)
+    error_message = "The nat_type must be gateway or instance."
+  }
+}
+
+variable "nat_instance_type" {
+  description = "Instance type of the NAT instance, an arm64 type since the AMI is the arm64 Amazon Linux 2023"
+  type        = string
+  default     = "t4g.nano"
+}
