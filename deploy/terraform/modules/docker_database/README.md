@@ -1,6 +1,6 @@
 # docker_database
 
-PostgreSQL for local development, used in place of RDS. It runs in a Docker container on a bridge network of its own and is published on `published_address` only. The `vela47` user and database are fixed by the image in `deploy/images/dev/database`. The password is generated here and passed to the container as `POSTGRES_PASSWORD`.
+PostgreSQL for local development, used in place of RDS. It runs in a Docker container on a bridge network of its own and is published on `published_address` only. The `vela47` user and database are fixed by the image in `deploy/images/local/database`. The password is generated here and passed to the container as `POSTGRES_PASSWORD`.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
