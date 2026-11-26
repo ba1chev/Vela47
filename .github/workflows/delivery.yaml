@@ -55,9 +55,11 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    # Only the digests leave the job: an image URI carries the account ID, which is masked in the logs,
+    # and GitHub drops a job output that contains a masked value
     outputs:
-      app: ${{ steps.app.outputs.image }}
-      sandbox: ${{ steps.sandbox.outputs.image }}
+      app: ${{ steps.app.outputs.digest }}
+      sandbox: ${{ steps.sandbox.outputs.digest }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -103,17 +105,16 @@ jobs:
           tags: ${{ steps.ecr.outputs.registry }}/vela47-sandbox:${{ needs.release.outputs.version }}
       - name: Resolve the digests
         env:
-          REGISTRY: ${{ steps.ecr.outputs.registry }}
           VERSION: ${{ needs.release.outputs.version }}
         run: |
           for image in app sandbox; do
-            digest="$(aws ecr describe-images --repository-name "vela47-$image" --image-ids imageTag="$VERSION" --query 'imageDetails[0].imageDigest' --output text)"
-            echo "$REGISTRY/vela47-$image@$digest" > "$RUNNER_TEMP/$image"
+            aws ecr describe-images --repository-name "vela47-$image" --image-ids imageTag="$VERSION" \
+              --query 'imageDetails[0].imageDigest' --output text > "$RUNNER_TEMP/$image"
           done
       - id: app
-        run: echo "image=$(cat "$RUNNER_TEMP/app")" >> "$GITHUB_OUTPUT"
+        run: echo "digest=$(cat "$RUNNER_TEMP/app")" >> "$GITHUB_OUTPUT"
       - id: sandbox
-        run: echo "image=$(cat "$RUNNER_TEMP/sandbox")" >> "$GITHUB_OUTPUT"
+        run: echo "digest=$(cat "$RUNNER_TEMP/sandbox")" >> "$GITHUB_OUTPUT"
 
   publish:
     name: Publish
@@ -137,11 +138,16 @@ jobs:
           mask-aws-account-id: true
       - name: Write the release
         env:
-          APP_IMAGE: ${{ needs.images.outputs.app }}
-          SANDBOX_IMAGE: ${{ needs.images.outputs.sandbox }}
+          APP_DIGEST: ${{ needs.images.outputs.app }}
+          SANDBOX_DIGEST: ${{ needs.images.outputs.sandbox }}
         run: |
+          [[ "$APP_DIGEST" == sha256:* && "$SANDBOX_DIGEST" == sha256:* ]] || { echo "::error::The images job passed no digests"; exit 1; }
+          repository() { aws ecr describe-repositories --repository-names "$1" --query 'repositories[0].repositoryUri' --output text; }
           python -m deploy.pipeline.commands.render_release \
-            --commit "$GITHUB_SHA" --app-image "$APP_IMAGE" --sandbox-image "$SANDBOX_IMAGE" --output "$RUNNER_TEMP/release.yaml"
+            --commit "$GITHUB_SHA" \
+            --app-image "$(repository vela47-app)@$APP_DIGEST" \
+            --sandbox-image "$(repository vela47-sandbox)@$SANDBOX_DIGEST" \
+            --output "$RUNNER_TEMP/release.yaml"
           tar --exclude='.terraform' --exclude='__pycache__' --exclude='*.tfstate*' -czf "$RUNNER_TEMP/deploy.tar.gz" deploy
       - name: Store the release, never overwriting one
         env:
@@ -154,7 +160,7 @@ jobs:
             aws s3api put-object --bucket "$ARTIFACTS_BUCKET" --key "$prefix/deploy.tar.gz" --body "$RUNNER_TEMP/deploy.tar.gz" --if-none-match '*'
             aws s3api put-object --bucket "$ARTIFACTS_BUCKET" --key "$prefix/release.yaml" --body "$RUNNER_TEMP/release.yaml" --content-type text/yaml --if-none-match '*'
           fi
-          cat "$RUNNER_TEMP/release.yaml" | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY"
+          sed -E 's/[0-9]{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com/<registry>/; s/^/    /' "$RUNNER_TEMP/release.yaml" >> "$GITHUB_STEP_SUMMARY"
       - name: Tag the release
         env:
           GH_TOKEN: ${{ github.token }}
