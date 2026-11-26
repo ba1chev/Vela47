@@ -5,18 +5,21 @@ from fastapi.responses import FileResponse, JSONResponse
 from app.server.routes import iam_router
 from app.server.routes import auth_router
 from app.server.routes import chat_router
+from app.server.routes import health_router
 from app.server.routes import session_router
 from app.server.routes import knowledge_router
 from app.server.server_lifespan import lifespan
 from app.server.security import AuthorizationError
 from app.server.security import AuthenticationError
+from app.server.server_logging import configure_logging
 from app.server.static_files import StaticFilesRevalidated
 
 STATIC_DIR = pathlib.Path(__file__).parent / "static"
 
+configure_logging()
 app = FastAPI(title = "Vela47", lifespan = lifespan)
 app.mount("/static", StaticFilesRevalidated(directory = STATIC_DIR), name = "static")
-for current_router in (auth_router, iam_router, session_router, chat_router, knowledge_router):
+for current_router in (health_router, auth_router, iam_router, session_router, chat_router, knowledge_router):
     app.include_router(current_router)
 
 
