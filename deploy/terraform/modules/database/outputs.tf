@@ -22,3 +22,13 @@ output "security_group_id" {
   description = "ID of the security group of the RDS instance, clients add their ingress rules to it"
   value       = aws_security_group.this.id
 }
+
+output "db_instance_identifier" {
+  description = "Identifier of the RDS instance, the deployment snapshots it by this name"
+  value       = aws_db_instance.this.identifier
+}
+
+output "db_instance_arn" {
+  description = "ARN of the RDS instance"
+  value       = aws_db_instance.this.arn
+}
