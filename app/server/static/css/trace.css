@@ -134,6 +134,11 @@ button.ev-head:focus-visible { outline: 2px solid var(--accent); outline-offset:
   background-image: linear-gradient(90deg, rgba(255, 127, 138, .12), transparent);
 }
 
+.ev[data-kind="security"] > .ev-head {
+  border-left-color: var(--warn);
+  background-image: linear-gradient(90deg, rgba(255, 159, 90, .12), transparent);
+}
+
 /* Each subagent type gets its own hue, set from --agent by the stylesheet below. */
 .ev[data-agent] > .ev-head { border-left-color: var(--agent); }
 .ev[data-agent] > .ev-head .name { color: var(--agent); }
@@ -156,6 +161,7 @@ button.ev-head:focus-visible { outline: 2px solid var(--accent); outline-offset:
 .ev[data-kind="layer"] > .ev-head .dot { background: var(--accent); }
 .ev[data-kind="subagent"] > .ev-head .dot { background: var(--ok); }
 .ev[data-kind="error"] > .ev-head .dot { background: var(--err); }
+.ev[data-kind="security"] > .ev-head .dot { background: var(--warn); }
 
 .ev[data-live="1"] > .ev-head .dot {
   animation: glow 1.3s ease-in-out infinite;
@@ -178,6 +184,7 @@ button.ev-head:focus-visible { outline: 2px solid var(--accent); outline-offset:
 }
 
 .ev[data-kind="error"] > .ev-head .name { color: var(--err); }
+.ev[data-kind="security"] > .ev-head .name { color: var(--warn); }
 .ev[data-kind="a2a"] > .ev-head .name { font-weight: 650; }
 
 .ev .detail:empty { display: none; }
