@@ -4,7 +4,7 @@
 # the kind of change it carries (see docs/change_management.md):
 #   infrastructure: none | additive | breaking
 #   database:       none | expand | contract
-version: 1.0.2
-infrastructure: additive
+version: 1.0.3
+infrastructure: none
 database: none
-summary: Let the first deployment of an environment through, and let the pipeline create the managed password of a database
+summary: Release only what the deployment applies, leaving the modules of the shared roots to the bootstrap script
