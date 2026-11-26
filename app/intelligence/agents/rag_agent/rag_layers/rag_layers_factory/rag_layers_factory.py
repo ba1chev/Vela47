@@ -8,14 +8,14 @@ from app.intelligence.agents import RagLayersFactoryBase
 
 class RagLayersFactory(RagLayersFactoryBase):
     """Concrete factory that maps each RagLayerType to its RagLayerBase subclass and
-    delegates construction to it. Additional keyword arguments are forwarded verbatim, so
-    the policy supplies each layer's own dependencies — a model, a vector memory and its
-    retrieval policy, a tracer — without the factory knowing which takes which.
+    forwards the keyword arguments verbatim, so the policy supplies each layer's own
+    dependencies without the factory knowing which layer takes which.
 
     Registry reference:
       QUERY      -> RagQueryLayer(model=<ModelFoundation>)
       RETRIEVAL  -> RagRetrievalLayer(vector_db_memory=<VectorDbMemory>,
                     retrieval_policy=<VectorDbOperationPolicy>, candidates=<int>, default 12)
+      SECURITY   -> RagSecurityLayer(tracing_service=<TracingServiceBase>)
       RERANKING  -> RagRerankingLayer(model=<ModelFoundation>, top_n=<int>, default 4,
                     min_score=<int>, default 4)
       GENERATION -> RagGenerationLayer(model=<ModelFoundation>, tracing_service=<TracingServiceBase>)"""
