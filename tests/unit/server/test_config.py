@@ -3,6 +3,7 @@ from pydantic import ValidationError
 
 from db import DEFAULT_SQLITE_PATH
 from app.server.config import Config
+from app.server.config_platform import ConfigPlatform
 from app.server.config_environment import ConfigEnvironment
 
 PROD = {
@@ -23,16 +24,16 @@ def make_reader(secret = None, reads = None):
 
 
 class TestConfig:
-    def test_with_nothing_set_it_is_dev_on_the_default_sqlite_file(self):
+    def test_with_nothing_set_it_is_local_on_the_default_sqlite_file(self):
         config = Config.from_environment({})
-        assert config.environment is ConfigEnvironment.DEV
+        assert config.environment is ConfigEnvironment.LOCAL
         assert config.database.sqlite_path == DEFAULT_SQLITE_PATH
 
-    def test_dev_takes_the_sqlite_file_from_the_environment(self):
+    def test_local_takes_the_sqlite_file_from_the_environment(self):
         config = Config.from_environment({"VELA47_SQLITE_PATH": "/tmp/vela47.sqlite3"})
         assert str(config.database.sqlite_path) == "/tmp/vela47.sqlite3"
 
-    def test_dev_reads_its_secrets_from_the_environment(self):
+    def test_local_reads_its_secrets_from_the_environment(self):
         config = Config.from_environment({
             "VELA47_TOKEN_SECRET": "s" * 32,
             "VELA47_ADMIN_USERNAME": "root",
@@ -42,7 +43,7 @@ class TestConfig:
         assert config.admin_username == "root"
         assert config.admin_password.get_secret_value() == "admin-password-long"
 
-    def test_dev_never_touches_secrets_manager(self):
+    def test_local_never_touches_secrets_manager(self):
         reads = []
         Config.from_environment({}, make_reader(reads = reads))
         assert reads == []
@@ -53,7 +54,22 @@ class TestConfig:
 
     def test_an_unknown_environment_is_refused(self):
         with pytest.raises(ValueError):
-            Config.from_environment({"VELA47_ENVIRONMENT": "staging"})
+            Config.from_environment({"VELA47_ENVIRONMENT": "qa"})
+
+    def test_dev_and_staging_run_on_aws_like_prod(self):
+        for current_name in ("dev", "staging"):
+            reads = []
+            config = Config.from_environment(dict(PROD, VELA47_ENVIRONMENT = current_name), make_reader(reads = reads))
+            assert config.environment.value == current_name and config.platform is ConfigPlatform.AWS
+            assert reads == [("vela47/app", "eu-central-1")] and config.database_credentials is None
+
+    def test_an_aws_environment_names_itself_when_it_cannot_start(self):
+        with pytest.raises(ValidationError, match = "staging cannot start without database.host"):
+            Config.from_environment(dict(PROD, VELA47_ENVIRONMENT = "staging", VELA47_DATABASE_HOST = ""), make_reader())
+
+    def test_the_version_comes_from_the_deployment_and_is_unset_in_a_working_tree(self):
+        assert Config.from_environment({}).version is None
+        assert Config.from_environment(dict(PROD, VELA47_VERSION = "1.4.0"), make_reader()).version == "1.4.0"
 
     def test_prod_reads_the_application_secret_once_from_its_region(self):
         reads = []
@@ -68,7 +84,7 @@ class TestConfig:
         assert config.token_secret.get_secret_value() == "m" * 32
         assert config.admin_password.get_secret_value() == "from-secrets-manager"
 
-    def test_dev_reads_the_local_postgres_and_its_credentials_from_the_environment(self):
+    def test_local_reads_the_local_postgres_and_its_credentials_from_the_environment(self):
         config = Config.from_environment({
             "VELA47_DATABASE_HOST": "10.111.0.2",
             "VELA47_DATABASE_USERNAME": "vela47",
@@ -78,7 +94,7 @@ class TestConfig:
         assert config.database_credentials.username == "vela47"
         assert config.database_credentials.password.get_secret_value() == "local-password"
 
-    def test_dev_with_a_database_host_but_no_credentials_cannot_start(self):
+    def test_local_with_a_database_host_but_no_credentials_cannot_start(self):
         with pytest.raises(ValidationError, match = "VELA47_DATABASE_PASSWORD"):
             Config.from_environment({"VELA47_DATABASE_HOST": "10.111.0.2", "VELA47_DATABASE_USERNAME": "vela47"})
 
@@ -147,5 +163,5 @@ class TestConfig:
         config = Config.from_environment(PROD, make_reader({"token_secret": "t" * 32, "tavily_api_key": ""}))
         assert config.tavily_api_key is None
 
-    def test_dev_has_no_search_key(self):
+    def test_local_has_no_search_key(self):
         assert Config.from_environment({"VELA47_TAVILY_API_KEY": "tvly-key"}).tavily_api_key is None
