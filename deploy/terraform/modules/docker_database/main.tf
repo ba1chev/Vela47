@@ -16,7 +16,7 @@ resource "docker_network" "this" {
 
 # Image declaration (PostgreSQL in place of RDS, rebuilt when its Dockerfile changes)
 resource "docker_image" "this" {
-  name = "${local.name}:dev"
+  name = "${local.name}:local"
 
   build {
     context = var.image_context
