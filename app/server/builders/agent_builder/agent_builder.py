@@ -22,6 +22,7 @@ from app.intelligence.tools import ToolSearchFiles
 from app.intelligence.sandbox import SandboxPoolBase
 from app.intelligence.agents import OperationPipeline
 from app.server.builders import CONTEXT_WINDOW_TOKENS
+from app.server.config_platform import ConfigPlatform
 from app.intelligence.agents import A2AInteractionType
 from app.intelligence.tools import ToolSearchDocuments
 from app.server.builders import build_knowledge_memory
@@ -31,7 +32,6 @@ from app.intelligence.tracing import TracingServiceBase
 from app.intelligence.agents import OperationPolicyFull
 from app.server.builders import ANSWER_MAX_OUTPUT_TOKENS
 from app.intelligence.agents import OperationSubagentType
-from app.server.config_environment import ConfigEnvironment
 from app.intelligence.agents import OperationSubagentFactory
 from app.intelligence.agents import OperationSubagentPeering
 from app.intelligence.agents import OperationSubagentBlueprint
@@ -42,8 +42,8 @@ from app.intelligence.agents import OperationSubagentProbeWorkspace
 from app.intelligence.agents import SUBAGENT_SYSTEM_PROMPT_TEMPLATES
 
 MODEL_NAMES = {
-    ConfigEnvironment.DEV: "qwen3.5:9b",
-    ConfigEnvironment.PROD: "eu.anthropic.claude-sonnet-5-5"
+    ConfigPlatform.LOCAL: "qwen3.5:9b",
+    ConfigPlatform.AWS: "eu.anthropic.claude-sonnet-5-5"
 }
 SUBAGENT_MAX_ITERATIONS = 6
 SUBAGENT_PROBE_FACTORIES = {
@@ -89,8 +89,8 @@ def subagent_peering(sandbox_pool: SandboxPoolBase) -> OperationSubagentPeering:
 
 def build_deep_agent(tracing_service: TracingServiceBase, sandbox_pool: SandboxPoolBase,
     web_fetcher: WebFetcher, web_search: WebSearchBase, knowledge_entries: list[VectorDbMemoryEntry],
-    environment: ConfigEnvironment, model_client: ModelClientBase) -> DeepAgent:
-    model_name = MODEL_NAMES[environment]
+    platform: ConfigPlatform, model_client: ModelClientBase) -> DeepAgent:
+    model_name = MODEL_NAMES[platform]
     planning_model = ModelFoundation(
         ModelConfig(model_name = model_name, temperature = 0.1, think = False, context_window_tokens = CONTEXT_WINDOW_TOKENS),
         tracing_service,
@@ -106,7 +106,7 @@ def build_deep_agent(tracing_service: TracingServiceBase, sandbox_pool: SandboxP
     )
 
     tool_factories = subagent_tool_factories(
-        build_knowledge_memory(tracing_service, knowledge_entries, environment, model_client), web_fetcher, web_search
+        build_knowledge_memory(tracing_service, knowledge_entries, platform, model_client), web_fetcher, web_search
     )
     blueprints = {
         current_type: OperationSubagentBlueprint(
