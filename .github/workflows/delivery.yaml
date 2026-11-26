@@ -1,0 +1,201 @@
+# Continuous delivery: every merge into main that declares a new version in deploy/release.yaml becomes a release.
+# Its images are built once and pushed to ECR, and releases/<version>/ in the artifacts bucket gets its release.yaml
+# (image digests, commit, change classes) and deploy.tar.gz (the Terraform and pipeline scripts of the commit).
+# The release is then promoted, unchanged: dev at once, staging and prod each after an approval.
+name: Delivery
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: delivery
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: eu-central-1
+  ARTIFACTS_BUCKET: vela47-artifacts
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      new: ${{ steps.version.outputs.new }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15"
+      - run: pip install -r deploy/pipeline/requirements.txt
+      - name: Read the version
+        id: version
+        run: |
+          version="$(python -m deploy.pipeline.commands.release_version)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git rev-parse -q --verify "refs/tags/v$version" > /dev/null; then
+            echo "new=false" >> "$GITHUB_OUTPUT"
+            echo "v$version is already released, this merge changes nothing that runs." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  images:
+    name: Images
+    needs: release
+    if: needs.release.outputs.new == 'true'
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      app: ${{ steps.app.outputs.image }}
+      sandbox: ${{ steps.sandbox.outputs.image }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: aws-actions/configure-aws-credentials@45666896f5d8e0f10ae255413f3a4cdd03bdc8f5 # v6.3.1
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@7290e214a610b32bc0eef81748948b6d466a8783 # v2.2.0
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build and push both images, unless an earlier attempt already pushed them
+        id: build
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          for image in app sandbox; do
+            digest="$(aws ecr describe-images --repository-name "vela47-$image" --image-ids imageTag="$VERSION" --query 'imageDetails[0].imageDigest' --output text 2>/dev/null || true)"
+            echo "${image}_pushed=$([ -n "$digest" ] && [ "$digest" != "None" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          done
+      - name: Server image
+        if: steps.build.outputs.app_pushed != 'true'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: deploy/images/aws/app/Dockerfile
+          platforms: linux/arm64
+          provenance: false
+          sbom: false
+          push: true
+          tags: ${{ steps.ecr.outputs.registry }}/vela47-app:${{ needs.release.outputs.version }}
+      - name: Sandbox image
+        if: steps.build.outputs.sandbox_pushed != 'true'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: deploy/images/aws/sandbox
+          platforms: linux/arm64
+          provenance: false
+          sbom: false
+          push: true
+          tags: ${{ steps.ecr.outputs.registry }}/vela47-sandbox:${{ needs.release.outputs.version }}
+      - name: Resolve the digests
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          for image in app sandbox; do
+            digest="$(aws ecr describe-images --repository-name "vela47-$image" --image-ids imageTag="$VERSION" --query 'imageDetails[0].imageDigest' --output text)"
+            echo "$REGISTRY/vela47-$image@$digest" > "$RUNNER_TEMP/$image"
+          done
+      - id: app
+        run: echo "image=$(cat "$RUNNER_TEMP/app")" >> "$GITHUB_OUTPUT"
+      - id: sandbox
+        run: echo "image=$(cat "$RUNNER_TEMP/sandbox")" >> "$GITHUB_OUTPUT"
+
+  publish:
+    name: Publish
+    needs: [release, images]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15"
+      - run: pip install -r deploy/pipeline/requirements.txt
+      - uses: aws-actions/configure-aws-credentials@45666896f5d8e0f10ae255413f3a4cdd03bdc8f5 # v6.3.1
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+      - name: Write the release
+        env:
+          APP_IMAGE: ${{ needs.images.outputs.app }}
+          SANDBOX_IMAGE: ${{ needs.images.outputs.sandbox }}
+        run: |
+          python -m deploy.pipeline.commands.render_release \
+            --commit "$GITHUB_SHA" --app-image "$APP_IMAGE" --sandbox-image "$SANDBOX_IMAGE" --output "$RUNNER_TEMP/release.yaml"
+          tar --exclude='.terraform' --exclude='__pycache__' --exclude='*.tfstate*' -czf "$RUNNER_TEMP/deploy.tar.gz" deploy
+      - name: Store the release, never overwriting one
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          prefix="releases/$VERSION"
+          if aws s3api head-object --bucket "$ARTIFACTS_BUCKET" --key "$prefix/release.yaml" > /dev/null 2>&1; then
+            echo "$prefix is already stored by an earlier attempt."
+          else
+            aws s3api put-object --bucket "$ARTIFACTS_BUCKET" --key "$prefix/deploy.tar.gz" --body "$RUNNER_TEMP/deploy.tar.gz" --if-none-match '*'
+            aws s3api put-object --bucket "$ARTIFACTS_BUCKET" --key "$prefix/release.yaml" --body "$RUNNER_TEMP/release.yaml" --content-type text/yaml --if-none-match '*'
+          fi
+          cat "$RUNNER_TEMP/release.yaml" | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY"
+      - name: Tag the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          summary="$(python -c 'from deploy.pipeline import ReleaseManifest; print(ReleaseManifest.load().summary)')"
+          gh release create "v$VERSION" --target "$GITHUB_SHA" --title "v$VERSION" --notes "$summary" \
+            || gh release view "v$VERSION" > /dev/null
+
+  dev:
+    name: Dev
+    needs: [release, publish]
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deployment.yaml
+    with:
+      environment: dev
+      version: ${{ needs.release.outputs.version }}
+    secrets: inherit
+
+  staging:
+    name: Staging
+    needs: [release, dev]
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deployment.yaml
+    with:
+      environment: staging
+      version: ${{ needs.release.outputs.version }}
+    secrets: inherit
+
+  prod:
+    name: Prod
+    needs: [release, staging]
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deployment.yaml
+    with:
+      environment: prod
+      version: ${{ needs.release.outputs.version }}
+    secrets: inherit
