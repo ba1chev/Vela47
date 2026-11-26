@@ -17,6 +17,7 @@ const RENDER = {
   tool_executed:     { kind: "tool" },
   a2a_started:       { kind: "a2a",      opens: true },
   a2a_finished:      { kind: "a2a",      closes: true },
+  security_flagged:  { kind: "security" },
   run_failed:        { kind: "error" },
 };
 
@@ -50,6 +51,7 @@ function detailFor(event) {
         p.steps ? `${p.steps} steps` : null,
         p.tasks ? `${p.tasks} tasks` : null,
         p.results ? `${p.results} results` : null,
+        p.flagged ? `${p.flagged} flagged` : null,
       ].filter(Boolean).join(" · ");
     case "subagent_started":
       return p.instruction || "";
@@ -68,6 +70,8 @@ function detailFor(event) {
       return p.status === "error" ? `failed: ${p.result || ""}` : (p.result || "");
     case "pipeline_finished":
       return p.results ? `${p.results} results merged` : "";
+    case "security_flagged":
+      return Object.entries(p.matches || {}).map(([name, text]) => `${name}: ${text}`).join(" · ");
     default:
       return "";
   }
@@ -86,24 +90,30 @@ function formatTokens(count) {
 }
 
 // What a whole run cost: how long the pipeline took and how many tokens its model calls
-// used. Shown above the trace and under the answer the run produced.
+// used, and how many prompt attacks the security monitor found in what it read. Shown
+// above the trace and under the answer the run produced.
 function summarizeTrace(events) {
   let durationMs = null;
   let tokens = 0;
+  let findings = 0;
   for (const event of events) {
     if (event.type === "pipeline_finished") durationMs = event.duration_ms;
     if (event.type === "model_invoked") tokens += (event.payload && event.payload.total_tokens) || 0;
+    if (event.type === "security_flagged") findings += 1;
   }
   return [
     durationMs == null ? null : formatDuration(durationMs),
     tokens ? formatTokens(tokens) : null,
+    findings ? `${findings} security ${findings === 1 ? "finding" : "findings"}` : null,
   ].filter(Boolean).join(" · ");
 }
 
+// A security finding is shown exactly as found: its evidence may be the very Markdown,
+// an image link for one, that plain text would strip away.
 function setDetail(row, event) {
   const detail = detailFor(event);
   if (!detail) return;
-  const text = plainText(detail);
+  const text = event.type === "security_flagged" ? detail : plainText(detail);
   row.detail.textContent = text;
   row.detail.title = text;
 }
