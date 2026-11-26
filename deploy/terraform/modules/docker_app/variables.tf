@@ -12,13 +12,13 @@ variable "repository_path" {
 variable "dockerfile" {
   description = "Dockerfile of the server image, relative to repository_path"
   type        = string
-  default     = "deploy/images/dev/app/Dockerfile"
+  default     = "deploy/images/local/app/Dockerfile"
 }
 
 variable "sandbox_directory" {
   description = "Sandbox compose project copied into the server image, relative to repository_path"
   type        = string
-  default     = "deploy/images/dev/sandbox"
+  default     = "deploy/images/local/sandbox"
 }
 
 variable "ollama_host" {

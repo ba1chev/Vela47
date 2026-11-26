@@ -13,6 +13,9 @@ resource "random_password" "admin_password" {
 resource "aws_secretsmanager_secret" "app" {
   name                    = "${var.name}/app"
   recovery_window_in_days = var.secret_recovery_window_in_days
+
+  #checkov:skip=CKV2_AWS_57:A rotated token key would sign everyone out, and the admin password is only used once
+  #checkov:skip=CKV_AWS_149:The default key of Secrets Manager encrypts it, a customer managed KMS key is not worth its price here
 }
 
 resource "aws_secretsmanager_secret_version" "app" {

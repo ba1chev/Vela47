@@ -1,0 +1,10 @@
+# The release this commit becomes once it is merged into main (see docs/release_process.md).
+# A pull request that changes what runs on AWS (app/, db/, requirements.txt, deploy/images/aws/,
+# deploy/pipeline/, deploy/terraform/modules/ or an AWS environment) raises the version and declares
+# the kind of change it carries (see docs/change_management.md):
+#   infrastructure: none | additive | breaking
+#   database:       none | expand | contract
+version: 1.0.0
+infrastructure: additive
+database: expand
+summary: Deploy dev, staging and prod from one release, with schema migrations, a health endpoint and canary deployments

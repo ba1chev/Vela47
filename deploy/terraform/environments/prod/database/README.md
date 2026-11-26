@@ -1,5 +1,3 @@
 # prod/database
 
-PostgreSQL on RDS in the private subnets of the `vpc` root module. It is Single-AZ by default; set `multi_az = true` to add a standby. The `app` root module reads its outputs and adds the ingress rule for the server task to its security group.
-
-Order: apply after `vpc` and before `app`. Destroy after `app` and before `vpc`.
+PostgreSQL 17 on RDS for prod, in the private subnets of `prod/vpc/eu-central-1`. Multi-AZ, 14 days of point-in-time backups, a final snapshot and deletion protection. The server migrates the schema when it starts; in staging and prod the deployment snapshots the instance first.

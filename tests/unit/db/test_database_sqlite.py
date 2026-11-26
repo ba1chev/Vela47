@@ -34,7 +34,7 @@ class TestDatabaseSqlite:
 
     def test_start_creates_every_registered_table(self):
         database = make_started()
-        assert set(inspect(database._engine).get_table_names()) == set(TABLE_REGISTRY)
+        assert set(inspect(database._engine).get_table_names()) == set(TABLE_REGISTRY) | {"alembic_version"}
 
     def test_a_transaction_commits_when_the_block_ends(self):
         database = make_started()

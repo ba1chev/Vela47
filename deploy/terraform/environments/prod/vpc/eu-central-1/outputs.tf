@@ -3,17 +3,22 @@ output "vpc_id" {
   value       = module.vpc.vpc_id
 }
 
+output "cidr_block" {
+  description = "CIDR of the VPC"
+  value       = module.vpc.cidr_block
+}
+
 output "public_subnet_ids" {
-  description = "IDs of the public subnets of the load balancer and the NAT gateway"
+  description = "IDs of the public subnets of the load balancer and the NAT"
   value       = module.vpc.public_subnet_ids
 }
 
 output "private_subnet_ids" {
-  description = "IDs of the private subnets of the EC2 instance, the server task, the sandbox function and the database"
+  description = "IDs of the private subnets of the EC2 instances, the server tasks, the sandbox function and the database"
   value       = module.vpc.private_subnet_ids
 }
 
-output "nat_gateway_public_ip" {
-  description = "Public address the server task reaches Bedrock and the web from"
-  value       = module.vpc.nat_gateway_public_ip
+output "eip_nat_public_ip" {
+  description = "Public address the server tasks reach Bedrock and the web from"
+  value       = module.vpc.eip_nat_public_ip
 }

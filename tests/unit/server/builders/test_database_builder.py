@@ -23,12 +23,12 @@ def make_prod_config():
 
 
 class TestDatabaseBuilder:
-    def test_dev_builds_sqlite_on_the_configured_file(self):
+    def test_local_builds_sqlite_on_the_configured_file(self):
         database = build_database(Config(database = DatabaseConfig(sqlite_path = pathlib.Path("/tmp/x.sqlite3"))))
         assert isinstance(database, DatabaseSqlite)
         assert database.path == pathlib.Path("/tmp/x.sqlite3")
 
-    def test_dev_with_a_database_host_builds_postgres_with_the_configured_credentials(self):
+    def test_local_with_a_database_host_builds_postgres_with_the_configured_credentials(self):
         reads = []
         config = Config(
             database = DatabaseConfig(host = "10.111.0.2", ssl_mode = "disable"),

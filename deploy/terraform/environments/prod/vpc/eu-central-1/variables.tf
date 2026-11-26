@@ -10,7 +10,7 @@ variable "tags" {
   default = {
     owner       = "ba1chev"
     project     = "vela47"
-    environment = "production"
+    environment = "prod"
     created_by  = "terraform"
   }
 }
@@ -18,23 +18,29 @@ variable "tags" {
 variable "name" {
   description = "Name of the VPC, also the prefix of the Name tag of everything in it"
   type        = string
-  default     = "vela47"
+  default     = "vela47-prod"
 }
 
 variable "cidr_block" {
-  description = "CIDR of the VPC"
+  description = "CIDR of the VPC, a range of its own per environment"
   type        = string
-  default     = "10.0.0.0/16"
+  default     = "10.30.0.0/16"
 }
 
 variable "public_subnet_cidr_blocks" {
-  description = "CIDRs of the public subnets (load balancer and NAT gateway), one subnet per availability zone"
+  description = "CIDRs of the public subnets (load balancer and NAT), one subnet per availability zone"
   type        = list(string)
-  default     = ["10.0.1.0/24", "10.0.2.0/24"]
+  default     = ["10.30.1.0/24", "10.30.2.0/24"]
 }
 
 variable "private_subnet_cidr_blocks" {
-  description = "CIDRs of the private subnets (EC2 instance, server task, sandbox function and database), one subnet per availability zone"
+  description = "CIDRs of the private subnets (EC2 instances, server tasks, sandbox function and database), one subnet per availability zone"
   type        = list(string)
-  default     = ["10.0.11.0/24", "10.0.12.0/24"]
+  default     = ["10.30.11.0/24", "10.30.12.0/24"]
+}
+
+variable "nat_type" {
+  description = "How the private subnets reach the internet, a NAT gateway or a NAT instance"
+  type        = string
+  default     = "gateway"
 }

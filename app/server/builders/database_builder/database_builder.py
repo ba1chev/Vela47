@@ -6,7 +6,7 @@ from db import DatabaseFactory
 from db import DatabaseCredentials
 from app.server.config import Config
 from app.server.config_secrets import read_secret
-from app.server.config_environment import ConfigEnvironment
+from app.server.config_platform import ConfigPlatform
 
 
 def _postgres(factory: DatabaseFactory, config: Config,
@@ -25,7 +25,7 @@ def build_database(config: Config,
     secret_reader: Callable[[str, str], dict[str, str]] = read_secret) -> DatabaseBase:
     factory = DatabaseFactory()
 
-    if config.environment is ConfigEnvironment.DEV:
+    if config.platform is ConfigPlatform.LOCAL:
         if config.database.host is None:
             return factory.create(DatabaseType.SQLITE, path = config.database.sqlite_path)
         return _postgres(factory, config, lambda: config.database_credentials)

@@ -12,6 +12,7 @@ from app.intelligence.memory import VectorDbMemory
 from app.intelligence.web import WebSearchDuckDuckGo
 from app.intelligence.model import ModelClientOllama
 from app.intelligence.sandbox import SandboxEnvLocal
+from app.server.config_platform import ConfigPlatform
 from app.intelligence.agents import A2AInteractionType
 from app.intelligence.sandbox import SandboxPoolDocker
 from app.intelligence.tracing import TracingServiceNull
@@ -20,7 +21,6 @@ from app.server.builders import ANSWER_MAX_OUTPUT_TOKENS
 from app.intelligence.sandbox import SandboxPoolInMemory
 from app.server.builders import SUBAGENT_PROBE_FACTORIES
 from app.intelligence.agents import OperationSubagentType
-from app.server.config_environment import ConfigEnvironment
 from tests.fixtures.model.fake_embeddings import FakeEmbeddings
 from app.intelligence.agents import SUBAGENT_SYSTEM_PROMPT_TEMPLATES
 from tests.fixtures.sandbox.named_sandbox_pool import NamedSandboxPool
@@ -75,7 +75,7 @@ class TestAgentBuilder:
                 assert mentioned <= set(names(current_tools)), (current_type, current_tool.name)
 
     def test_the_deep_agent_is_assembled_without_contacting_anything(self):
-        agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), WebSearchDuckDuckGo(WebFetcher()), [], ConfigEnvironment.DEV, ModelClientOllama())
+        agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), WebSearchDuckDuckGo(WebFetcher()), [], ConfigPlatform.LOCAL, ModelClientOllama())
         assert isinstance(agent, DeepAgent)
 
     def test_each_type_is_checked_by_the_probes_its_work_calls_for(self):
@@ -106,24 +106,24 @@ class TestAgentBuilder:
             assert "message_worker" not in SUBAGENT_SYSTEM_PROMPT_TEMPLATES[current_type]
 
     def test_the_deep_agent_lets_its_subagents_message_each_other(self):
-        agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), WebSearchDuckDuckGo(WebFetcher()), [], ConfigEnvironment.DEV, ModelClientOllama())
+        agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), WebSearchDuckDuckGo(WebFetcher()), [], ConfigPlatform.LOCAL, ModelClientOllama())
         layer = next(current for current in agent._operation_pipeline._operation_layers if current.operation_type.name == "SUBAGENTS")
         assert layer._peering.peers == SUBAGENT_PEERS
 
-    def test_every_environment_has_a_model(self):
-        assert set(MODEL_NAMES) == set(ConfigEnvironment)
+    def test_every_platform_has_a_model(self):
+        assert set(MODEL_NAMES) == set(ConfigPlatform)
 
     def test_the_deep_agent_runs_on_the_model_and_the_client_it_is_given(self):
         client = ModelClientOllama()
-        for current_environment in ConfigEnvironment:
-            agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), WebSearchDuckDuckGo(WebFetcher()), [], current_environment, client)
-            assert agent._model._config.model_name == MODEL_NAMES[current_environment] and agent._model._client is client
+        for current_platform in ConfigPlatform:
+            agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), WebSearchDuckDuckGo(WebFetcher()), [], current_platform, client)
+            assert agent._model._config.model_name == MODEL_NAMES[current_platform] and agent._model._client is client
 
     def test_the_answer_has_room_for_a_long_report(self):
-        agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), WebSearchDuckDuckGo(WebFetcher()), [], ConfigEnvironment.DEV, ModelClientOllama())
+        agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), WebSearchDuckDuckGo(WebFetcher()), [], ConfigPlatform.LOCAL, ModelClientOllama())
         assert agent._model._config.max_output_tokens == ANSWER_MAX_OUTPUT_TOKENS
 
     def test_the_deep_agent_inspects_what_it_starts_from_before_it_plans(self):
-        agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), WebSearchDuckDuckGo(WebFetcher()), [], ConfigEnvironment.DEV, ModelClientOllama())
+        agent = build_deep_agent(TracingServiceNull(), SandboxPoolInMemory(size = 1), WebFetcher(), WebSearchDuckDuckGo(WebFetcher()), [], ConfigPlatform.LOCAL, ModelClientOllama())
         layers = [current.operation_type.name for current in agent._operation_pipeline._operation_layers]
         assert layers == ["SECURITY", "PLANNING", "DECOMPOSITION", "SUBAGENTS", "MERGING"]

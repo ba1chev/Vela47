@@ -12,8 +12,9 @@ data "aws_iam_policy_document" "instance_assume_role" {
 }
 
 resource "aws_iam_role" "instance" {
-  name               = "${var.name}-instance"
-  assume_role_policy = data.aws_iam_policy_document.instance_assume_role.json
+  name                 = "${var.name}-instance"
+  assume_role_policy   = data.aws_iam_policy_document.instance_assume_role.json
+  permissions_boundary = var.permissions_boundary_arn
 }
 
 resource "aws_iam_role_policy_attachment" "instance_container_service" {
@@ -46,8 +47,9 @@ data "aws_iam_policy_document" "task_assume_role" {
 }
 
 resource "aws_iam_role" "task_execution" {
-  name               = "${local.app_name}-task-execution"
-  assume_role_policy = data.aws_iam_policy_document.task_assume_role.json
+  name                 = "${local.app_name}-task-execution"
+  assume_role_policy   = data.aws_iam_policy_document.task_assume_role.json
+  permissions_boundary = var.permissions_boundary_arn
 }
 
 resource "aws_iam_role_policy_attachment" "task_execution" {
@@ -56,8 +58,9 @@ resource "aws_iam_role_policy_attachment" "task_execution" {
 }
 
 resource "aws_iam_role" "task" {
-  name               = "${local.app_name}-task"
-  assume_role_policy = data.aws_iam_policy_document.task_assume_role.json
+  name                 = "${local.app_name}-task"
+  assume_role_policy   = data.aws_iam_policy_document.task_assume_role.json
+  permissions_boundary = var.permissions_boundary_arn
 }
 
 # Bedrock models the server task may call
@@ -76,7 +79,8 @@ locals {
   )
 }
 
-# The server reads the two secrets, calls the models it is configured with and runs commands in the sandbox function, nothing else
+# The server reads the two secrets, calls the models it is configured with and runs commands in the sandbox function.
+# ECS Exec opens a shell in the running task through Session Manager, for debugging only
 data "aws_iam_policy_document" "task" {
   statement {
     actions   = ["secretsmanager:GetSecretValue"]
@@ -92,10 +96,51 @@ data "aws_iam_policy_document" "task" {
     actions   = ["lambda:InvokeFunction"]
     resources = [aws_lambda_function.sandbox.arn]
   }
+
+  #checkov:skip=CKV_AWS_111:ssmmessages has no resource-level permissions
+  #checkov:skip=CKV_AWS_356:ssmmessages has no resource-level permissions
+  statement {
+    actions = [
+      "ssmmessages:CreateControlChannel",
+      "ssmmessages:CreateDataChannel",
+      "ssmmessages:OpenControlChannel",
+      "ssmmessages:OpenDataChannel",
+    ]
+    resources = ["*"]
+  }
 }
 
 resource "aws_iam_role_policy" "task" {
   name   = "${local.app_name}-task"
   role   = aws_iam_role.task.id
   policy = data.aws_iam_policy_document.task.json
+}
+
+# IAM role declaration for ECS itself, which moves the listener rule weights during a canary deployment
+data "aws_iam_policy_document" "ecs_infrastructure_assume_role" {
+  count = local.canary ? 1 : 0
+
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["ecs.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "ecs_infrastructure" {
+  count = local.canary ? 1 : 0
+
+  name                 = "${var.name}-ecs-infrastructure"
+  assume_role_policy   = data.aws_iam_policy_document.ecs_infrastructure_assume_role[0].json
+  permissions_boundary = var.permissions_boundary_arn
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_infrastructure" {
+  count = local.canary ? 1 : 0
+
+  role       = aws_iam_role.ecs_infrastructure[0].name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonECSInfrastructureRolePolicyForLoadBalancers"
 }

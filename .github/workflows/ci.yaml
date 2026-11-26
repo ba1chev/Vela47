@@ -1,0 +1,124 @@
+# Continuous integration: every pull request into main is checked here before it may be merged.
+# Nothing in it touches AWS. See docs/release_process.md for the whole flow.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  branch:
+    name: Branch name
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check the branch name
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          if [[ "$BRANCH" =~ ^(feature|fix|infra|hotfix|docs)/[a-z0-9][a-z0-9._-]*$ || "$BRANCH" =~ ^dependabot/ ]]; then
+            echo "$BRANCH follows the naming rules"
+          else
+            echo "::error::Branch '$BRANCH' must be named <feature|fix|infra|hotfix|docs>/<lowercase-words> (docs/release_process.md)"
+            exit 1
+          fi
+
+  release:
+    name: Release rules
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15"
+      - run: pip install -r deploy/pipeline/requirements.txt
+      - name: Check deploy/release.yaml against the changes
+        run: python -m deploy.pipeline.commands.check_release --base "origin/${{ github.base_ref }}"
+
+  tests:
+    name: Unit tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest -q
+
+  terraform:
+    name: Terraform
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.17.2
+          terraform_wrapper: false
+      - name: Format
+        run: terraform fmt -check -recursive deploy/terraform
+      - name: Validate every root module
+        run: |
+          for root in $(find deploy/terraform/environments -name main.tf -not -path '*/.terraform/*' -exec dirname {} \; | sort); do
+            echo "::group::$root"
+            terraform -chdir="$root" init -backend=false -lockfile=readonly -input=false
+            terraform -chdir="$root" validate
+            echo "::endgroup::"
+          done
+      - uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
+        with:
+          tflint_version: v0.66.0
+      - name: Lint
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          tflint --init --config "$GITHUB_WORKSPACE/.tflint.hcl"
+          tflint --recursive --config "$GITHUB_WORKSPACE/.tflint.hcl" --chdir deploy/terraform
+
+  checkov:
+    name: Checkov
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: bridgecrewio/checkov-action@b782b35c8411ff565b881fba67ceebdb426d7dc4 # v12.3147.0
+        with:
+          config_file: .checkov.yaml
+
+  images:
+    name: Images
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build the server image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: deploy/images/aws/app/Dockerfile
+          platforms: linux/arm64
+          push: false
+      - name: Build the sandbox image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: deploy/images/aws/sandbox
+          platforms: linux/arm64
+          push: false

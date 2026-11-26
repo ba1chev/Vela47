@@ -7,25 +7,25 @@ from app.intelligence.memory import VectorDbMemory
 from app.intelligence.model import ModelEmbeddings
 from app.intelligence.model import ModelFoundation
 from app.intelligence.model import ModelClientBase
+from app.server.config_platform import ConfigPlatform
 from app.intelligence.memory import HybridSearchPolicy
 from app.intelligence.memory import VectorDbMemoryEntry
 from app.intelligence.tracing import TracingServiceBase
-from app.server.config_environment import ConfigEnvironment
 
 RAG_MODEL_NAMES = {
-    ConfigEnvironment.DEV: "qwen3.5:9b",
-    ConfigEnvironment.PROD: "eu.anthropic.claude-sonnet-5-5"
+    ConfigPlatform.LOCAL: "qwen3.5:9b",
+    ConfigPlatform.AWS: "eu.anthropic.claude-sonnet-5-5"
 }
 EMBEDDING_MODEL_NAMES = {
-    ConfigEnvironment.DEV: "qwen3-embedding:0.6b",
-    ConfigEnvironment.PROD: "amazon.titan-embed-text-v2:0"
+    ConfigPlatform.LOCAL: "qwen3-embedding:0.6b",
+    ConfigPlatform.AWS: "amazon.titan-embed-text-v2:0"
 }
 EMBEDDING_QUERY_TEMPLATES = {
-    ConfigEnvironment.DEV: (
+    ConfigPlatform.LOCAL: (
         "Instruct: Given a question, retrieve passages from the user's documents that answer it\n"
         "Query: {query}"
     ),
-    ConfigEnvironment.PROD: "{query}"
+    ConfigPlatform.AWS: "{query}"
 }
 CONTEXT_WINDOW_TOKENS = 8192
 RERANKING_MAX_OUTPUT_TOKENS = 512
@@ -33,19 +33,19 @@ ANSWER_MAX_OUTPUT_TOKENS = 8192
 
 
 def build_knowledge_memory(tracing_service: TracingServiceBase, entries: list[VectorDbMemoryEntry],
-    environment: ConfigEnvironment, model_client: ModelClientBase) -> VectorDbMemory:
+    platform: ConfigPlatform, model_client: ModelClientBase) -> VectorDbMemory:
     vector_db_memory = VectorDbMemory(
-        ModelEmbeddings(EMBEDDING_MODEL_NAMES[environment], tracing_service, client = model_client),
-        EMBEDDING_QUERY_TEMPLATES[environment]
+        ModelEmbeddings(EMBEDDING_MODEL_NAMES[platform], tracing_service, client = model_client),
+        EMBEDDING_QUERY_TEMPLATES[platform]
     )
     vector_db_memory.add_entries(entries)
     return vector_db_memory
 
 
 def build_rag_agent(tracing_service: TracingServiceBase, entries: list[VectorDbMemoryEntry],
-    environment: ConfigEnvironment, model_client: ModelClientBase) -> RagAgent:
-    vector_db_memory = build_knowledge_memory(tracing_service, entries, environment, model_client)
-    model_name = RAG_MODEL_NAMES[environment]
+    platform: ConfigPlatform, model_client: ModelClientBase) -> RagAgent:
+    vector_db_memory = build_knowledge_memory(tracing_service, entries, platform, model_client)
+    model_name = RAG_MODEL_NAMES[platform]
 
     query_model = ModelFoundation(
         ModelConfig(model_name = model_name, temperature = 0.1, context_window_tokens = CONTEXT_WINDOW_TOKENS),

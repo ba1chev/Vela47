@@ -83,3 +83,15 @@ variable "deletion_protection" {
   type        = bool
   default     = false
 }
+
+variable "backup_window" {
+  description = "Daily UTC window of the automated backup, before the maintenance window"
+  type        = string
+  default     = "01:00-02:00"
+}
+
+variable "maintenance_window" {
+  description = "Weekly UTC window in which RDS applies minor version upgrades and patches"
+  type        = string
+  default     = "sun:02:30-sun:03:30"
+}

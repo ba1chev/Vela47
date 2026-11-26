@@ -10,21 +10,21 @@ variable "tags" {
   default = {
     owner       = "ba1chev"
     project     = "vela47"
-    environment = "production"
+    environment = "prod"
     created_by  = "terraform"
   }
-}
-
-variable "state_bucket" {
-  description = "Bucket of the Terraform state of the environment, created by global/s3_state"
-  type        = string
-  default     = "vela47-terraform-state"
 }
 
 variable "name" {
   description = "Identifier of the RDS instance, also the name of its subnet group and security group"
   type        = string
-  default     = "vela47"
+  default     = "vela47-prod"
+}
+
+variable "state_bucket" {
+  description = "Bucket of the Terraform state, created by shared/s3_state"
+  type        = string
+  default     = "vela47-terraform-state"
 }
 
 variable "instance_class" {
@@ -34,25 +34,25 @@ variable "instance_class" {
 }
 
 variable "multi_az" {
-  description = "Whether a standby replica runs in another availability zone (true for real production, it doubles the price of the database)"
-  type        = bool
-  default     = false
-}
-
-variable "backup_retention_period" {
-  description = "Days the automated backups of the RDS instance are kept"
-  type        = number
-  default     = 7
-}
-
-variable "skip_final_snapshot" {
-  description = "Whether the RDS instance is deleted without a final snapshot (false for real production)"
+  description = "Whether a standby replica runs in another availability zone, it doubles the price of the database"
   type        = bool
   default     = true
 }
 
-variable "deletion_protection" {
-  description = "Protects the RDS instance from deletion (true for real production)"
+variable "backup_retention_period" {
+  description = "Days the automated backups are kept, the database can be restored to any second in them"
+  type        = number
+  default     = 14
+}
+
+variable "skip_final_snapshot" {
+  description = "Whether the RDS instance is deleted without a final snapshot"
   type        = bool
   default     = false
+}
+
+variable "deletion_protection" {
+  description = "Protects the RDS instance from deletion"
+  type        = bool
+  default     = true
 }

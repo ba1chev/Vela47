@@ -1,0 +1,24 @@
+# Checks that run before every commit: pip install pre-commit && pre-commit install
+# terraform-docs, tflint and checkov must be installed locally (brew install terraform-docs tflint checkov).
+repos:
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.109.5
+    hooks:
+      - id: terraform_fmt
+        args: [--args=-recursive]
+      - id: terraform_validate
+        args: [--hook-config=--retry-once-with-cleanup=true, --tf-init-args=-backend=false]
+      - id: terraform_tflint
+        args: [--args=--config=__GIT_WORKING_DIR__/.tflint.hcl]
+      - id: terraform_docs
+        args: [--args=--output-mode=inject, --args=--output-file=README.md]
+      - id: terraform_checkov
+        args: [--args=--config-file __GIT_WORKING_DIR__/.checkov.yaml]
+  - repo: local
+    hooks:
+      - id: unit-tests
+        name: unit tests
+        entry: .venv/bin/python -m pytest -q
+        language: system
+        pass_filenames: false
+        types: [python]

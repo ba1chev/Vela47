@@ -60,7 +60,7 @@ def _bootstrap_admin(identity_access_service: IdentityAccessService, config: Con
             config.admin_username.strip().lower()
         )
         return
-    logger.warning("Admin '%s' created from the configuration.", config.admin_username.strip().lower())
+    logger.info("Admin '%s' created from the configuration.", config.admin_username.strip().lower())
 
 
 @asynccontextmanager
@@ -74,13 +74,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.chat_session_store = ChatSessionStoreSql(database)
     app.state.knowledge_store = KnowledgeStoreSql(database)
     app.state.model_client = build_model_client(config)
-    app.state.rag_indexer = build_rag_indexer(config.environment, app.state.model_client)
+    app.state.rag_indexer = build_rag_indexer(config.platform, app.state.model_client)
     app.state.web_fetcher = WebFetcher()
     app.state.web_search = build_web_search(config, app.state.web_fetcher)
-    logger.warning(
-        "Database ready: %s in %s mode", database.database_type.value, config.environment.value
+    logger.info(
+        "Database ready: %s in %s, release %s",
+        database.database_type.value, config.environment.value, config.version or "unversioned"
     )
-    logger.warning("Web search: %s", type(app.state.web_search).__name__)
+    logger.info("Web search: %s", type(app.state.web_search).__name__)
 
     install_security(
         app.state, IdentityAccessStoreSql(database), AuthenticationPasswordHasher(), _token_secret(config)
@@ -90,12 +91,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     pool = build_sandbox_pool(config, SANDBOX_POOL_SIZE)
     await asyncio.to_thread(pool.start)
     app.state.sandbox_pool = pool
-    logger.warning("Sandbox ready: %s slots in %s", pool.available, type(pool).__name__)
+    logger.info("Sandbox ready: %s slots in %s", pool.available, type(pool).__name__)
 
     try:
         yield
     finally:
         await asyncio.to_thread(pool.shutdown)
-        logger.warning("Sandbox torn down.")
+        logger.info("Sandbox torn down.")
         await asyncio.to_thread(database.shutdown)
-        logger.warning("Database closed.")
+        logger.info("Database closed.")
