@@ -41,6 +41,7 @@ class RagPipeline:
             "candidates": len(context.candidates),
             "passages": len(context.passages),
             "reranked": bool(context.relevance),
+            "flagged": len(context.security),
             "has_final": context.final is not None
         }
 
