@@ -3,6 +3,7 @@ from typing import Optional
 from app.intelligence.tools import ToolBase
 from app.intelligence.memory import VectorDbMemory
 from app.intelligence.memory import HybridSearchPolicy
+from app.intelligence.security import SecurityPromptType
 from app.intelligence.memory import VectorDbOperationPolicy
 from app.intelligence.tools import ToolSearchDocumentsInput
 
@@ -45,6 +46,10 @@ class ToolSearchDocuments(ToolBase[ToolSearchDocumentsInput, str]):
     @property
     def input_schema(self) -> type[ToolSearchDocumentsInput]:
         return ToolSearchDocumentsInput
+
+    @property
+    def result_threat(self) -> SecurityPromptType:
+        return SecurityPromptType.POISONING
 
     def execute(self, input: ToolSearchDocumentsInput) -> str:
         if len(self._vector_db_memory) == 0:
