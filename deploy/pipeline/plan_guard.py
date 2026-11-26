@@ -15,7 +15,7 @@ class PlanGuard:
     vpc and database roots change only in a release that declares an infrastructure
     change, which also catches drift made outside Terraform, and delete something only
     in a breaking one. The app root changes with every release, since its task
-    definition carries the new image."""
+    definition carries the new image, and so does any root on its first deployment."""
 
     def __init__(self, plan: dict[str, Any], root: str, manifest: ReleaseManifest) -> None:
         self._changes: list[dict[str, Any]] = [
@@ -24,6 +24,20 @@ class PlanGuard:
         ]
         self._root: str = root
         self._manifest: ReleaseManifest = manifest
+        self._first_deployment: bool = not self._managed_resources(
+            plan.get("prior_state", {}).get("values", {}).get("root_module", {})
+        )
+
+    @classmethod
+    def _managed_resources(cls, module: dict[str, Any]) -> int:
+        return (
+            sum(1 for current in module.get("resources", []) if current.get("mode") == "managed")
+            + sum(cls._managed_resources(current) for current in module.get("child_modules", []))
+        )
+
+    @property
+    def first_deployment(self) -> bool:
+        return self._first_deployment
 
     @property
     def changes(self) -> list[tuple[str, str]]:
@@ -36,7 +50,7 @@ class PlanGuard:
             for current in self._changes
             if current["type"] in PROTECTED_RESOURCE_TYPES and "delete" in current["change"]["actions"]
         ]
-        if self._root not in FOUNDATION_ROOTS:
+        if self._root not in FOUNDATION_ROOTS or self._first_deployment:
             return found
 
         if self._changes and self._manifest.infrastructure is InfrastructureChange.NONE:
@@ -54,4 +68,5 @@ class PlanGuard:
         if not self._changes:
             return f"**{self._root}**: no changes"
         rows = "\n".join(f"| `{address}` | {actions} |" for address, actions in self.changes)
-        return f"**{self._root}**: {len(self._changes)} changes\n\n| Resource | Actions |\n|---|---|\n{rows}"
+        first = ", first deployment" if self._first_deployment else ""
+        return f"**{self._root}**: {len(self._changes)} changes{first}\n\n| Resource | Actions |\n|---|---|\n{rows}"

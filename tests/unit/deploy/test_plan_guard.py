@@ -6,11 +6,16 @@ def make_manifest(infrastructure = "none"):
     return ReleaseManifest(version = "1.1.0", infrastructure = infrastructure, database = "none", summary = "s")
 
 
-def make_plan(*changes):
-    return {"resource_changes": [
+def make_plan(*changes, deployed = True):
+    plan = {"resource_changes": [
         {"address": address, "type": address.split(".")[-2], "change": {"actions": actions}}
         for address, actions in changes
     ]}
+    if deployed:
+        plan["prior_state"] = {"values": {"root_module": {"child_modules": [
+            {"resources": [{"address": "module.vpc.aws_vpc.this", "mode": "managed"}]}
+        ]}}}
+    return plan
 
 
 class TestPlanGuard:
@@ -41,3 +46,13 @@ class TestPlanGuard:
         plan = make_plan(("module.app.aws_ecs_service.this", ["update"]), ("module.app.aws_lb.this", ["read"]))
         summary = PlanGuard(plan, "app", make_manifest()).summary()
         assert "1 changes" in summary and "| `module.app.aws_ecs_service.this` | update |" in summary
+
+    def test_the_first_deployment_of_a_root_creates_it_whatever_the_release_declares(self):
+        plan = make_plan(("module.vpc.aws_vpc.this", ["create"]), ("module.vpc.aws_subnet.private[0]", ["create"]), deployed = False)
+        guard = PlanGuard(plan, "vpc", make_manifest())
+        assert guard.first_deployment and guard.violations() == [] and "first deployment" in guard.summary()
+
+    def test_data_sources_alone_do_not_make_a_root_deployed(self):
+        plan = make_plan(("module.vpc.aws_vpc.this", ["create"]), deployed = False)
+        plan["prior_state"] = {"values": {"root_module": {"resources": [{"address": "data.aws_region.current", "mode": "data"}]}}}
+        assert PlanGuard(plan, "vpc", make_manifest()).first_deployment

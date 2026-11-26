@@ -176,6 +176,32 @@ data "aws_iam_policy_document" "ci" {
     resources = ["arn:aws:secretsmanager:${var.region}:${local.account_id}:secret:${var.name}-*"]
   }
 
+  # RDS creates and deletes the managed master password of a database with the permissions of whoever creates the database
+  statement {
+    sid = "DatabaseManagedSecrets"
+    actions = [
+      "secretsmanager:CreateSecret",
+      "secretsmanager:TagResource",
+      "secretsmanager:DescribeSecret",
+      "secretsmanager:RotateSecret",
+      "secretsmanager:UpdateSecret",
+      "secretsmanager:DeleteSecret",
+    ]
+    resources = ["arn:aws:secretsmanager:${var.region}:${local.account_id}:secret:rds!db-*"]
+  }
+
+  statement {
+    sid       = "DatabaseManagedSecretsKey"
+    actions   = ["kms:DescribeKey"]
+    resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values   = [var.region]
+    }
+  }
+
   statement {
     sid       = "Dns"
     actions   = ["route53:GetHostedZone", "route53:ListResourceRecordSets", "route53:ChangeResourceRecordSets", "route53:ListTagsForResource"]
