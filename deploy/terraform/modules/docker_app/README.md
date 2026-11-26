@@ -44,7 +44,7 @@ No modules.
 | <a name="input_container_address"></a> [container\_address](#input\_container\_address) | Address of the application container on its network | `string` | n/a | yes |
 | <a name="input_database_host"></a> [database\_host](#input\_database\_host) | Address of the database container, VELA47\_DATABASE\_HOST | `string` | n/a | yes |
 | <a name="input_database_password"></a> [database\_password](#input\_database\_password) | Password of the vela47 user on the database, VELA47\_DATABASE\_PASSWORD | `string` | n/a | yes |
-| <a name="input_dockerfile"></a> [dockerfile](#input\_dockerfile) | Dockerfile of the server image, relative to repository\_path | `string` | `"deploy/images/dev/app/Dockerfile"` | no |
+| <a name="input_dockerfile"></a> [dockerfile](#input\_dockerfile) | Dockerfile of the server image, relative to repository\_path | `string` | `"deploy/images/local/app/Dockerfile"` | no |
 | <a name="input_health_check_interval"></a> [health\_check\_interval](#input\_health\_check\_interval) | Time between two health checks of the container | `string` | `"5s"` | no |
 | <a name="input_health_check_retries"></a> [health\_check\_retries](#input\_health\_check\_retries) | Failed health checks in a row after which the container is unhealthy | `number` | `3` | no |
 | <a name="input_health_check_start_period"></a> [health\_check\_start\_period](#input\_health\_check\_start\_period) | Time the server gets to start, including bringing up the sandbox, before failed health checks count | `string` | `"5m"` | no |
@@ -56,7 +56,7 @@ No modules.
 | <a name="input_published_address"></a> [published\_address](#input\_published\_address) | Host address the server and its UI are published on, 127.0.0.1 keeps them off the LAN | `string` | n/a | yes |
 | <a name="input_published_port"></a> [published\_port](#input\_published\_port) | Port the server and its UI are published on | `number` | n/a | yes |
 | <a name="input_repository_path"></a> [repository\_path](#input\_repository\_path) | Absolute path of the repository root, the context the server image is built from | `string` | n/a | yes |
-| <a name="input_sandbox_directory"></a> [sandbox\_directory](#input\_sandbox\_directory) | Sandbox compose project copied into the server image, relative to repository\_path | `string` | `"deploy/images/dev/sandbox"` | no |
+| <a name="input_sandbox_directory"></a> [sandbox\_directory](#input\_sandbox\_directory) | Sandbox compose project copied into the server image, relative to repository\_path | `string` | `"deploy/images/local/sandbox"` | no |
 | <a name="input_stop_timeout"></a> [stop\_timeout](#input\_stop\_timeout) | Seconds the server gets to bring the sandbox down when its container is stopped or destroyed | `number` | `60` | no |
 | <a name="input_token_secret_length"></a> [token\_secret\_length](#input\_token\_secret\_length) | Length of the key which signs the session tokens | `number` | `48` | no |
 | <a name="input_wait_timeout"></a> [wait\_timeout](#input\_wait\_timeout) | Seconds Terraform waits for the container to become healthy | `number` | `600` | no |
