@@ -8,13 +8,13 @@ output "lb_dns_name" {
   value       = aws_lb.this.dns_name
 }
 
-output "lb_target_group_arn" {
-  description = "ARN of the target group of the server tasks"
-  value       = aws_lb_target_group.this.arn
+output "lb_target_group_arns" {
+  description = "ARNs of the blue and green target groups of the server tasks"
+  value       = { for current_name, current in aws_lb_target_group.this : current_name => current.arn }
 }
 
 output "autoscaling_group_name" {
-  description = "Name of the auto scaling group which runs the EC2 instance of the cluster"
+  description = "Name of the auto scaling group which runs the EC2 instances of the cluster"
   value       = aws_autoscaling_group.this.name
 }
 
@@ -24,17 +24,17 @@ output "ecs_cluster_name" {
 }
 
 output "ecs_service_name" {
-  description = "Name of the ECS service of the server task"
+  description = "Name of the ECS service of the server tasks"
   value       = aws_ecs_service.this.name
 }
 
-output "ecr_image_app_uri" {
-  description = "URI of the server image the task runs, pinned by digest"
-  value       = local.app_image
+output "ecs_service_arn" {
+  description = "ARN of the ECS service of the server tasks"
+  value       = aws_ecs_service.this.arn
 }
 
 output "cloudwatch_log_group_app_name" {
-  description = "Name of the log group of the server task"
+  description = "Name of the log group of the server tasks"
   value       = aws_cloudwatch_log_group.app.name
 }
 
