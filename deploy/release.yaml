@@ -4,7 +4,7 @@
 # the kind of change it carries (see docs/change_management.md):
 #   infrastructure: none | additive | breaking
 #   database:       none | expand | contract
-version: 1.0.0
-infrastructure: additive
-database: expand
-summary: Deploy dev, staging and prod from one release, with schema migrations, a health endpoint and canary deployments
+version: 1.0.1
+infrastructure: none
+database: none
+summary: Update the Python dependencies and the base image of the sandbox function to Python 3.15
