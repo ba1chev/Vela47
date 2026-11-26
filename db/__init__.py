@@ -1,4 +1,4 @@
-# Where the server keeps its state: SQLite in DEV, PostgreSQL on RDS in PROD.
+# Where the server keeps its state: SQLite or a local PostgreSQL on LOCAL, PostgreSQL on RDS on AWS.
 
 from db.database_config import DEFAULT_SQLITE_PATH, DatabaseConfig
 from db.database_credentials import DatabaseCredentials
@@ -13,6 +13,7 @@ from db.tables.float32_vector import Float32Vector
 from db.tables.knowledge_document_table import KnowledgeDocumentTable
 from db.tables.knowledge_chunk_table import KnowledgeChunkTable
 from db.tables.table_registry import TABLE_REGISTRY
+from db.database_migrator import MIGRATIONS_DIRECTORY, BASELINE_REVISION, DatabaseMigrator
 from db.database_base import DatabaseBase
 from db.database_factory.database_factory_base import DatabaseFactoryBase
 from db.database_postgres import DatabasePostgres
@@ -35,6 +36,9 @@ __all__ = [
     "KnowledgeDocumentTable",
     "KnowledgeChunkTable",
     "TABLE_REGISTRY",
+    "MIGRATIONS_DIRECTORY",
+    "BASELINE_REVISION",
+    "DatabaseMigrator",
     "DatabaseBase",
     "DatabaseFactoryBase",
     "DatabasePostgres",
