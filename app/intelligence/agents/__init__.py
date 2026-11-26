@@ -22,6 +22,7 @@ from app.intelligence.agents.deep_agent.operation_context import OperationContex
 from app.intelligence.agents.deep_agent.operation_layers.operation_layer_type import OperationType
 from app.intelligence.agents.deep_agent.operation_layers.operation_layer_base import OperationLayerBase
 from app.intelligence.agents.deep_agent.operation_layers.operation_decomposition.operation_decomposition_layer import OperationDecompositionLayer
+from app.intelligence.agents.deep_agent.operation_layers.operation_security.operation_security_layer import OperationSecurityLayer
 from app.intelligence.agents.deep_agent.prompts.merging_system_prompt import MERGING_SYSTEM_PROMPT
 from app.intelligence.agents.deep_agent.operation_layers.operation_merging.operation_merging_layer import OperationMergingLayer
 from app.intelligence.agents.deep_agent.prompts.planning_system_prompt import PLANNING_SYSTEM_PROMPT
@@ -98,6 +99,7 @@ from app.intelligence.agents.rag_agent.rag_layers.rag_query.rag_query_layer impo
 from app.intelligence.agents.rag_agent.rag_layers.rag_retrieval.rag_retrieval_layer import RagRetrievalLayer
 from app.intelligence.agents.rag_agent.rag_layers.rag_reranking.rag_reranking_layer import RagRerankingLayer
 from app.intelligence.agents.rag_agent.rag_layers.rag_generation.rag_generation_layer import RagGenerationLayer
+from app.intelligence.agents.rag_agent.rag_layers.rag_security.rag_security_layer import RagSecurityLayer
 from app.intelligence.agents.rag_agent.rag_layers.rag_layers_factory.rag_layers_registry import RAG_LAYERS_REGISTRY
 from app.intelligence.agents.rag_agent.rag_layers.rag_layers_factory.rag_layers_factory_base import RagLayersFactoryBase
 from app.intelligence.agents.rag_agent.rag_layers.rag_layers_factory.rag_layers_factory import RagLayersFactory
@@ -129,6 +131,7 @@ __all__ = [
     "OperationType",
     "OperationLayerBase",
     "OperationDecompositionLayer",
+    "OperationSecurityLayer",
     "MERGING_SYSTEM_PROMPT",
     "OperationMergingLayer",
     "PLANNING_SYSTEM_PROMPT",
@@ -207,6 +210,7 @@ __all__ = [
     "RagRetrievalLayer",
     "RagRerankingLayer",
     "RagGenerationLayer",
+    "RagSecurityLayer",
     "RAG_LAYERS_REGISTRY",
     "RagLayersFactoryBase",
     "RagLayersFactory",
