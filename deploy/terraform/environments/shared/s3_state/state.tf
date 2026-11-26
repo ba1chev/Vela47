@@ -11,7 +11,7 @@ provider "aws" {
 # terraform {
 #   backend "s3" {
 #     bucket       = "vela47-terraform-state"
-#     key          = "prod/global/s3_state/terraform.tfstate"
+#     key          = "shared/s3_state/terraform.tfstate"
 #     region       = "eu-central-1"
 #     encrypt      = true
 #     use_lockfile = true
