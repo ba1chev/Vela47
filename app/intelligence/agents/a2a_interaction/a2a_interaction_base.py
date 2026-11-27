@@ -1,11 +1,12 @@
-from typing import Optional, Self
 from abc import ABC, abstractmethod
+from typing import Any, Optional, Self
 
 from app.intelligence.agents import AgentBase
 from app.intelligence.messages import MessageAI
 from app.intelligence.messages import MessageBase
 from app.intelligence.messages import MessageHuman
 from app.intelligence.agents import A2AInteractionType
+from app.intelligence.tracing import current_tracing_service
 
 
 class A2AInteractionBase(ABC):
@@ -40,6 +41,9 @@ class A2AInteractionBase(ABC):
     def _transfer(self, sender: AgentBase, receiver: AgentBase, text: str) -> str:
         raise NotImplementedError("Must be implemented")
 
+    def _connection_details(self) -> dict[str, Any]:
+        return {}
+
     @property
     def left(self) -> Optional[AgentBase]:
         return self._left
@@ -71,23 +75,38 @@ class A2AInteractionBase(ABC):
             raise RuntimeError("An interaction connects two agents; append both before connecting.")
         if self._connected:
             return
-        self._connect()
+        with current_tracing_service().step("Connect", "a2a", {"interaction": self.interaction_type.value}) as span:
+            self._connect()
+            span.update(self._connection_details())
+            span.setdefault("detail", f"{self.interaction_type.value} connection open")
         self._connected = True
 
     def close_connection(self) -> None:
         if not self._connected:
             return
         self._connected = False
-        self._disconnect()
+        with current_tracing_service().step("Disconnect", "a2a", {"interaction": self.interaction_type.value}) as span:
+            self._disconnect()
+            span["detail"] = f"{self.interaction_type.value} connection closed"
 
     def send(self, sender: AgentBase, message: MessageHuman) -> MessageAI:
         if not self._connected:
             raise RuntimeError("The interaction is not connected; call establish_connection() first.")
 
+        tracer = current_tracing_service()
         receiver = self._receiver_of(sender)
-        delivered = self._transfer(sender, receiver, self._text(message))
-        reply = receiver.execute(MessageHuman(content = delivered))
-        return MessageAI(content = self._transfer(receiver, sender, self._text(reply)))
+        text = self._text(message)
+        with tracer.step("Deliver message", "a2a", {"characters": len(text), "message": text}) as span:
+            delivered = self._transfer(sender, receiver, text)
+            span["detail"] = f"{len(text)} characters sent, {len(delivered)} received intact" if delivered == text else f"{len(text)} characters sent, {len(delivered)} received"
+        with tracer.step("Peer answers", "a2a", {"received": delivered}) as span:
+            reply = receiver.execute(MessageHuman(content = delivered))
+            span["reply"] = self._text(reply)
+            span["detail"] = f"the peer answered in {len(self._text(reply))} characters"
+        with tracer.step("Deliver reply", "a2a", {"characters": len(self._text(reply))}) as span:
+            answer = self._transfer(receiver, sender, self._text(reply))
+            span["detail"] = f"{len(answer)} characters back to the sender"
+        return MessageAI(content = answer)
 
     def _receiver_of(self, sender: AgentBase) -> AgentBase:
         if sender is self._left:
