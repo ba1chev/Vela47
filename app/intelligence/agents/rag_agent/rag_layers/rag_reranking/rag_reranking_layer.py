@@ -6,12 +6,14 @@ from app.intelligence.agents import RagLayerBase
 from app.intelligence.agents import RagLayerType
 from app.intelligence.model import ModelFoundation
 from app.intelligence.messages import MessageHuman
+from app.intelligence.memory import describe_entry
 from app.intelligence.messages import MessageSystem
 from app.intelligence.memory import VectorDbMemoryEntry
 from app.intelligence.memory import VectorDbOperationFilter
 from app.intelligence.memory import VectorDbOperationRerank
 from app.intelligence.outputs import OutputParserStructured
 from app.intelligence.memory import VectorDbOperationManager
+from app.intelligence.tracing import current_tracing_service
 from app.intelligence.agents import RAG_RERANKING_SYSTEM_PROMPT
 
 
@@ -70,10 +72,17 @@ class RagRerankingLayer(RagLayerBase):
             output_schema = self._output_schema(len(context.candidates))
         )
 
+        tracer = current_tracing_service()
         try:
             relevance = self._parser.parse(response).data
-        except ValidationError:
+        except ValidationError as error:
             context.passages = context.candidates[:self._top_n]
+            tracer.record("Unreadable scores", "reranking", {
+                "detail": f"the reply did not match the schema, the first {len(context.passages)} candidates are kept as retrieved",
+                "status": "error",
+                "error": str(error),
+                "reply": response.content
+            })
             return
 
         scores = {
@@ -90,3 +99,22 @@ class RagRerankingLayer(RagLayerBase):
         )
         context.relevance = scores
         context.passages = ranked[:self._top_n]
+        kept = {current.message.id for current in context.passages}
+        survivors = {current.message.id for current in ranked}
+        tracer.record("Scores", "reranking", {
+            "detail": f"{len(context.passages)} of {len(context.candidates)} kept, "
+                f"scores {min(scores.values(), default = 0)}-{max(scores.values(), default = 0)} of 10",
+            "min_score": self._min_score,
+            "top_n": self._top_n,
+            "judged": [
+                describe_entry(
+                    current, None,
+                    retrieved_rank = rank,
+                    relevance = scores.get(current.message.id),
+                    kept = current.message.id in kept,
+                    reason = "kept" if current.message.id in kept
+                        else (f"beyond the top {self._top_n}" if current.message.id in survivors else f"below {self._min_score}")
+                )
+                for rank, current in enumerate(context.candidates, start = 1)
+            ]
+        })
