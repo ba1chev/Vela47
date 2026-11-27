@@ -6,6 +6,7 @@ from app.intelligence.agents import OperationContext
 from app.intelligence.agents import OperationLayerBase
 from app.intelligence.agents import PLANNING_SYSTEM_PROMPT
 from app.intelligence.outputs import OutputParserStructured
+from app.intelligence.tracing import current_tracing_service
 from app.intelligence.agents import format_subagent_capabilities
 
 
@@ -48,3 +49,9 @@ class OperationPlanningLayer(OperationLayerBase):
         )
         plan = self._parser.parse(response).data
         context.plan = plan.model_copy(update = {"steps": plan.steps[:self.MAX_STEPS]})
+        current_tracing_service().record("Plan", "planning", {
+            "detail": " → ".join(current.subagent_type.name for current in context.plan.steps) or "no step needed",
+            "steps": [current.model_dump(mode = "json") for current in context.plan.steps],
+            "dropped_steps": len(plan.steps) - len(context.plan.steps),
+            "max_steps": self.MAX_STEPS
+        })
