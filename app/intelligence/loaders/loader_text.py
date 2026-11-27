@@ -16,7 +16,13 @@ class LoaderText(LoaderBase):
         return LoaderType.TEXT
 
     def load(self, data: bytes, encoding: Optional[str] = None) -> LoaderDocument:
+        text, used = self._decode(data, encoding)
         return LoaderDocument(
-            text = self._tidy(self._decode(data, encoding)),
-            loader_type = self.loader_type
+            text = self._tidy(text),
+            loader_type = self.loader_type,
+            details = {
+                "declared_encoding": encoding,
+                "encoding": used,
+                "replaced_characters": text.count("\ufffd")
+            }
         )
