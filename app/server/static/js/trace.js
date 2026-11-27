@@ -56,6 +56,7 @@ function detailFor(event) {
   const p = event.payload || {};
   switch (event.type) {
     case "layer_finished":
+      if (p.detail) return p.detail;
       return [
         p.steps ? plural(p.steps, "step") : null,
         p.tasks ? plural(p.tasks, "task") : null,
@@ -89,6 +90,7 @@ function detailFor(event) {
     case "a2a_finished":
       return p.status === "error" ? `failed: ${p.result || ""}` : (p.result || "");
     case "pipeline_finished":
+      if (p.detail) return p.detail;
       return p.results ? `${plural(p.results, "result")} merged` : "";
     case "step_started":
     case "step_finished":
@@ -219,6 +221,7 @@ function placeRow(row, parent) {
 }
 
 function labelFor(event, spec) {
+  if (event.span_id) return event.label;
   return spec.opens === "Pipeline" || spec.closes === "Pipeline" ? "Pipeline" : event.label;
 }
 
