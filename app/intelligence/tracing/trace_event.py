@@ -1,3 +1,4 @@
+from uuid import uuid4
 from typing import Any, Optional
 from pydantic import BaseModel, Field
 from datetime import datetime, timezone
@@ -12,7 +13,11 @@ class TraceEvent(BaseModel):
 
     Events are immutable records of something that already happened — the
     timestamp is stamped at construction and never set by the caller, which keeps
-    ordering honest even when a producer batches its reporting."""
+    ordering honest even when a producer batches its reporting.
+
+    span_id and parent_id make the events a tree: the started and finished events of
+    one span share its id, and everything reported while it is open names it as the
+    parent. The tree is therefore exact however events interleave."""
 
     type: TraceEventType = Field(
         description = "What kind of occurrence this is. The UI dispatches on this value to "
@@ -34,6 +39,16 @@ class TraceEvent(BaseModel):
         description = "Structured detail specific to this event type — the step count for a "
             "finished plan, the token usage for a model call, the slot id for a sandbox "
             "lease. Must be JSON-serialisable, since it is sent to the browser verbatim."
+    )
+    span_id: str = Field(
+        default_factory = lambda: uuid4().hex[:16],
+        description = "Id of the span this event belongs to. Shared by the started and finished "
+            "events of one span; every other event gets one of its own."
+    )
+    parent_id: Optional[str] = Field(
+        default = None,
+        description = "Id of the span that was open when this event was reported, or None at the "
+            "top of a run."
     )
     duration_ms: Optional[float] = Field(
         default = None,
