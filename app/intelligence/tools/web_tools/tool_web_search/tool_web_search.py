@@ -2,6 +2,7 @@ from app.intelligence.tools import ToolBase
 from app.intelligence.web import WebSearchBase
 from app.intelligence.tools import ToolWebSearchInput
 from app.intelligence.security import SecurityPromptType
+from app.intelligence.tracing import current_tracing_service
 
 
 class ToolWebSearch(ToolBase[ToolWebSearchInput, str]):
@@ -43,6 +44,13 @@ class ToolWebSearch(ToolBase[ToolWebSearchInput, str]):
 
     def execute(self, input: ToolWebSearchInput) -> str:
         results = self._web_search.search(input.query, input.max_results)
+        current_tracing_service().record("Results", "web", {
+            "detail": f"{len(results)} result(s) from {type(self._web_search).__name__}",
+            "provider": type(self._web_search).__name__,
+            "query": input.query,
+            "max_results": input.max_results,
+            "results": [current_result.model_dump(mode = "json") for current_result in results]
+        })
         if not results:
             return f"The web search for '{input.query}' found nothing. Try fewer or different keywords."
 
