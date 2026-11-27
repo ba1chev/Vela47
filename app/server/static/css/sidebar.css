@@ -1,0 +1,101 @@
+/* The conversations panel folds into a narrow rail of icons and slides open again.
+   Only on wide screens: below 1100 px the panel is a drawer and is never folded. */
+
+/* Every icon-only button: the sidebar toggle and the shortcuts in the rail. */
+.icon-button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color .15s, background .15s, transform .15s;
+}
+
+.icon-button:hover,
+.icon-button:focus-visible {
+  outline: none;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.icon-button:active { transform: scale(.94); }
+
+/* The header keeps its height: the toggle is taller than the text beside it, so it
+   gives the difference back in margin. Its left edge lines up with the rail below. */
+.sessions > .sessions-head { padding-left: 13px; }
+.sidebar-toggle { margin-block: -6.5px; }
+.sessions > .sessions-head h2 { flex: 1; }
+
+/* The rail sits under the header and takes no room of its own, so the open panel
+   lays out as it always did. */
+.sessions-rail {
+  position: absolute;
+  top: 49px;
+  left: 0;
+  width: 58px;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding-top: 10px;
+}
+
+/* A short glow on the documents when the rail's documents icon opens the panel, so
+   the eye lands on them. */
+.knowledge[data-flash="1"] { animation: flash 1.6s ease-out; }
+
+/* While an answer streams the panel is dimmed and inert, but it can still be folded
+   and unfolded: that never changes which conversation is on screen. */
+.app[data-busy="1"] :is(.sidebar-toggle, #rail-chats, #rail-documents) {
+  pointer-events: auto;
+}
+
+@media (min-width: 1101px) {
+  .app {
+    transition: grid-template-columns .36s cubic-bezier(.2, .8, .2, 1);
+  }
+
+  .app[data-sidebar="collapsed"] {
+    grid-template-columns: 60px minmax(0, 1fr) 320px;
+  }
+
+  .sessions { position: relative; }
+
+  /* The contents keep the open width while the column narrows, so nothing rewraps
+     mid-slide: the panel's clip cuts them off instead. */
+  .sessions > .sessions-head,
+  .sessions-body,
+  .knowledge { min-width: 270px; }
+
+  .sessions-rail { display: flex; }
+
+  /* Opening: the contents fade and drift in once the column has started to widen.
+     Closing: they leave quickly, before the column is narrow enough to clip them. */
+  .sessions > .sessions-head h2,
+  #new-chat,
+  .sessions-body,
+  .knowledge,
+  .sessions-rail {
+    transition:
+      opacity .24s ease .1s,
+      transform .36s cubic-bezier(.2, .8, .2, 1) .06s,
+      visibility 0s;
+  }
+
+  .app[data-sidebar="collapsed"] :is(.sessions > .sessions-head h2, #new-chat, .sessions-body, .knowledge),
+  .app:not([data-sidebar="collapsed"]) .sessions-rail {
+    opacity: 0;
+    transform: translateX(-12px);
+    visibility: hidden;
+    transition:
+      opacity .12s ease,
+      transform .2s ease,
+      visibility 0s .2s;
+  }
+}
