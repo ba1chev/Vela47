@@ -4,7 +4,7 @@
 # the kind of change it carries (see docs/change_management.md):
 #   infrastructure: none | additive | breaking
 #   database:       none | expand | contract
-version: 1.0.3
-infrastructure: none
+version: 2.0.0
+infrastructure: breaking
 database: none
-summary: Release only what the deployment applies, leaving the modules of the shared roots to the bootstrap script
+summary: Replace the NAT instance of dev with one that installs iptables with swap, since 512 MB were not enough for dnf

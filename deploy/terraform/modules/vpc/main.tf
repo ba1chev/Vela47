@@ -149,9 +149,19 @@ resource "aws_instance" "nat" {
   # The address it boots with lets user_data install iptables before the elastic address is moved onto it
   associate_public_ip_address = true
 
-  user_data = <<-EOT
+  # A t4g.nano has 512 MB, less than dnf needs to read the package metadata, so the packages are installed with swap.
+  # user_data only runs on the first boot, so a change to it replaces the instance
+  user_data_replace_on_change = true
+  user_data                   = <<-EOT
     #!/bin/bash
-    dnf install -y iptables-services
+    dd if=/dev/zero of=/swapfile bs=1M count=1024
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+    for attempt in 1 2 3; do
+      dnf install -y --setopt=install_weak_deps=False iptables-services && break
+      sleep 10
+    done
     echo "net.ipv4.ip_forward = 1" > /etc/sysctl.d/90-nat.conf
     sysctl -p /etc/sysctl.d/90-nat.conf
     interface=$(ip route show default | awk '{print $5}')
@@ -159,6 +169,8 @@ resource "aws_instance" "nat" {
     iptables -F FORWARD
     service iptables save
     systemctl enable --now iptables
+    swapoff /swapfile
+    rm -f /swapfile
   EOT
 
   metadata_options {
