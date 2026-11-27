@@ -32,3 +32,8 @@ class TestLoaderPdf:
         damaged = PdfBuilder().build(["x"]).replace(b"/Size 6 /Root 1 0 R", b"/Size /Six /Root 9 0 R")
         with pytest.raises(ValueError, match = "not a readable PDF"):
             LoaderPdf().load(damaged)
+
+
+    def test_the_pages_and_those_with_text_are_reported(self):
+        details = LoaderPdf().load(PdfBuilder().build(["First page.", "", "Third page."])).details
+        assert details["pages"] == 3 and details["pages_with_text"] == 2 and details["encrypted"] is False
