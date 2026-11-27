@@ -29,16 +29,16 @@ class LoaderBase(ABC):
     def load(self, data: bytes, encoding: Optional[str] = None) -> LoaderDocument:
         raise NotImplementedError("Must be implemented")
 
-    def _decode(self, data: bytes, encoding: Optional[str] = None) -> str:
+    def _decode(self, data: bytes, encoding: Optional[str] = None) -> tuple[str, str]:
         if encoding:
             try:
-                return data.decode(encoding)
+                return data.decode(encoding), encoding
             except (LookupError, UnicodeDecodeError):
                 pass
         try:
-            return data.decode("utf-8-sig")
+            return data.decode("utf-8-sig"), "utf-8"
         except UnicodeDecodeError:
-            return data.decode("cp1252", errors = "replace")
+            return data.decode("cp1252", errors = "replace"), "cp1252"
 
     def _tidy(self, text: str) -> str:
         lines = [current_line.rstrip() for current_line in text.replace("\r\n", "\n").split("\n")]
