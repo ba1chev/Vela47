@@ -6,6 +6,7 @@ from app.intelligence.messages import MessageHuman
 from app.intelligence.model import ModelFoundation
 from app.intelligence.messages import MessageSystem
 from app.intelligence.agents import RAG_QUERY_SYSTEM_PROMPT
+from app.intelligence.tracing import current_tracing_service
 
 
 class RagQueryLayer(RagLayerBase):
@@ -48,9 +49,14 @@ class RagQueryLayer(RagLayerBase):
 
     def execute(self, context: RagContext) -> None:
         goal = self._text_of(context.goal.content)
+        tracer = current_tracing_service()
 
         if not context.history:
             context.query = goal
+            tracer.record("Query as written", "query", {
+                "detail": "no earlier turn to resolve, the question is searched as written",
+                "query": goal
+            })
             return
 
         response = self._model.invoke([
@@ -63,4 +69,15 @@ class RagQueryLayer(RagLayerBase):
             if current_line.strip()
         ]
         rewritten = lines[0] if lines else ""
-        context.query = rewritten if 0 < len(rewritten) <= len(goal) + self.MAX_EXTRA_CHARS else goal
+        accepted = 0 < len(rewritten) <= len(goal) + self.MAX_EXTRA_CHARS
+        context.query = rewritten if accepted else goal
+        tracer.record("Rewrite", "query", {
+            "detail": f"searching for “{context.query}”" if accepted
+                else ("the model wrote nothing, the question is searched as written" if not rewritten
+                    else f"the rewrite ran {len(rewritten) - len(goal)} characters over the question, which is searched as written"),
+            "original": goal,
+            "rewritten": rewritten,
+            "accepted": accepted,
+            "max_extra_chars": self.MAX_EXTRA_CHARS,
+            "history_turns": len(context.history)
+        })
