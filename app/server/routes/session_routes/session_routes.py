@@ -5,6 +5,7 @@ from app.server.routes import caller
 from app.server.routes import authorize
 from app.server.chat_sessions import ChatSession
 from app.server.security import IdentityAccessAction
+from app.server.requests import RenameChatSessionRequest
 from app.server.security import format_chat_session_collection_vrn
 
 session_router = APIRouter(prefix = "/api/sessions")
@@ -60,6 +61,18 @@ def read_chat_session(session_id: str, request: Request) -> dict[str, Any]:
             for current_message in chat_session.messages
         ]
     }
+
+
+@session_router.patch("/{session_id}")
+def rename_chat_session(session_id: str, body: RenameChatSessionRequest, request: Request) -> dict[str, Any]:
+    caller(request)
+    chat_session = find_chat_session(request, session_id)
+    authorize(request, IdentityAccessAction.SESSION_WRITE, chat_session.vrn)
+    try:
+        renamed = request.app.state.chat_session_store.rename_session(session_id, body.title)
+    except KeyError:
+        raise HTTPException(status_code = 404, detail = "No such conversation.") from None
+    return _summarize(renamed)
 
 
 @session_router.delete("/{session_id}")
