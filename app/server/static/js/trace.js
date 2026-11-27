@@ -14,11 +14,16 @@ const RENDER = {
   sandbox_acquired:  { kind: "sandbox",  skip: true },
   sandbox_released:  { kind: "sandbox",  skip: true },
   model_invoked:     { kind: "model" },
-  tool_executed:     { kind: "tool" },
+  tool_started:      { kind: "tool",     opens: true },
+  tool_executed:     { kind: "tool",     closes: true },
   a2a_started:       { kind: "a2a",      opens: true },
   a2a_finished:      { kind: "a2a",      closes: true },
+  security_checked:  { kind: "check" },
   security_flagged:  { kind: "security" },
   run_failed:        { kind: "error" },
+  step_started:      { kind: "step",     opens: true },
+  step_finished:     { kind: "step",     closes: true },
+  step_recorded:     { kind: "step" },
 };
 
 // Rows still waiting for their matching *_finished event, keyed by type+label, and the
@@ -43,14 +48,18 @@ function plainText(text) {
     .trim();
 }
 
+function plural(count, noun) {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
 function detailFor(event) {
   const p = event.payload || {};
   switch (event.type) {
     case "layer_finished":
       return [
-        p.steps ? `${p.steps} steps` : null,
-        p.tasks ? `${p.tasks} tasks` : null,
-        p.results ? `${p.results} results` : null,
+        p.steps ? plural(p.steps, "step") : null,
+        p.tasks ? plural(p.tasks, "task") : null,
+        p.results ? plural(p.results, "result") : null,
         p.flagged ? `${p.flagged} flagged` : null,
       ].filter(Boolean).join(" · ");
     case "subagent_started":
@@ -62,6 +71,17 @@ function detailFor(event) {
         p.total_tokens ? `${p.total_tokens} tok` : null,
         (p.tool_calls && p.tool_calls.length) ? `→ ${p.tool_calls.join(", ")}` : null,
       ].filter(Boolean).join(" · ");
+    case "tool_started":
+      return p.args ? Object.entries(p.args).map(([key, value]) => `${key}: ${typeof value === "string" ? value : JSON.stringify(value)}`).join(" · ") : "";
+    case "security_checked":
+      return [
+        "clean",
+        p.signatures ? plural(p.signatures.length, "signature") : null,
+        p.characters != null ? `${p.characters} chars` : null,
+        p.invisible_characters ? `${p.invisible_characters} invisible removed` : null,
+        p.hidden_characters ? `${p.hidden_characters} hidden decoded` : null,
+        p.normalized ? "normalised" : null,
+      ].filter(Boolean).join(" · ");
     case "tool_executed":
       return p.status === "error" ? `error: ${p.result || ""}` : (p.result || "");
     case "a2a_started":
@@ -69,7 +89,11 @@ function detailFor(event) {
     case "a2a_finished":
       return p.status === "error" ? `failed: ${p.result || ""}` : (p.result || "");
     case "pipeline_finished":
-      return p.results ? `${p.results} results merged` : "";
+      return p.results ? `${plural(p.results, "result")} merged` : "";
+    case "step_started":
+    case "step_finished":
+    case "step_recorded":
+      return p.status === "error" ? `failed: ${p.error || ""}` : (p.detail || "");
     case "security_flagged":
       return Object.entries(p.matches || {}).map(([name, text]) => `${name}: ${text}`).join(" · ");
     default:
@@ -118,10 +142,14 @@ function setDetail(row, event) {
   row.detail.title = text;
 }
 
-function makeRow(event, spec, label) {
+function makeRow(event, spec, label, depth) {
   const li = makeElement("li", "ev");
   li.dataset.kind = spec.kind;
-  li.style.setProperty("--depth", String(openGroups.length));
+  li.style.setProperty("--depth", String(depth));
+  // A step names what it is in its category, which the stylesheet colours by.
+  if (spec.kind === "step" && event.payload && event.payload.category) {
+    li.dataset.category = event.payload.category;
+  }
   // The label of a subagent event is its type, which the stylesheet turns into a
   // per-type hue so the trace is colour-coded by who did the work.
   if (spec.kind === "subagent") li.dataset.agent = label;
@@ -147,7 +175,7 @@ function makeRow(event, spec, label) {
   head.append(dot, wrap, time);
   li.append(head);
 
-  const row = { li, head, detail, count, time, children: null };
+  const row = { li, head, detail, count, time, depth, children: null };
   if (spec.opens) {
     row.children = makeElement("ol", "ev-children");
     li.dataset.open = "1";
@@ -166,62 +194,115 @@ function toggleGroup(row) {
 // A finished group folds away when it holds only leaf steps, so the panel keeps the
 // shape of the run in view instead of every model call; a group that failed stays open.
 function finishGroup(row) {
-  const steps = row.children.children.length;
-  if (!steps) return;
+  const children = [...row.children.children];
+  if (!children.length) return;
   row.li.dataset.nested = "1";
-  row.count.textContent = `${steps} ${steps === 1 ? "call" : "calls"}`;
+  const onlyCalls = children.every((child) => ["model", "tool"].includes(child.dataset.kind));
+  row.count.textContent = plural(children.length, onlyCalls ? "call" : "step");
   const holdsGroups = row.children.querySelector(":scope > .ev > .ev-children") !== null;
   if (!holdsGroups && row.li.dataset.kind !== "error") toggleGroup(row);
 }
 
-function addEvent(event) {
-  const spec = RENDER[event.type];
-  if (!spec || spec.skip) return;
+// A *_finished event completes the row its *_started opened, rather than adding a
+// second line — so the trace reads as a list of steps, not a log of transitions.
+function completeRow(row, event) {
+  row.li.dataset.live = "0";
+  if (event.payload && event.payload.status === "error") row.li.dataset.kind = "error";
+  setDetail(row, event);
+  row.time.textContent = formatDuration(event.duration_ms);
+  finishGroup(row);
+}
 
-  traceEvents.push(event);
-  traceEmptyEl.hidden = true;
-  traceSummaryEl.textContent = summarizeTrace(traceEvents);
-  const label = spec.opens === "Pipeline" || spec.closes === "Pipeline"
-    ? "Pipeline"
-    : event.label;
+function placeRow(row, parent) {
+  (parent ? parent.children : eventsEl).appendChild(row.li);
+  scrollToEnd(eventsEl.parentElement);
+}
+
+function labelFor(event, spec) {
+  return spec.opens === "Pipeline" || spec.closes === "Pipeline" ? "Pipeline" : event.label;
+}
+
+// Rows of open spans by span id, and the parent of every span seen, so an event whose
+// parent is not drawn (a sandbox lease, say) still lands under the nearest one that is.
+const spanRows = new Map();
+const spanParents = new Map();
+
+function rowFor(spanId) {
+  let id = spanId;
+  while (id && !spanRows.has(id)) id = spanParents.get(id);
+  return id ? spanRows.get(id) : null;
+}
+
+// Events with span ids form an exact tree, however the run interleaves them.
+function addSpanEvent(event, spec) {
+  const label = labelFor(event, spec);
+  if (spec.closes) {
+    const row = spanRows.get(event.span_id);
+    if (row) {
+      completeRow(row, event);
+      return;
+    }
+  }
+
+  const parent = rowFor(event.parent_id);
+  const row = makeRow(event, spec, label, parent ? parent.depth + 1 : 0);
+  setDetail(row, event);
+  if (spec.opens) {
+    row.li.dataset.live = "1";
+    spanRows.set(event.span_id, row);
+  } else {
+    row.time.textContent = formatDuration(event.duration_ms);
+  }
+  placeRow(row, parent);
+}
+
+// Traces stored before events carried span ids: the tree is rebuilt from the order
+// of the events, each *_started opening a group until its *_finished arrives.
+function addOrderedEvent(event, spec) {
+  const label = labelFor(event, spec);
   const key = `${spec.kind}:${label}`;
 
-  // A *_finished event completes the row its *_started opened, rather than adding
-  // a second line — so the trace reads as a list of steps, not a log of transitions.
   if (spec.closes && openRows.has(key)) {
     const row = openRows.get(key);
     openRows.delete(key);
     const at = openGroups.indexOf(row);
     if (at >= 0) openGroups.splice(at);
-    row.li.dataset.live = "0";
-    if (event.payload && event.payload.status === "error") row.li.dataset.kind = "error";
-    setDetail(row, event);
-    row.time.textContent = formatDuration(event.duration_ms);
-    finishGroup(row);
+    completeRow(row, event);
     return;
   }
 
   const parent = openGroups.length ? openGroups[openGroups.length - 1] : null;
-  const row = makeRow(event, spec, label);
+  const row = makeRow(event, spec, label, openGroups.length);
   setDetail(row, event);
-
   if (spec.opens) {
     row.li.dataset.live = "1";
     openRows.set(key, row);
   } else {
     row.time.textContent = formatDuration(event.duration_ms);
   }
-
-  (parent ? parent.children : eventsEl).appendChild(row.li);
+  placeRow(row, parent);
   if (spec.opens) openGroups.push(row);
-  scrollToEnd(eventsEl.parentElement);
+}
+
+function addEvent(event) {
+  const spec = RENDER[event.type];
+  if (event.span_id) spanParents.set(event.span_id, event.parent_id || null);
+  if (!spec || spec.skip) return;
+
+  traceEvents.push(event);
+  traceEmptyEl.hidden = true;
+  traceSummaryEl.textContent = summarizeTrace(traceEvents);
+  if (event.span_id) addSpanEvent(event, spec);
+  else addOrderedEvent(event, spec);
 }
 
 // Steps still open when a run ends never reported a result.
 function settleTrace() {
-  for (const row of openRows.values()) row.li.dataset.live = "0";
+  for (const row of [...openRows.values(), ...spanRows.values()]) row.li.dataset.live = "0";
   openRows.clear();
   openGroups.length = 0;
+  spanRows.clear();
+  spanParents.clear();
 }
 
 function clearTrace() {
