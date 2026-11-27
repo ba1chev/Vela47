@@ -159,3 +159,17 @@
   font-size: 13px;
   pointer-events: none;
 }
+
+/* The trace of a document opens from a small icon beside its delete button, shown the
+   same way: on hover or keyboard focus. */
+.knowledge-trace {
+  display: grid;
+  place-items: center;
+  flex: none;
+  padding: 4px 6px;
+  opacity: 0;
+}
+
+.knowledge-item:hover .knowledge-trace,
+.knowledge-trace:focus-visible { opacity: 1; }
+
