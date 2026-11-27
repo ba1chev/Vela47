@@ -102,7 +102,7 @@ class TestToolExecutorSecurity:
 
     def test_the_finding_sits_inside_the_call_whose_result_it_was_found_in(self):
         _, events = run_traced(ToolWebSearch(FakeWebSearch(INJECTED)), "web_search", {"query": "notes"})
-        started, finding, executed = events
+        started, finding, executed = [current for current in events if current.type is not TraceEventType.STEP_RECORDED]
         assert [started.type, finding.type, executed.type] == [
             TraceEventType.TOOL_STARTED, TraceEventType.SECURITY_FLAGGED, TraceEventType.TOOL_EXECUTED
         ]
