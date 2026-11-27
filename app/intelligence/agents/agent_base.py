@@ -82,9 +82,21 @@ class AgentBase(ABC):
         )
 
     def _history(self) -> list[MessageBase]:
-        return self._history_truncate.apply(
-            self._history_shrink.apply(self._short_term_memory.get_all())
+        remembered = self._short_term_memory.get_all()
+        kept = self._history_shrink.apply(remembered)
+        history = self._history_truncate.apply(kept)
+        cut = sum(
+            len(str(current_before.content)) != len(str(current_after.content))
+            for current_before, current_after in zip(kept, history)
         )
+        self._tracing_service.record("Conversation memory", "memory", {
+            "detail": f"{len(history)} of {len(remembered)} earlier messages passed on, {cut} cut to {self.HISTORY_MESSAGE_CHARS} characters",
+            "remembered": len(remembered),
+            "kept": len(kept),
+            "cut": cut,
+            "max_chars": self.HISTORY_MESSAGE_CHARS
+        })
+        return history
 
     def restore(self, messages: list[MessageBase]) -> None:
         for current_message in messages:
