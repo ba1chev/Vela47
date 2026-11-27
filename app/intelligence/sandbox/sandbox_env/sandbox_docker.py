@@ -7,6 +7,7 @@ from app.intelligence.sandbox import SandboxEnv
 from app.intelligence.sandbox import SandboxEnvLocal
 from app.intelligence.sandbox import cap_sandbox_output
 from app.intelligence.sandbox import SandboxCommandResult
+from app.intelligence.tracing import current_tracing_service
 from app.intelligence.sandbox import archive_sandbox_directory
 
 
@@ -54,13 +55,19 @@ class SandboxDocker(SandboxEnv):
 
     def _copy_in(self) -> Optional[str]:
         workspace = shlex.quote(self._container_directory)
+        archive = archive_sandbox_directory(self._files.root)
+        current_tracing_service().record("Copy workspace in", "sandbox", {
+            "detail": f"{len(self.list_files())} file(s), {len(archive)} bytes as tar into {self._container_directory}",
+            "files": self.list_files(),
+            "archive_bytes": len(archive)
+        })
         try:
             copied = subprocess.run(
                 [
                     "docker", "exec", "-i", self._container_name, "sh", "-c",
                     f"rm -rf {workspace} && mkdir -p {workspace} && tar -x -C {workspace}"
                 ],
-                input = archive_sandbox_directory(self._files.root),
+                input = archive,
                 capture_output = True,
                 timeout = self.COPY_TIMEOUT_SECONDS,
                 check = False
@@ -73,6 +80,9 @@ class SandboxDocker(SandboxEnv):
         return None
 
     def _sweep(self) -> None:
+        current_tracing_service().record("Sweep", "sandbox", {
+            "detail": f"every process killed and {self._container_directory} removed in {self._container_name}"
+        })
         workspace = shlex.quote(self._container_directory)
         try:
             subprocess.run(
@@ -85,6 +95,21 @@ class SandboxDocker(SandboxEnv):
             return
 
     def run(self, command: str, timeout_seconds: int = 60) -> SandboxCommandResult:
+        with current_tracing_service().step(f"Run · {command}", "sandbox", {
+            "container": self._container_name,
+            "command": command,
+            "timeout_seconds": timeout_seconds
+        }) as span:
+            result = self._run(command, timeout_seconds)
+            span.update({
+                "exit_code": result.exit_code,
+                "timed_out": result.timed_out,
+                "output": result.output,
+                "detail": f"exit {result.exit_code}" + (", timed out" if result.timed_out else "") + f", {len(result.output)} characters of output"
+            })
+        return result
+
+    def _run(self, command: str, timeout_seconds: int) -> SandboxCommandResult:
         try:
             refusal = self._copy_in()
             if refusal is not None:
