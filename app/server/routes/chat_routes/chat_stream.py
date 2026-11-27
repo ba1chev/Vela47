@@ -4,9 +4,11 @@ from datetime import datetime, timezone
 from starlette.datastructures import State
 from typing import AsyncIterator, Callable
 
+from typing import Optional
 from app.server.routes import sse_frame
 from app.server.routes import relay_trace
 from app.server.routes import trace_queue
+from app.server.routes import drain_trace
 from app.server.routes import stored_trace
 from app.intelligence.agents import AgentBase
 from app.intelligence.tracing import TraceEvent
@@ -45,10 +47,10 @@ def _remember(state: State, chat_session: ChatSession, is_new: bool, turn: list[
 
 async def stream_chat(state: State, message: str, chat_session: ChatSession, is_new: bool,
     build_agent: Callable[[TracingServiceBase], AgentBase], agent_name: str,
-    keepalive_seconds: float = KEEPALIVE_SECONDS) -> AsyncIterator[str]:
+    keepalive_seconds: float = KEEPALIVE_SECONDS,
+    tracing_service: Optional[TracingServiceBase] = None) -> AsyncIterator[str]:
     yield sse_frame("session", {"id": chat_session.id, "title": chat_session.title, "new": is_new})
-
-    tracing_service = TracingService()
+    tracing_service = tracing_service if tracing_service is not None else TracingService()
     queue = trace_queue(tracing_service)
     tracing_service.subscribe(lambda event: _log_finding(chat_session, event))
 
@@ -69,7 +71,11 @@ async def stream_chat(state: State, message: str, chat_session: ChatSession, is_
                 "trace": stored_trace(tracing_service.events())
             }
         })
-        await asyncio.to_thread(_remember, state, chat_session, is_new, [human_message, response])
+        with tracing_service.step("Store", "db", {"conversation": chat_session.id, "new": is_new}) as span:
+            await asyncio.to_thread(_remember, state, chat_session, is_new, [human_message, response])
+            span["detail"] = ("a new conversation created" if is_new else "2 messages appended") + f", {len(response.response_metadata['trace'])} trace events kept with the answer"
+        async for current_frame in drain_trace(queue):
+            yield current_frame
         content = (
             response.content
             if isinstance(response.content, str)
@@ -82,4 +88,11 @@ async def stream_chat(state: State, message: str, chat_session: ChatSession, is_
         })
     except Exception as e:
         logger.exception("Run failed in conversation %s of %s", chat_session.id, chat_session.owner_id)
+        tracing_service.emit(TraceEventType.RUN_FAILED, type(e).__name__, {
+            "status": "error",
+            "error": f"{type(e).__name__}: {e}",
+            "detail": str(e)
+        })
+        async for current_frame in drain_trace(queue):
+            yield current_frame
         yield sse_frame("error", {"message": f"{type(e).__name__}: {e}"})
