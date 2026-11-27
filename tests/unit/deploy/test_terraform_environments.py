@@ -83,3 +83,10 @@ class TestTerraformEnvironments:
         used = {default_of((ENVIRONMENTS / current / "app" / "variables.tf").read_text(), "instance_type") for current in AWS_ENVIRONMENTS}
         used.add(default_of((MODULES / "vpc" / "variables.tf").read_text(), "nat_instance_type"))
         assert used <= set(allowed)
+
+    def test_the_instances_and_tasks_keep_their_way_out_until_they_are_gone(self):
+        app = (MODULES / "app" / "main.tf").read_text()
+        group = re.search(r'resource "aws_autoscaling_group" "this" \{.*?depends_on = \[(.*?)\]', app, re.DOTALL).group(1)
+        service = re.search(r'resource "aws_ecs_service" "this" \{.*?depends_on = \[(.*?)\]', app, re.DOTALL).group(1)
+        assert "aws_vpc_security_group_egress_rule.instance_all" in group
+        assert "aws_vpc_security_group_egress_rule.task_all" in service
