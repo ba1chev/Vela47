@@ -3,6 +3,7 @@ import pytest
 
 from app.intelligence.web import WebAccessError
 from app.intelligence.web import WebAddressGuard
+from app.intelligence.tracing import TracingService
 from tests.fixtures.web.fake_resolver import FakeResolver
 
 
@@ -54,3 +55,26 @@ class TestWebAddressGuard:
     def test_public_addresses_are_public(self):
         guard = WebAddressGuard(FakeResolver())
         assert all(guard.is_public(current) for current in ("93.184.216.34", "8.8.8.8", "2606:4700::1111"))
+
+
+class TestWebAddressGuardTrace:
+    def traced(self, url, table = None):
+        tracer = TracingService()
+        with tracer.step("Fetch", "web"):
+            try:
+                WebAddressGuard(FakeResolver(table)).check(httpx.URL(url))
+            except WebAccessError:
+                pass
+        return [current for current in tracer.events() if current.label == "Address check"][-1]
+
+    def test_a_passed_check_lists_every_address_with_its_verdict(self):
+        check = self.traced("https://example.org/", {"example.org": ["93.184.216.34", "93.184.216.35"]})
+        assert check.payload["addresses"] == [
+            {"address": "93.184.216.34", "public": True}, {"address": "93.184.216.35", "public": True}
+        ]
+        assert check.payload["chosen"] == "93.184.216.34"
+
+    def test_a_refused_check_finishes_as_an_error_with_the_private_address(self):
+        check = self.traced("https://intranet.example/", {"intranet.example": ["93.184.216.34", "10.0.0.5"]})
+        assert check.payload["status"] == "error" and "10.0.0.5" in check.payload["error"]
+        assert {"address": "10.0.0.5", "public": False} in check.payload["addresses"]

@@ -1,5 +1,6 @@
 from app.intelligence.tools import ToolWebSearch
 from app.intelligence.web import WebSearchResult
+from app.intelligence.tracing import TracingService
 from app.intelligence.tools import ToolWebSearchInput
 from app.intelligence.security import SecurityPromptType
 from tests.fixtures.web.fake_web_search import FakeWebSearch
@@ -37,3 +38,14 @@ class TestToolWebSearch:
 
     def test_its_results_come_from_outside_the_run(self):
         assert ToolWebSearch(FakeWebSearch()).result_threat is SecurityPromptType.INJECTION
+
+
+class TestToolWebSearchTrace:
+    def test_the_provider_and_every_result_are_traced_whole(self):
+        tracer = TracingService()
+        with tracer.step("web_search", "web"):
+            ToolWebSearch(FakeWebSearch(RESULTS)).execute(ToolWebSearchInput(query = "pytest"))
+        (results,) = [current.payload for current in tracer.events() if current.label == "Results"]
+        assert results["provider"] == "FakeWebSearch" and results["query"] == "pytest"
+        assert results["results"][1]["snippet"] == "x" * 1000
+

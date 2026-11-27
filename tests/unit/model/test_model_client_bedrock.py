@@ -153,3 +153,10 @@ class TestModelClientBedrock:
         client, runtime = make_client(stream_events = events, reject_temperature = True)
         assert [current.content for current in client.stream(make_config(), [MessageHuman(content = "hi")])] == ["Hi", ""]
         assert ["temperature" in current["inferenceConfig"] for current in runtime.requests] == [True, False]
+
+
+class TestModelClientBedrockProvider:
+    def test_the_reply_carries_what_bedrock_reported_about_the_call(self):
+        client, _ = make_client()
+        response = client.chat(make_config(), [MessageHuman(content = "hi")])
+        assert set(response.response_metadata["provider"]) == {"stop_reason", "latency_ms", "cache_read_tokens", "cache_write_tokens"}

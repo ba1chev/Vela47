@@ -7,6 +7,8 @@ from app.intelligence.tools import ToolWriteFile
 from app.intelligence.messages import MessageTool
 from app.intelligence.agents import PromptManager
 from app.intelligence.messages import MessageHuman
+from app.intelligence.tracing import TracingService
+from app.intelligence.tracing import TraceEventType
 from app.intelligence.sandbox import SandboxEnvLocal
 from app.intelligence.messages import MessageToolCall
 from app.intelligence.agents import OperationSubagent
@@ -148,3 +150,44 @@ class TestOperationSubagent:
         subagent.execute(MessageHuman(content = "add 2 and 3"))
         assert [type(current).__name__ for current in observer.observed] == ["MessageHuman", "MessageTool"]
         assert observer.observed[0].content == "add 2 and 3" and observer.observed[1].name == "add"
+
+
+class TestOperationSubagentTrace:
+    def traced(self, replies, probes = None, max_iterations = 6):
+        tracer = TracingService()
+        env = SandboxEnvLocal(pathlib.Path(tempfile.mkdtemp()) / "run")
+        probes = [RecordingProbe(env)] if probes == "recording" else probes
+        subagent = OperationSubagent(
+            model = ScriptedToolModel(replies),
+            prompt_manager = PromptManager(),
+            max_context_window_size = 24,
+            tools = [ToolWriteFile(env), ToolReadFile(env)],
+            context_window_middleware = MiddlewareSlidingWindow(step = 2),
+            max_iterations = max_iterations,
+            tracing_service = tracer,
+            probes = probes
+        )
+        subagent.execute(MessageHuman(content = "task"))
+        return tracer.events()
+
+    def test_every_turn_is_a_step_holding_its_tool_calls(self):
+        events = self.traced([call("write_file", {"path": "a.py", "content": "x = 1"}, "c1"), MessageAI(content = "done")])
+        turns = [current for current in events if current.type is TraceEventType.STEP_STARTED and current.label.startswith("Turn")]
+        assert [current.label for current in turns] == ["Turn 1", "Turn 2"]
+        (tool,) = [current for current in events if current.type is TraceEventType.TOOL_STARTED]
+        assert tool.parent_id == turns[0].span_id
+
+    def test_a_reminder_to_act_is_traced(self):
+        events = self.traced([MessageAI(content = "I would write it"), MessageAI(content = "still nothing")])
+        assert "Reminded to act" in [current.label for current in events]
+
+    def test_running_out_of_turns_is_traced(self):
+        events = self.traced([call("read_file", {"path": "a.py"}, "c1")] * 2 + [MessageAI(content = "report")], max_iterations = 2)
+        assert "Out of turns" in [current.label for current in events]
+
+    def test_setup_and_each_probe_are_traced(self):
+        events = self.traced([MessageAI(content = "nothing to do")], probes = "recording")
+        (setup,) = [current for current in events if current.label == "Setup"]
+        assert setup.payload["tools"] == ["write_file", "read_file"] and setup.payload["max_iterations"] == 6
+        labels = [current.label for current in events if current.type is TraceEventType.STEP_FINISHED]
+        assert "RecordingProbe probe · before" in labels and "RecordingProbe probe · after" in labels

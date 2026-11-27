@@ -1,7 +1,9 @@
+from app.intelligence.memory import describe_entry
 from app.intelligence.memory import cosine_similarity
 from app.intelligence.memory import VectorDbOperation
 from app.intelligence.memory import VectorDbMemoryEntry
 from app.intelligence.memory import VectorDbOperationType
+from app.intelligence.tracing import current_tracing_service
 
 
 class VectorDbOperationDeduplicate(VectorDbOperation):
@@ -22,11 +24,18 @@ class VectorDbOperationDeduplicate(VectorDbOperation):
 
     def apply(self, entries: list[VectorDbMemoryEntry]) -> list[VectorDbMemoryEntry]:
         kept: list[VectorDbMemoryEntry] = []
+        removed: list[dict] = []
         for entry in entries:
-            is_duplicate = any(
-                cosine_similarity(entry.vector, k.vector) >= self._threshold
-                for k in kept
-            )
-            if not is_duplicate:
+            similarities = [(cosine_similarity(entry.vector, current.vector), current) for current in kept]
+            duplicates = [current_pair for current_pair in similarities if current_pair[0] >= self._threshold]
+            if not duplicates:
                 kept.append(entry)
+                continue
+            similarity, original = duplicates[0]
+            removed.append(describe_entry(entry, similarity, duplicate_of = original.message.id))
+        current_tracing_service().record("Deduplicate", "retrieval", {
+            "detail": f"{len(removed)} near-duplicate(s) removed at cosine ≥ {self._threshold}, {len(kept)} kept",
+            "threshold": self._threshold,
+            "removed": removed
+        })
         return kept

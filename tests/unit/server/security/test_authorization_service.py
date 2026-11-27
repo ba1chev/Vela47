@@ -4,6 +4,7 @@ from app.server.security import SecurityContext
 from app.server.security import AuthorizationError
 from app.server.security import IdentityEntityType
 from app.server.security import SecurityServiceType
+from app.intelligence.tracing import TracingService
 from app.server.security import AuthorizationService
 from app.server.security import IdentityAccessAction
 from app.server.security import AuthorizationDecision
@@ -143,3 +144,17 @@ class TestAuthorizationService:
         context = SecurityContext(action = IdentityAccessAction.AGENT_RUN, resource = AGENT)
         with pytest.raises(RuntimeError):
             AuthorizationService(make_service()).execute(context)
+
+
+class TestAuthorizationServiceTrace:
+    def test_a_decision_is_traced_with_every_policy_that_was_evaluated(self):
+        service = make_service()
+        session = make_session(service, IdentityEntityType.USER, "ana")
+        tracer = TracingService()
+        with tracer.step("Request", "server"):
+            AuthorizationService(service).execute(SecurityContext(
+                action = IdentityAccessAction.SESSION_LIST, resource = f"vrn:session:{session.entity_id}:*", session = session
+            ))
+        (decision,) = [current for current in tracer.events() if current.payload.get("category") == "auth"]
+        assert decision.label == "session:List · allow" and decision.payload["role"] == "user"
+        assert any(current["effect"] == "Allow" for current in decision.payload["policies"])

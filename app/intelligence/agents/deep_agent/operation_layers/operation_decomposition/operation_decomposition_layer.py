@@ -4,6 +4,7 @@ from app.intelligence.agents import OperationType
 from app.intelligence.agents import OperationTask
 from app.intelligence.agents import OperationContext
 from app.intelligence.agents import OperationLayerBase
+from app.intelligence.tracing import current_tracing_service
 
 
 class OperationDecompositionLayer(OperationLayerBase):
@@ -38,3 +39,7 @@ class OperationDecompositionLayer(OperationLayerBase):
             )
             for current_step in context.plan.steps
         ]
+        current_tracing_service().record("Tasks", "planning", {
+            "detail": f"{len(context.tasks)} task(s), one per step, each carrying the request as its goal",
+            "tasks": [current.model_dump(mode = "json") for current in context.tasks]
+        })

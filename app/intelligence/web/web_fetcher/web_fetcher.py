@@ -5,6 +5,7 @@ from typing import Optional
 from app.intelligence.web import WebPage
 from app.intelligence.web import WebAccessError
 from app.intelligence.web import WebAddressGuard
+from app.intelligence.tracing import current_tracing_service
 
 
 class WebFetcher:
@@ -17,7 +18,8 @@ class WebFetcher:
     The response is streamed and cut at max_bytes after decompression, with a deadline
     as well as read timeouts, so a server trickling bytes cannot hold a subagent
     forever. Failures leave as WebAccessError with a sentence a model can act on, and
-    the transport is injectable for tests."""
+    the transport is injectable for tests. A fetch is traced as a step holding one step
+    per hop, each with its address check, status and headers."""
 
     USER_AGENT = "Mozilla/5.0 (compatible; Vela47/1.0; +research agent)"
     REDIRECT_STATUSES = {301, 302, 303, 307, 308}
@@ -76,6 +78,23 @@ class WebFetcher:
 
     def fetch(self, url: str, form: Optional[dict[str, str]] = None,
         max_bytes: Optional[int] = None) -> WebPage:
+        limit = max_bytes or self._max_bytes
+        with current_tracing_service().step("Fetch", "web", {"url": url, "max_bytes": limit}) as span:
+            page = self._fetch(url, form, limit)
+            span.update({
+                "final_url": page.url,
+                "status_code": page.status_code,
+                "content_type": page.content_type,
+                "encoding": page.encoding,
+                "bytes": len(page.content),
+                "truncated": page.truncated,
+                "detail": f"HTTP {page.status_code}, {page.content_type or 'no content type'}, "
+                    f"{len(page.content)} bytes" + (", cut at the limit" if page.truncated else "")
+            })
+        return page
+
+    def _fetch(self, url: str, form: Optional[dict[str, str]], limit: int) -> WebPage:
+        tracer = current_tracing_service()
         current_url = self._parse(url)
         method = "POST" if form is not None else "GET"
         deadline = time.monotonic() + self._deadline_seconds
@@ -83,29 +102,37 @@ class WebFetcher:
         try:
             with httpx.Client(transport = self._transport, timeout = self._timeout_seconds,
                 trust_env = False, follow_redirects = False) as client:
-                for _ in range(self._max_redirects + 1):
-                    response = self._send(client, method, current_url, form)
-                    try:
-                        location = response.headers.get("location")
-                        if response.status_code in self.REDIRECT_STATUSES and location:
-                            current_url = current_url.join(location)
-                            if response.status_code in (301, 302, 303):
-                                method, form = "GET", None
-                            continue
-                        if response.status_code >= 400:
-                            raise WebAccessError(f"{current_url} answered HTTP {response.status_code}.")
+                for hop in range(self._max_redirects + 1):
+                    with tracer.step(f"{method} {current_url}", "http", {"hop": hop + 1, "method": method}) as request_span:
+                        response = self._send(client, method, current_url, form)
+                        try:
+                            location = response.headers.get("location")
+                            request_span.update({
+                                "status_code": response.status_code,
+                                "http_version": response.http_version,
+                                "headers": dict(response.headers)
+                            })
+                            if response.status_code in self.REDIRECT_STATUSES and location:
+                                current_url = current_url.join(location)
+                                request_span["detail"] = f"HTTP {response.status_code}, redirected to {current_url}"
+                                if response.status_code in (301, 302, 303):
+                                    method, form = "GET", None
+                                continue
+                            if response.status_code >= 400:
+                                raise WebAccessError(f"{current_url} answered HTTP {response.status_code}.")
 
-                        content, truncated = self._read(response, max_bytes or self._max_bytes, deadline)
-                        return WebPage(
-                            url = str(current_url),
-                            status_code = response.status_code,
-                            content_type = response.headers.get("content-type", "").split(";")[0].strip().lower(),
-                            encoding = response.charset_encoding,
-                            content = content,
-                            truncated = truncated
-                        )
-                    finally:
-                        response.close()
+                            content, truncated = self._read(response, limit, deadline)
+                            request_span["detail"] = f"HTTP {response.status_code}, {len(content)} bytes read"
+                            return WebPage(
+                                url = str(current_url),
+                                status_code = response.status_code,
+                                content_type = response.headers.get("content-type", "").split(";")[0].strip().lower(),
+                                encoding = response.charset_encoding,
+                                content = content,
+                                truncated = truncated
+                            )
+                        finally:
+                            response.close()
         except httpx.HTTPError as error:
             raise WebAccessError(
                 f"{current_url} could not be fetched: {type(error).__name__}: {error or 'no detail'}"

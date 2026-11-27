@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 from app.intelligence.loaders import LoaderType
@@ -8,7 +8,8 @@ class LoaderDocument(BaseModel):
     """What a loader extracted from a file: its text, ready to be chunked or read by an
     agent, and the title the file gives itself when it has one. The title is kept apart
     from the text because callers use it differently — a page fetched by URL is listed
-    under its <title> rather than under the URL, while the text is what gets searched."""
+    under its <title> rather than under the URL, while the text is what gets searched.
+    details says what the loader saw on the way, for the trace of an upload."""
 
     model_config = {"frozen": True}
 
@@ -25,4 +26,10 @@ class LoaderDocument(BaseModel):
     loader_type: LoaderType = Field(
         description = "Which loader produced the text, so a caller can tell a page from a PDF "
             "without looking at the bytes again."
+    )
+    details: dict[str, Any] = Field(
+        default_factory = dict,
+        description = "What the loader saw while reading: the encoding it decoded with, the pages "
+            "of a PDF and how many held text, the paragraphs and tables of a Word document. "
+            "Plain JSON, shown in the trace of an upload and never read by the agents."
     )

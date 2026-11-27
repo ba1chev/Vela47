@@ -1,6 +1,7 @@
 import time
 import threading
 from typing import Callable
+from app.intelligence.tracing import current_tracing_service
 
 
 class WebSearchThrottle:
@@ -27,6 +28,11 @@ class WebSearchThrottle:
         with self._lock:
             wait = self._next_at - self._clock()
             if wait > 0:
+                current_tracing_service().record("Throttle", "web", {
+                    "detail": f"waited {wait:.1f}s for the search provider's turn",
+                    "wait_seconds": round(wait, 3),
+                    "min_interval_seconds": self._min_interval_seconds
+                })
                 self._sleep(wait)
             self._next_at = self._clock() + self._min_interval_seconds
 

@@ -7,6 +7,7 @@ from app.intelligence.web import WebAccessError
 from app.intelligence.web import WebSearchResult
 from app.intelligence.web import WebSearchThrottle
 from app.intelligence.web import WebSearchDuckDuckGoParser
+from app.intelligence.tracing import current_tracing_service
 
 
 class WebSearchDuckDuckGo(WebSearchBase):
@@ -56,9 +57,17 @@ class WebSearchDuckDuckGo(WebSearchBase):
 
         results = self._results(query)
         if results is None:
+            current_tracing_service().record("Rate limited", "web", {
+                "detail": f"DuckDuckGo refused the search, retrying after {self.RETRY_AFTER_SECONDS}s",
+                "retry_after_seconds": self.RETRY_AFTER_SECONDS
+            })
             self._throttle.back_off(self.RETRY_AFTER_SECONDS)
             results = self._results(query)
         if results is None:
+            current_tracing_service().record("Cooling down", "web", {
+                "detail": "refused twice, searches pause for a while",
+                "status": "error"
+            })
             self._throttle.cool_down()
             raise self._paused(self._throttle.blocked_for())
 

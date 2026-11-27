@@ -16,3 +16,20 @@ class SecurityPromptVerdict(SecurityVerdict):
         description = "The threat the text was inspected for, which also says where the text came "
             "from: the user's message, the result of a tool or stored content."
     )
+    invisible_characters: int = Field(
+        default = 0,
+        ge = 0,
+        description = "Characters a person cannot see (zero-width spaces, direction marks) that "
+            "were dropped before the signatures ran."
+    )
+    hidden_characters: int = Field(
+        default = 0,
+        ge = 0,
+        description = "Unicode tag characters, invisible ASCII a model still reads, that were "
+            "decoded in place before the signatures ran."
+    )
+    normalized: bool = Field(
+        default = False,
+        description = "Whether NFKC folding changed the text, as it does for full-width letters and "
+            "other look-alike forms."
+    )

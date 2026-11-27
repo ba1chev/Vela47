@@ -120,6 +120,33 @@ class TestServerSessions:
         assert client.delete(f"/api/sessions/{others.id}").status_code == 403
         assert app.state.chat_session_store.get_session(others.id) is not None
 
+    def test_renaming_changes_the_title_in_the_list(self):
+        client = make_client()
+        session = store_session(sign_in(client, "ana"), "Old")
+        response = client.patch(f"/api/sessions/{session.id}", json = {"title": "  Trip\n plans  "})
+        assert response.status_code == 200 and response.json()["title"] == "Trip plans"
+        assert client.get("/api/sessions").json()[0]["title"] == "Trip plans"
+
+    def test_a_blank_or_too_long_title_is_422(self):
+        client = make_client()
+        session = store_session(sign_in(client, "ana"))
+        for current_title in ["   ", "x" * 201]:
+            response = client.patch(f"/api/sessions/{session.id}", json = {"title": current_title})
+            assert response.status_code == 422
+        assert app.state.chat_session_store.get_session(session.id).title == "A chat"
+
+    def test_renaming_someone_elses_conversation_is_403_and_leaves_it(self):
+        client = make_client()
+        sign_in(client, "ana")
+        others = store_session(app.state.identity_access_service.find_entity("bob").id, "bob's")
+        assert client.patch(f"/api/sessions/{others.id}", json = {"title": "mine"}).status_code == 403
+        assert app.state.chat_session_store.get_session(others.id).title == "bob's"
+
+    def test_renaming_an_unknown_conversation_is_404(self):
+        client = make_client()
+        sign_in(client, "ana")
+        assert client.patch("/api/sessions/missing", json = {"title": "x"}).status_code == 404
+
     def test_a_guest_has_conversations_of_its_own(self):
         client = make_client()
         client.post("/api/auth/guest")

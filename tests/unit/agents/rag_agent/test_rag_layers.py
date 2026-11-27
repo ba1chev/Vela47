@@ -268,3 +268,44 @@ class TestRagSecurityLayer:
         context = make_context(candidates = make_entries())
         RagSecurityLayer().execute(context)
         assert context.security == []
+
+
+class TestRagLayersTrace:
+    def recorded(self, tracer, label):
+        return [current.payload for current in tracer.events() if current.label == label][-1]
+
+    def test_a_rewrite_is_traced_with_whether_it_was_taken(self):
+        tracer = TracingService()
+        with tracer.step("Query", "query"):
+            RagQueryLayer(FakeModel(["How do I fix error E1042?"])).execute(make_context("How do I fix it?", history = HISTORY))
+        rewrite = self.recorded(tracer, "Rewrite")
+        assert rewrite["accepted"] is True and rewrite["rewritten"] == "How do I fix error E1042?"
+
+    def test_retrieval_traces_every_ranking_and_the_candidates(self):
+        tracer = TracingService()
+        memory = VectorDbMemory(FakeEmbeddings())
+        memory.add_entries(make_entries())
+        with tracer.step("Retrieval", "retrieval"):
+            RagRetrievalLayer(memory, HybridSearchPolicy()).execute(make_context(query = "What does E1042 mean?"))
+        labels = [current.label for current in tracer.events()]
+        for current_label in ["Query embedding", "Dense ranking", "Keyword ranking", "Fusion", "Deduplicate", "Candidates"]:
+            assert current_label in labels
+        dense = self.recorded(tracer, "Dense ranking")
+        assert dense["ranking"][0]["title"] == "guide.md" and "score" in dense["ranking"][0]
+        assert self.recorded(tracer, "Candidates")["candidates"][0]["id"] == "d1-0"
+
+    def test_reranking_traces_why_each_candidate_was_kept_or_dropped(self):
+        tracer = TracingService()
+        scores = json.dumps([{"index": 1, "score": 2}, {"index": 2, "score": 9}, {"index": 3, "score": 6}])
+        with tracer.step("Reranking", "reranking"):
+            RagRerankingLayer(FakeModel([scores]), top_n = 1, min_score = 4).execute(make_context(query = "q", candidates = make_entries()))
+        judged = {current["id"]: current["reason"] for current in self.recorded(tracer, "Scores")["judged"]}
+        assert judged == {"d1-0": "below 4", "d1-1": "kept", "d1-2": "beyond the top 1"}
+
+    def test_generation_traces_the_sources_and_what_the_answer_cited(self):
+        tracer = TracingService()
+        context = make_context(passages = make_entries()[:2])
+        RagGenerationLayer(FakeModel(["E1042 is a secret error [1] [3]."]), tracer).execute(context)
+        citations = self.recorded(tracer, "Citations")
+        assert citations["cited"] == [1] and citations["uncited"] == [2] and citations["unknown"] == [3]
+        assert [current["number"] for current in self.recorded(tracer, "Sources")["sources"]] == [1, 2]

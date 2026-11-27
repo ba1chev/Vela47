@@ -24,3 +24,8 @@ class TestLoaderText:
 
     def test_a_text_file_has_no_title(self):
         assert LoaderText().load(b"x").title is None
+
+
+    def test_the_encoding_it_decoded_with_is_reported(self):
+        assert LoaderText().load("café".encode("utf-8")).details["encoding"] == "utf-8"
+        assert LoaderText().load("café".encode("cp1252")).details["encoding"] == "cp1252"

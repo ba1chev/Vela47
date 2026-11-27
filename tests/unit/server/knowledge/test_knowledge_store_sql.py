@@ -81,3 +81,15 @@ class TestKnowledgeStoreSql:
         reopened = make_store(path)
         assert reopened.get_document(document.id) == document
         assert len(reopened.load_entries("o1")) == len(entries)
+
+    def test_the_trace_of_an_upload_is_kept_apart_from_the_listing(self):
+        store = make_store()
+        document, _ = add(store)
+        assert store.get_trace(document.id) is None
+        store.set_trace(document.id, [{"type": "pipeline_started", "label": "Upload · guide.md"}])
+        assert store.get_trace(document.id) == [{"type": "pipeline_started", "label": "Upload · guide.md"}]
+        assert store.list_documents("o1") == [document]
+
+    def test_an_unknown_document_has_no_trace(self):
+        assert make_store().get_trace("missing") is None
+

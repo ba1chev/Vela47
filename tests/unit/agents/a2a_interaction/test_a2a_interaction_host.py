@@ -2,6 +2,8 @@ from app.intelligence.model import ModelConfig
 from app.intelligence.agents import PromptManager
 from app.intelligence.messages import MessageHuman
 from app.intelligence.model import ModelFoundation
+from app.intelligence.tracing import TracingService
+from app.intelligence.tracing import TraceEventType
 from app.intelligence.agents import A2AInteractionHost
 from app.intelligence.agents import A2AInteractionType
 from tests.fixtures.agents.echo_agent import EchoAgent
@@ -36,3 +38,13 @@ class TestA2AInteractionHost:
         assert interaction.connected
         interaction.close_connection()
         assert not interaction.connected
+
+
+class TestA2AInteractionTrace:
+    def test_connecting_both_deliveries_the_answer_and_disconnecting_are_steps(self):
+        tracer = TracingService()
+        with tracer.step("Exchange", "a2a"):
+            with make_interaction() as interaction:
+                interaction.send(interaction.left, MessageHuman(content = "ping"))
+        finished = [current.label for current in tracer.events() if current.type is TraceEventType.STEP_FINISHED]
+        assert finished == ["Connect", "Deliver message", "Peer answers", "Deliver reply", "Disconnect", "Exchange"]

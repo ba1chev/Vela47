@@ -24,6 +24,10 @@ function renderUsage() {
     `${count} ${count === 1 ? "document" : "documents"}`;
 }
 
+const TRACE_ICON = `<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
+  <path d="M3 12h4l3-7 4 14 3-7h4" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
 function makeKnowledgeItem(doc, pending) {
   const li = makeElement("li", "knowledge-item");
   if (pending) li.dataset.pending = "1";
@@ -40,6 +44,14 @@ function makeKnowledgeItem(doc, pending) {
   li.append(info);
 
   if (!pending) {
+    const trace = makeElement("button", "ghost knowledge-trace");
+    trace.type = "button";
+    trace.innerHTML = TRACE_ICON;
+    trace.title = "Show how it was indexed";
+    trace.setAttribute("aria-label", `Show the trace of “${doc.title}”`);
+    trace.addEventListener("click", () => showDocumentTrace(doc));
+    li.append(trace);
+
     const remove = makeElement("button", "ghost knowledge-delete");
     remove.type = "button";
     remove.textContent = "×";
@@ -95,20 +107,91 @@ function toBase64(buffer) {
   return btoa(binary);
 }
 
+// An upload asked for as a stream answers with its trace as it happens, then one last
+// frame: the document, or the status and reason it was refused. A refusal before the
+// stream starts (no session, a body the server rejects) comes back as plain JSON.
+async function postStreamed(path, body, onTrace) {
+  let response;
+  try {
+    response = await fetch(`${path}?stream=true`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    return { ok: false, status: 0, data: null };
+  }
+  if (!response.ok || !response.body) {
+    let data = null;
+    try { data = await response.json(); } catch { data = null; }
+    return { ok: false, status: response.status, data };
+  }
+
+  let result = { ok: false, status: 0, data: null };
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  const handle = (block) => {
+    let event = "message";
+    let data = "";
+    for (const line of block.split("\n")) {
+      if (line.startsWith("event: ")) event = line.slice(7);
+      else if (line.startsWith("data: ")) data += line.slice(6);
+    }
+    if (!data) return;
+    const parsed = JSON.parse(data);
+    if (event === "trace") onTrace(parsed);
+    else if (event === "document") result = { ok: true, status: 201, data: parsed };
+    else if (event === "error") result = { ok: false, status: parsed.status, data: { detail: parsed.detail } };
+  };
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let end;
+      while ((end = buffer.indexOf("\n\n")) >= 0) {
+        handle(buffer.slice(0, end));
+        buffer = buffer.slice(end + 2);
+      }
+    }
+  } catch {
+    return { ok: false, status: 0, data: null };
+  }
+  return result;
+}
+
+// The pending row says which stage the upload has reached, from the layers its trace
+// opens: receiving, extracting, chunking, embedding and so on.
+function showPendingStage(stage) {
+  const meta = knowledgeListEl.querySelector('.knowledge-item[data-pending="1"] .knowledge-meta');
+  if (meta) meta.textContent = `indexing · ${stage.toLowerCase()}…`;
+}
+
 // Shared by uploads and links: shows the document as pending while the server reads,
-// chunks and embeds it, then redraws the list from what the server now holds. A
+// chunks and embeds it, draws its trace live in the trace panel, then redraws the list
+// from what the server now holds. A chat run that starts meanwhile keeps the panel. A
 // request that never gets an answer — the server restarting mid-upload — is reported
 // like a refusal, so the buttons are always given back.
 async function addDocument(path, body, label) {
   uploadLabelEl.dataset.busy = "1";
   linkSubmitEl.disabled = true;
   renderKnowledge(label);
+  let tracing = false;
+  const onTrace = (event) => {
+    if (event.type === "layer_started") showPendingStage(event.label);
+    if (run) return;
+    if (!tracing) {
+      clearTrace();
+      tracing = true;
+    }
+    addEvent(event);
+  };
   let result;
   try {
-    result = await api(path, { method: "POST", body });
-  } catch {
-    result = { ok: false, status: 0, data: null };
+    result = await postStreamed(path, body, onTrace);
   } finally {
+    if (tracing && !run) settleTrace();
     delete uploadLabelEl.dataset.busy;
     linkSubmitEl.disabled = false;
   }
@@ -206,6 +289,28 @@ linkUrlEl.addEventListener("keydown", (event) => {
     linkToggleEl.focus();
   }
 });
+
+// The trace of an upload is kept with its document, so how it was read, cut, embedded
+// and described can be looked at again later. Documents indexed before traces were kept
+// have none.
+async function showDocumentTrace(doc) {
+  showKnowledgeError("");
+  const result = await api(`/api/knowledge/${encodeURIComponent(doc.id)}/trace`);
+  if (result.status === 401) {
+    showGate(EXPIRED);
+    return;
+  }
+  if (!result.ok) {
+    showKnowledgeError(errorText(result, `The trace of “${doc.title}” could not be loaded.`));
+    return;
+  }
+  if (!result.data.trace.length) {
+    showKnowledgeError(`“${doc.title}” was indexed before traces were kept.`);
+    return;
+  }
+  renderTrace(result.data.trace);
+  if (window.matchMedia("(max-width: 880px)").matches) openDrawer("trace");
+}
 
 async function deleteDocument(button, id) {
   if (!confirmTwice(button)) return;

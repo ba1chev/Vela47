@@ -43,11 +43,23 @@ class LoaderPdf(LoaderBase):
         except Exception as error:
             raise ValueError(f"The file is not a readable PDF: {error}") from None
 
-        text = self._tidy(self.HYPHENATED_BREAK.sub(r"\1\2", "\n\n".join(pages)))
+        joined, hyphenations = self.HYPHENATED_BREAK.subn(r"\1\2", "\n\n".join(pages))
+        text = self._tidy(joined)
         if not text:
             raise ValueError(
                 "The PDF has no text layer — it is probably scanned images, which cannot be "
                 "read without OCR."
             )
 
-        return LoaderDocument(text = text, title = title or None, loader_type = self.loader_type)
+        return LoaderDocument(
+            text = text,
+            title = title or None,
+            loader_type = self.loader_type,
+            details = {
+                "pages": len(pages),
+                "pages_with_text": sum(bool(current_page.strip()) for current_page in pages),
+                "page_characters": [len(current_page) for current_page in pages],
+                "encrypted": reader.is_encrypted,
+                "hyphenations_joined": hyphenations
+            }
+        )

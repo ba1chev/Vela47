@@ -29,12 +29,20 @@ class LoaderHtml(LoaderBase):
         return match.group(1).decode("ascii") if match else None
 
     def load(self, data: bytes, encoding: Optional[str] = None) -> LoaderDocument:
+        declared = self._declared_charset(data)
+        markup, used = self._decode(data, encoding or declared)
         parser = LoaderHtmlParser()
-        parser.feed(self._decode(data, encoding or self._declared_charset(data)))
+        parser.feed(markup)
         parser.close()
 
         return LoaderDocument(
             text = self._tidy(parser.text),
             title = parser.title,
-            loader_type = self.loader_type
+            loader_type = self.loader_type,
+            details = {
+                "header_encoding": encoding,
+                "meta_encoding": declared,
+                "encoding": used,
+                "markup_characters": len(markup)
+            }
         )

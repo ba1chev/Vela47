@@ -1,12 +1,13 @@
 import json
 import uuid
 import subprocess
-from typing import Optional
+from typing import Any, Optional
 
 from app.intelligence.agents import AgentBase
 from app.intelligence.agents import A2AInteractionType
 from app.intelligence.agents import A2AInteractionBase
 from app.intelligence.agents import A2A_DOCKER_SEND_SCRIPT
+from app.intelligence.tracing import current_tracing_service
 from app.intelligence.agents import A2A_DOCKER_RECEIVE_SCRIPT
 
 
@@ -86,6 +87,17 @@ class A2AInteractionDocker(A2AInteractionBase):
             self._disconnect()
             raise RuntimeError(f"A container has no address on {self._network}.")
 
+    def _connection_details(self) -> dict[str, Any]:
+        return {
+            "network": self._network,
+            "internal": True,
+            "addresses": dict(self._addresses),
+            "port": self.PORT,
+            "detail": f"isolated network {self._network}: " + ", ".join(
+                f"{current_container} at {current_address}" for current_container, current_address in self._addresses.items()
+            )
+        }
+
     def _disconnect(self) -> None:
         for current_step in (
             ("network", "disconnect", "--force", self._network, self._left_container),
@@ -128,4 +140,13 @@ class A2AInteractionDocker(A2AInteractionBase):
                 f"The message from {sender_container} could not be delivered to {receiver_container}: "
                 f"{(sent.stderr if sent.returncode != 0 else errors).strip()}"
             )
+        current_tracing_service().record("Socket transfer", "a2a", {
+            "detail": f"{sender_container} → {receiver_container} at {arguments[0]}:{self.PORT}",
+            "sender_container": sender_container,
+            "receiver_container": receiver_container,
+            "address": arguments[0],
+            "port": self.PORT,
+            "bytes_sent": len(text.encode("utf-8")),
+            "bytes_received": len(received.encode("utf-8"))
+        })
         return received

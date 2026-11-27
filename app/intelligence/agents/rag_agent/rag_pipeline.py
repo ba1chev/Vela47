@@ -3,6 +3,7 @@ from typing import Any, Optional
 from app.intelligence.agents import RagPolicy
 from app.intelligence.agents import RagContext
 from app.intelligence.agents import RagLayerBase
+from app.intelligence.agents import RagLayerType
 from app.intelligence.tracing import TraceEventType
 from app.intelligence.agents import RagLayersFactory
 from app.intelligence.tracing import TracingServiceNull
@@ -45,6 +46,19 @@ class RagPipeline:
             "has_final": context.final is not None
         }
 
+    def _detail(self, layer_type: RagLayerType, context: RagContext) -> str:
+        if layer_type is RagLayerType.QUERY:
+            return f"searching for “{context.query}”"
+        if layer_type is RagLayerType.RETRIEVAL:
+            return f"{len(context.candidates)} candidates"
+        if layer_type is RagLayerType.SECURITY:
+            return f"{len(context.security)} flagged"
+        if layer_type is RagLayerType.RERANKING:
+            return f"{len(context.passages)} passages kept" + ("" if context.relevance else ", not reranked")
+        if layer_type is RagLayerType.GENERATION and context.final is not None:
+            return f"{len(str(context.final.content))} characters answered"
+        return ""
+
     def run(self, context: RagContext) -> RagContext:
         with self._tracing_service.span(
             TraceEventType.PIPELINE_STARTED,
@@ -60,6 +74,7 @@ class RagPipeline:
                 ) as layer_span:
                     current_layer.execute(context)
                     layer_span.update(self._summarize(context))
+                    layer_span["detail"] = self._detail(current_layer.layer_type, context)
             pipeline_span.update(self._summarize(context))
         return context
 

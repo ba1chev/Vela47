@@ -162,6 +162,35 @@ button.ev-head:focus-visible { outline: 2px solid var(--accent); outline-offset:
 .ev[data-kind="subagent"] > .ev-head .dot { background: var(--ok); }
 .ev[data-kind="error"] > .ev-head .dot { background: var(--err); }
 .ev[data-kind="security"] > .ev-head .dot { background: var(--warn); }
+.ev[data-kind="check"] > .ev-head .dot { background: var(--ok); opacity: .7; }
+
+/* Steps are coloured by the family of work they belong to: the network, reading and
+   limits, cutting the text, describing the chunks. */
+.ev[data-category="web"] > .ev-head .dot,
+.ev[data-category="http"] > .ev-head .dot,
+.ev[data-category="guard"] > .ev-head .dot { background: var(--accent-3); }
+.ev[data-category="chunker"] > .ev-head .dot,
+.ev[data-category="scoring"] > .ev-head .dot,
+.ev[data-category="search"] > .ev-head .dot,
+.ev[data-category="embedding"] > .ev-head .dot { background: var(--accent-2); }
+.ev[data-category="metadata"] > .ev-head .dot { background: var(--agent-test); }
+.ev[data-category="query"] > .ev-head .dot,
+.ev[data-category="retrieval"] > .ev-head .dot,
+.ev[data-category="reranking"] > .ev-head .dot,
+.ev[data-category="generation"] > .ev-head .dot { background: var(--accent-3); }
+.ev[data-category="planning"] > .ev-head .dot,
+.ev[data-category="turn"] > .ev-head .dot { background: var(--accent); }
+.ev[data-category="probe"] > .ev-head .dot { background: var(--ok); }
+.ev[data-category="sandbox"] > .ev-head .dot,
+.ev[data-kind="sandbox"] > .ev-head .dot { background: var(--agent-code); }
+.ev[data-category="a2a"] > .ev-head .dot { background: var(--agent-review); }
+.ev[data-category="auth"] > .ev-head .dot { background: var(--ok); }
+.ev[data-category="memory"] > .ev-head .dot,
+.ev[data-category="db"] > .ev-head .dot,
+.ev[data-category="server"] > .ev-head .dot { background: var(--muted); }
+.ev[data-kind="sandbox"] > .ev-head .name { color: var(--muted); font-family: var(--mono); font-size: 12px; }
+.ev[data-kind="error"] > .ev-head .dot { background: var(--err); }
+.ev[data-kind="check"] > .ev-head .name { color: var(--muted); }
 
 .ev[data-live="1"] > .ev-head .dot {
   animation: glow 1.3s ease-in-out infinite;

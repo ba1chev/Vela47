@@ -4,6 +4,7 @@ from app.intelligence.model import ModelEmbeddings
 from app.intelligence.model import ModelFoundation
 from app.intelligence.tracing import TracingService
 from app.intelligence.tracing import TraceEventType
+from app.intelligence.messages import MessageSystem
 from app.intelligence.model import ModelClientOllama
 from tests.fixtures.model.scripted_model_client import ScriptedModelClient
 
@@ -46,3 +47,23 @@ class TestModelEmbeddings:
         tracer = TracingService()
         ModelEmbeddings("e", tracer, client = ScriptedModelClient()).embed("hello")
         assert reported(tracer)[0]["embedding"] and reported(tracer)[0]["input_tokens"] == 1
+
+
+class TestModelFoundationTrace:
+    def test_a_call_reports_its_whole_request_and_reply(self):
+        tracer = TracingService()
+        model = ModelFoundation(ModelConfig(model_name = "m", temperature = 0.2), tracer, ScriptedModelClient())
+        tools = [{"type": "function", "function": {"name": "read_file"}}]
+        model.invoke([MessageSystem(content = "be brief"), MessageHuman(content = "hi")], tools = tools)
+        payload = reported(tracer)[0]
+        assert payload["prompt"] == [{"role": "system", "content": "be brief"}, {"role": "human", "content": "hi"}]
+        assert payload["tools"] == ["read_file"] and payload["config"]["temperature"] == 0.2
+        assert payload["response"] == "hello" and payload["calls"] == [{"name": "read_file", "args": {"path": "a.py"}, "id": "c1"}]
+        assert payload["backend"] == "ollama"
+
+    def test_a_stream_reports_its_first_token_and_the_whole_answer(self):
+        tracer = TracingService()
+        model = ModelFoundation(ModelConfig(model_name = "m"), tracer, ScriptedModelClient())
+        assert "".join(model.stream([MessageHuman(content = "hi")])) == "one two"
+        payload = reported(tracer)[0]
+        assert payload["response"] == "one two" and payload["chunks"] == 2 and payload["first_token_ms"] is not None

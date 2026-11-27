@@ -27,7 +27,7 @@ from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_oper
 from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_manager import VectorDbOperationManager
 from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_policy import VectorDbOperationPolicy
 from app.intelligence.memory.vector_db_memory.vector_db_memory import VectorDbMemory
-from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_utils import cosine_similarity, tokenize, reciprocal_rank_fusion
+from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_utils import RANKING_TRACE_LIMIT, cosine_similarity, tokenize, reciprocal_rank_scores, reciprocal_rank_fusion, describe_entry
 from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_keyword_index import VectorDbKeywordIndex
 from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_deduplicate import VectorDbOperationDeduplicate
 from app.intelligence.memory.vector_db_memory.vector_db_operation.vector_db_operation_factory.vector_db_operation_base_factory import VectorDbOperationBaseFactory
@@ -105,7 +105,10 @@ __all__ = [
     "VectorDbMemory",
     "cosine_similarity",
     "tokenize",
+    "RANKING_TRACE_LIMIT",
+    "reciprocal_rank_scores",
     "reciprocal_rank_fusion",
+    "describe_entry",
     "VectorDbKeywordIndex",
     "VectorDbOperationDeduplicate",
     "VectorDbOperationBaseFactory",

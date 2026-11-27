@@ -2,8 +2,11 @@ from app.intelligence.agents import RagContext
 from app.intelligence.agents import RagLayerBase
 from app.intelligence.agents import RagLayerType
 from app.intelligence.memory import VectorDbMemory
-from app.intelligence.memory import reciprocal_rank_fusion
+from app.intelligence.memory import describe_entry
+from app.intelligence.memory import VectorDbMemoryEntry
+from app.intelligence.memory import reciprocal_rank_scores
 from app.intelligence.memory import VectorDbOperationPolicy
+from app.intelligence.tracing import current_tracing_service
 
 
 class RagRetrievalLayer(RagLayerBase):
@@ -31,8 +34,19 @@ class RagRetrievalLayer(RagLayerBase):
         queries = list(dict.fromkeys(
             current_query for current_query in (goal, context.query) if current_query
         ))
-        rankings = [
-            self._vector_db_memory.search_entries(current_query, self._candidates, self._retrieval_policy)
-            for current_query in queries
-        ]
-        context.candidates = reciprocal_rank_fusion(rankings)[:self._candidates]
+        tracer = current_tracing_service()
+        rankings: list[list[VectorDbMemoryEntry]] = []
+        for current_query in queries:
+            with tracer.step(f"Search · {current_query}", "retrieval", {"query": current_query, "candidates": self._candidates}) as span:
+                ranking = self._vector_db_memory.search_entries(current_query, self._candidates, self._retrieval_policy)
+                span["found"] = len(ranking)
+                span["detail"] = f"{len(ranking)} chunks over {len(self._vector_db_memory)} indexed"
+            rankings.append(ranking)
+
+        fused = reciprocal_rank_scores(rankings)[:self._candidates]
+        context.candidates = [current for current, _ in fused]
+        tracer.record("Candidates", "retrieval", {
+            "detail": f"{len(fused)} candidates from {len(queries)} search(es), fused by reciprocal rank",
+            "queries": queries,
+            "candidates": [describe_entry(current, score) for current, score in fused]
+        })

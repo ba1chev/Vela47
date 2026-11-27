@@ -7,6 +7,7 @@ from app.intelligence.sandbox import SandboxEnv
 from app.intelligence.sandbox import SandboxEnvLocal
 from app.intelligence.sandbox import cap_sandbox_output
 from app.intelligence.sandbox import SandboxCommandResult
+from app.intelligence.tracing import current_tracing_service
 from app.intelligence.sandbox import archive_sandbox_directory
 
 
@@ -48,11 +49,28 @@ class SandboxLambda(SandboxEnv):
         return self._files.list_files()
 
     def run(self, command: str, timeout_seconds: int = 60) -> SandboxCommandResult:
+        with current_tracing_service().step(f"Run · {command}", "sandbox", {
+            "function": self._function_name,
+            "command": command,
+            "timeout_seconds": timeout_seconds,
+            "files": self.list_files()
+        }) as span:
+            result = self._run(command, timeout_seconds, span)
+            span.update({
+                "exit_code": result.exit_code,
+                "timed_out": result.timed_out,
+                "output": result.output,
+                "detail": f"exit {result.exit_code}" + (", timed out" if result.timed_out else "") + f", {len(result.output)} characters of output"
+            })
+        return result
+
+    def _run(self, command: str, timeout_seconds: int, report: dict[str, Any]) -> SandboxCommandResult:
         payload = json.dumps({
             "archive": base64.b64encode(archive_sandbox_directory(self._files.root, compress = True)).decode(),
             "command": command,
             "timeout_seconds": timeout_seconds
         }).encode()
+        report["payload_bytes"] = len(payload)
         if len(payload) > self.MAX_PAYLOAD_BYTES:
             return SandboxCommandResult(
                 exit_code = -1,

@@ -2,6 +2,8 @@ import pytest
 
 from app.intelligence.agents import RagChunkerType
 from app.intelligence.agents import RagChunkerFixed
+from app.intelligence.tracing import TraceEventType
+from app.intelligence.tracing import TracingService
 from app.intelligence.agents import RagChunkSearchType
 from app.intelligence.agents import RagChunkersFactory
 from app.intelligence.agents import RagChunkerSemantic
@@ -150,3 +152,33 @@ class TestRagChunkersFactory:
     def test_an_unknown_type_raises_value_error(self):
         with pytest.raises(ValueError):
             RagChunkersFactory().create("sentences")
+
+
+class TestRagChunkerSemanticTrace:
+    TEXT = (
+        "Backups run every night. Backups are kept for a week. Backups are restored on request.\n\n"
+        "Errors are logged centrally. Errors page the on-call engineer. Errors are reviewed weekly."
+    )
+
+    def traced(self, **kwargs):
+        tracer = TracingService()
+        with tracer.step("Chunking", "chunker"):
+            make_semantic(chunk_chars = 120, min_chars = 40, **kwargs).chunk(self.TEXT)
+        return tracer.events()
+
+    def test_every_stage_of_the_cut_is_traced_in_order(self):
+        labels = [current.label for current in self.traced() if current.type is not TraceEventType.STEP_STARTED]
+        assert labels == [
+            "Sentences", "Sentence embeddings", "Window similarity", "Extend costs", "A* search", "Chunks", "Chunking"
+        ]
+
+    def test_the_window_similarity_holds_a_value_per_gap(self):
+        (window,) = [current for current in self.traced() if current.label == "Window similarity"]
+        assert len(window.payload["similarities"]) == 6 == len(window.payload["depths"]) == len(window.payload["cut_costs"])
+        assert window.payload["paragraph_gaps"] == [3] and window.payload["window_sentences"] == 3
+
+    def test_the_search_reports_what_it_expanded_and_the_cuts_it_chose(self):
+        search = [current for current in self.traced() if current.label == "A* search"][-1]
+        assert search.payload["starts"][0] == 0 and search.payload["expanded"] >= len(search.payload["starts"])
+        assert search.payload["pushed"] >= search.payload["expanded"] - 1 and "cost" in search.payload
+        assert search.duration_ms is not None

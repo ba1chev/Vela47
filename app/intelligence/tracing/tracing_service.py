@@ -24,12 +24,16 @@ class TracingService(TracingServiceBase):
 
     def emit(self, type: TraceEventType, label: str,
         payload: Optional[dict[str, Any]] = None,
-        duration_ms: Optional[float] = None) -> None:
+        duration_ms: Optional[float] = None,
+        span_id: Optional[str] = None,
+        parent_id: Optional[str] = None) -> None:
         event = TraceEvent(
             type = type,
             label = label,
             payload = payload or {},
-            duration_ms = duration_ms
+            duration_ms = duration_ms,
+            parent_id = parent_id if parent_id is not None else self.current_span_id(),
+            **({"span_id": span_id} if span_id is not None else {})
         )
         with self._lock:
             self._events.append(event)

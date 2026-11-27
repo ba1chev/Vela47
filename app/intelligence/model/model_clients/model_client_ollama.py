@@ -1,6 +1,6 @@
 import ollama
 from uuid import uuid4
-from typing import Iterator, Optional
+from typing import Any, Iterator, Optional
 
 from app.intelligence.model import ModelConfig
 from app.intelligence.messages import MessageAI
@@ -78,6 +78,19 @@ class ModelClientOllama(ModelClientBase):
             total_tokens = input_tokens + output_tokens
         )
 
+    def _milliseconds(self, response: Any, name: str) -> float:
+        return round((response.get(name, 0) or 0) / 1_000_000, 1)
+
+    def _provider(self, response: Any, thinking: str) -> dict[str, Any]:
+        return {
+            "done_reason": response.get("done_reason"),
+            "total_ms": self._milliseconds(response, "total_duration"),
+            "load_ms": self._milliseconds(response, "load_duration"),
+            "prompt_eval_ms": self._milliseconds(response, "prompt_eval_duration"),
+            "eval_ms": self._milliseconds(response, "eval_duration"),
+            "thinking": thinking or None
+        }
+
     def chat(self, config: ModelConfig, messages: list[MessageBase], tools: Optional[list[dict]] = None,
         output_schema: Optional[dict] = None) -> MessageAI:
         response = ollama.chat(
@@ -94,12 +107,15 @@ class ModelClientOllama(ModelClientBase):
             tool_calls = self._parse_tool_calls(response["message"]),
             usage_metadata = self._usage(
                 response.get("prompt_eval_count", 0) or 0, response.get("eval_count", 0) or 0
-            )
+            ),
+            response_metadata = {"provider": self._provider(response, response["message"].get("thinking") or "")}
         )
 
     def stream(self, config: ModelConfig, messages: list[MessageBase]) -> Iterator[MessageAI]:
         input_tokens = 0
         output_tokens = 0
+        thinking: list[str] = []
+        last: Any = {}
         for chunk in ollama.chat(
             model = config.model_name,
             messages = self._format_messages(messages),
@@ -110,10 +126,16 @@ class ModelClientOllama(ModelClientBase):
         ):
             input_tokens = chunk.get("prompt_eval_count", 0) or input_tokens
             output_tokens = chunk.get("eval_count", 0) or output_tokens
+            thinking.append(chunk.get("message", {}).get("thinking") or "")
+            last = chunk
             content = chunk.get("message", {}).get("content", "")
             if content:
                 yield MessageAI(content = content)
-        yield MessageAI(content = "", usage_metadata = self._usage(input_tokens, output_tokens))
+        yield MessageAI(
+            content = "",
+            usage_metadata = self._usage(input_tokens, output_tokens),
+            response_metadata = {"provider": self._provider(last, "".join(thinking))}
+        )
 
     def embed(self, model_name: str, texts: list[str], keep_alive: str) -> tuple[list[list[float]], int]:
         response = ollama.embed(model = model_name, input = texts, keep_alive = keep_alive)

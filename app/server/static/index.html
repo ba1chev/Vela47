@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="/static/css/gate.css">
   <link rel="stylesheet" href="/static/css/account.css">
   <link rel="stylesheet" href="/static/css/conversations.css">
+  <link rel="stylesheet" href="/static/css/sidebar.css">
   <link rel="stylesheet" href="/static/css/agent.css">
   <link rel="stylesheet" href="/static/css/documents.css">
   <link rel="stylesheet" href="/static/css/answers.css">
@@ -48,12 +49,47 @@
     </form>
   </main>
 
-  <div class="app" id="app" hidden>
+  <div class="app" id="app" data-sidebar="collapsed" hidden>
     <aside class="sessions" id="sessions" aria-label="Agent, conversations and documents">
       <header class="sessions-head">
+        <button type="button" class="sidebar-toggle icon-button" id="sidebar-toggle"
+                aria-controls="sessions" aria-expanded="false"
+                aria-label="Open sidebar" title="Open sidebar">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <rect x="3.5" y="4.5" width="17" height="15" rx="3.5" fill="none"
+                  stroke="currentColor" stroke-width="1.8"/>
+            <path class="sidebar-toggle-pane" d="M9.5 5v14" fill="none" stroke="currentColor"
+                  stroke-width="1.8"/>
+          </svg>
+        </button>
         <h2>Chats</h2>
         <button type="button" id="new-chat" class="ghost">+ new</button>
       </header>
+
+      <nav class="sessions-rail" aria-label="Sidebar shortcuts">
+        <button type="button" class="icon-button" id="rail-new-chat"
+                aria-label="New chat" title="New chat">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor"
+                  stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <button type="button" class="icon-button" id="rail-chats"
+                aria-label="Show conversations" title="Conversations">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path d="M5 6.5A2.5 2.5 0 0 1 7.5 4h9A2.5 2.5 0 0 1 19 6.5v7a2.5 2.5 0 0 1-2.5 2.5H11l-4 3.5V16h0a2 2 0 0 1-2-2z"
+                  fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button type="button" class="icon-button" id="rail-documents"
+                aria-label="Show documents" title="Documents">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path d="M13.5 3.5H7.5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V8.5zM13.5 3.5v5h5M9 13h6M9 16.5h4"
+                  fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </nav>
       <div class="sessions-body">
         <ol class="session-list" id="session-list"></ol>
         <div class="sessions-empty" id="sessions-empty">No conversations yet.</div>
@@ -232,6 +268,7 @@
   <script src="/static/js/agent.js"></script>
   <script src="/static/js/documents.js"></script>
   <script src="/static/js/drawer.js"></script>
+  <script src="/static/js/sidebar.js"></script>
   <script src="/static/js/trace.js"></script>
   <script src="/static/js/messages.js"></script>
   <script src="/static/js/chat.js"></script>

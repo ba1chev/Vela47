@@ -3,6 +3,7 @@ import heapq
 
 from app.intelligence.agents import RagChunkSearchBase
 from app.intelligence.agents import RagChunkSearchType
+from app.intelligence.tracing import current_tracing_service
 
 
 class RagChunkSearchAStar(RagChunkSearchBase):
@@ -21,6 +22,21 @@ class RagChunkSearchAStar(RagChunkSearchBase):
 
     def search(self, lengths: list[int], cut_costs: list[float],
         extend_costs: dict[tuple[int, int], float]) -> list[int]:
+        with current_tracing_service().step("A* search", "search", {
+            "sentences": len(lengths),
+            "chunk_chars": self._chunk_chars,
+            "min_chars": self._min_chars
+        }) as span:
+            starts = self._search(lengths, cut_costs, extend_costs, span)
+            span["starts"] = starts
+            span["detail"] = (
+                f"{span.get('expanded', 0)} states expanded, {span.get('pushed', 0)} pushed, "
+                f"{len(starts)} chunks at cost {span.get('cost', 0.0):.3f}"
+            )
+        return starts
+
+    def _search(self, lengths: list[int], cut_costs: list[float],
+        extend_costs: dict[tuple[int, int], float], report: dict) -> list[int]:
         count = len(lengths)
         if count == 0:
             return []
@@ -37,6 +53,7 @@ class RagChunkSearchAStar(RagChunkSearchBase):
         best: dict[tuple[int, int], float] = {(1, 0): 0.0}
         parents: dict[tuple[int, int], tuple[int, int] | None] = {}
         frontier = [(heuristic(1, lengths[0]), 0.0, 1, 0, None)]
+        pushed, widest, forced_cuts = 1, 1, 0
 
         while frontier:
             _, cost, index, start, parent = heapq.heappop(frontier)
@@ -48,6 +65,7 @@ class RagChunkSearchAStar(RagChunkSearchBase):
 
             chars = remaining[start] - remaining[index]
             forced = chars + lengths[index] > self._chunk_chars
+            forced_cuts += forced
             moves = []
             if not forced:
                 moves.append((index + 1, start, extend_costs[(start, index)], chars + lengths[index]))
@@ -60,9 +78,19 @@ class RagChunkSearchAStar(RagChunkSearchBase):
                     best[(next_index, next_start)] = total
                     heapq.heappush(frontier, (total + heuristic(next_index, next_chars), total,
                         next_index, next_start, (index, start)))
+                    pushed += 1
+            widest = max(widest, len(frontier))
         else:
             raise RuntimeError("No cut of the document keeps every chunk within its length limits.")
 
+        report.update({
+            "expanded": len(parents),
+            "pushed": pushed,
+            "widest_frontier": widest,
+            "forced_states": forced_cuts,
+            "cheapest_cut": round(cheapest_cut, 4),
+            "cost": round(cost, 4)
+        })
         starts: set[int] = set()
         state = (index, start)
         while state is not None:

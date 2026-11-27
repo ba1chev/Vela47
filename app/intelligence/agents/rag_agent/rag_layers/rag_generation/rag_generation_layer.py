@@ -1,11 +1,13 @@
 from typing import Any, Optional
 
+import re
 from app.intelligence.agents import RagContext
 from app.intelligence.messages import MessageAI
 from app.intelligence.agents import RagLayerBase
 from app.intelligence.agents import RagLayerType
 from app.intelligence.model import ModelFoundation
 from app.intelligence.messages import MessageHuman
+from app.intelligence.memory import describe_entry
 from app.intelligence.messages import MessageSystem
 from app.intelligence.tracing import TraceEventType
 from app.intelligence.tracing import TracingServiceNull
@@ -28,6 +30,7 @@ class RagGenerationLayer(RagLayerBase):
     nothing (see RAG_NO_SOURCES_PROMPT). Both answers are streamed the same way."""
 
     EXCERPT_CHARS = 240
+    CITATION = re.compile(r"\[(\d+)\]")
 
     def __init__(self, model: ModelFoundation,
         tracing_service: Optional[TracingServiceBase] = None) -> None:
@@ -84,6 +87,12 @@ class RagGenerationLayer(RagLayerBase):
 
     def execute(self, context: RagContext) -> None:
         messages = self._messages(context)
+        self._tracing_service.record("Sources", "generation", {
+            "detail": f"{len(context.passages)} source(s) numbered for citation" if context.passages
+                else "no passage survived, answering without the documents",
+            "prompt": "generation" if context.passages else "no sources",
+            "sources": [describe_entry(current, None, number = number) for number, current in enumerate(context.passages, start = 1)]
+        })
         parts: list[str] = []
         for current_chunk in self._model.stream(messages):
             parts.append(current_chunk)
@@ -91,7 +100,17 @@ class RagGenerationLayer(RagLayerBase):
                 TraceEventType.ANSWER_CHUNK, "answer", {"text": current_chunk}
             )
 
+        answer = "".join(parts)
         context.final = MessageAI(
-            content = "".join(parts),
+            content = answer,
             response_metadata = {"sources": self._sources(context)}
         )
+        cited = sorted({int(current) for current in self.CITATION.findall(answer)})
+        available = range(1, len(context.passages) + 1)
+        self._tracing_service.record("Citations", "generation", {
+            "detail": f"cites {', '.join(f'[{current}]' for current in cited)}" if cited else "cites no source",
+            "cited": [current for current in cited if current in available],
+            "uncited": [current for current in available if current not in cited],
+            "unknown": [current for current in cited if current not in available],
+            "characters": len(answer)
+        })

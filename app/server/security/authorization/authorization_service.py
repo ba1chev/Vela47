@@ -1,3 +1,5 @@
+from typing import Optional
+
 from app.server.security import SecurityContext
 from app.server.security import AuthorizationError
 from app.server.security import SecurityServiceBase
@@ -9,6 +11,7 @@ from app.server.security import IdentityAccessService
 from app.server.security import IdentityAccessPolicyBase
 from app.server.security import IdentityAccessRoleSession
 from app.server.security import IdentityAccessPolicyEffect
+from app.intelligence.tracing import current_tracing_service
 
 
 class AuthorizationService(SecurityServiceBase):
@@ -31,6 +34,18 @@ class AuthorizationService(SecurityServiceBase):
 
     def evaluate(self, session: IdentityAccessRoleSession, action: IdentityAccessAction,
         resource: str) -> AuthorizationDecision:
+        return self._decide(self._effects(session, action, resource))
+
+    def _decide(self, effects: list[tuple[IdentityAccessPolicyBase, Optional[IdentityAccessPolicyEffect]]]) -> AuthorizationDecision:
+        verdicts = [current_effect for _, current_effect in effects]
+        if IdentityAccessPolicyEffect.DENY in verdicts:
+            return AuthorizationDecision.EXPLICIT_DENY
+        if IdentityAccessPolicyEffect.ALLOW in verdicts:
+            return AuthorizationDecision.ALLOW
+        return AuthorizationDecision.IMPLICIT_DENY
+
+    def _effects(self, session: IdentityAccessRoleSession, action: IdentityAccessAction,
+        resource: str) -> list[tuple[IdentityAccessPolicyBase, Optional[IdentityAccessPolicyEffect]]]:
         role = self._identity_access_service.get_role(session.role_type)
         request = IdentityAccessRequest(
             principals = session.principals,
@@ -44,12 +59,7 @@ class AuthorizationService(SecurityServiceBase):
         if resource_policy is not None:
             policies.append(resource_policy)
 
-        effects = [current_policy.evaluate(request) for current_policy in policies]
-        if IdentityAccessPolicyEffect.DENY in effects:
-            return AuthorizationDecision.EXPLICIT_DENY
-        if IdentityAccessPolicyEffect.ALLOW in effects:
-            return AuthorizationDecision.ALLOW
-        return AuthorizationDecision.IMPLICIT_DENY
+        return [(current_policy, current_policy.evaluate(request)) for current_policy in policies]
 
     def execute(self, context: SecurityContext) -> None:
         if context.session is None:
@@ -58,7 +68,21 @@ class AuthorizationService(SecurityServiceBase):
                 "authentication service before it in the pipeline."
             )
 
-        context.decision = self.evaluate(context.session, context.action, context.resource)
+        effects = self._effects(context.session, context.action, context.resource)
+        context.decision = self._decide(effects)
+        current_tracing_service().record(f"{context.action.value} · {context.decision.value}", "auth", {
+            "detail": f"{context.session.role_type.value} on {context.resource}",
+            "action": context.action.value,
+            "resource": context.resource,
+            "role": context.session.role_type.value,
+            "entity_type": context.session.entity_type.value,
+            "decision": context.decision.value,
+            "policies": [
+                {"name": current_policy.name, "type": current_policy.type.value, "effect": current_effect.value if current_effect else None}
+                for current_policy, current_effect in effects
+            ],
+            **({"status": "error", "error": f"{context.decision.value}"} if context.decision is not AuthorizationDecision.ALLOW else {})
+        })
 
         if context.decision is AuthorizationDecision.EXPLICIT_DENY:
             raise AuthorizationError(

@@ -1,7 +1,10 @@
+from app.intelligence.memory import describe_entry
 from app.intelligence.memory import cosine_similarity
 from app.intelligence.memory import VectorDbOperation
+from app.intelligence.memory import RANKING_TRACE_LIMIT
 from app.intelligence.memory import VectorDbMemoryEntry
 from app.intelligence.memory import VectorDbOperationType
+from app.intelligence.tracing import current_tracing_service
 
 
 class VectorDbOperationSearch(VectorDbOperation):
@@ -23,8 +26,14 @@ class VectorDbOperationSearch(VectorDbOperation):
 
     def apply(self, entries: list[VectorDbMemoryEntry]) -> list[VectorDbMemoryEntry]:
         scored = sorted(
-            entries,
-            key = lambda e: cosine_similarity(e.vector, self._query_vector),
+            ((cosine_similarity(current.vector, self._query_vector), current) for current in entries),
+            key = lambda current_pair: current_pair[0],
             reverse = True
         )
-        return scored[:self._top_k]
+        current_tracing_service().record("Dense ranking", "retrieval", {
+            "detail": f"{len(entries)} chunks by cosine similarity, best {scored[0][0]:.3f}" if scored else "nothing to rank",
+            "entries": len(entries),
+            "top_k": self._top_k,
+            "ranking": [describe_entry(current, score) for score, current in scored[:RANKING_TRACE_LIMIT]]
+        })
+        return [current for _, current in scored[:self._top_k]]

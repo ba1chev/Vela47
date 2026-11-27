@@ -1,7 +1,11 @@
+from app.intelligence.memory import tokenize
+from app.intelligence.memory import describe_entry
 from app.intelligence.memory import VectorDbOperation
 from app.intelligence.memory import VectorDbMemoryEntry
+from app.intelligence.memory import RANKING_TRACE_LIMIT
 from app.intelligence.memory import VectorDbKeywordIndex
 from app.intelligence.memory import VectorDbOperationType
+from app.intelligence.tracing import current_tracing_service
 
 
 class VectorDbOperationKeywordSearch(VectorDbOperation):
@@ -28,4 +32,11 @@ class VectorDbOperationKeywordSearch(VectorDbOperation):
             key = lambda current_pair: current_pair[0],
             reverse = True
         )
+        current_tracing_service().record("Keyword ranking", "retrieval", {
+            "detail": f"{len(ranked)} of {len(entries)} chunks share a word with the query (BM25)",
+            "terms": tokenize(self._query),
+            "entries": len(entries),
+            "matched": len(ranked),
+            "ranking": [describe_entry(entries[current_index], score) for score, current_index in ranked[:RANKING_TRACE_LIMIT]]
+        })
         return [entries[current_index] for _, current_index in ranked[:self._top_k]]
