@@ -1,4 +1,5 @@
-# Names of the resources, and the files whose change rebuilds the server image
+# Names of the resources, the files whose change rebuilds the server image, and what the server needs
+# to reach the models of each backend
 locals {
   name = "${var.name}-app"
   source_files = sort([
@@ -9,6 +10,10 @@ locals {
       ["requirements.txt", var.dockerfile]
     ) : current_file if !strcontains(current_file, "__pycache__") && !strcontains(current_file, ".sqlite3")
   ])
+  model_client_environment = {
+    ollama  = ["OLLAMA_HOST=${var.ollama_host}"]
+    bedrock = ["VELA47_AWS_REGION=${var.aws_region}", "AWS_PROFILE=${var.aws_profile}"]
+  }
 }
 
 # Network declaration (the server on a network of its own, no other container is on it)
@@ -52,15 +57,16 @@ resource "random_password" "admin_password" {
 }
 
 # Container declaration
-# It reaches Ollama on the host through host.docker.internal and brings the sandbox project up through
-# the host's Docker socket, so the sandbox containers run next to it, not inside it
+# It reaches Ollama on the host through host.docker.internal, or Bedrock with the host's AWS credentials,
+# and brings the sandbox project up through the host's Docker socket, so the sandbox containers run next
+# to it, not inside it
 resource "docker_container" "this" {
   name  = local.name
   image = docker_image.this.image_id
   init  = true
 
   # The database image has no SSL, and its user vela47 is fixed there
-  env = [
+  env = concat([
     "VELA47_ENVIRONMENT=local",
     "VELA47_DATABASE_HOST=${var.database_host}",
     "VELA47_DATABASE_SSL_MODE=disable",
@@ -69,8 +75,8 @@ resource "docker_container" "this" {
     "VELA47_TOKEN_SECRET=${random_password.token_secret.result}",
     "VELA47_ADMIN_USERNAME=${var.admin_username}",
     "VELA47_ADMIN_PASSWORD=${random_password.admin_password.result}",
-    "OLLAMA_HOST=${var.ollama_host}",
-  ]
+    "VELA47_MODEL_CLIENT=${var.model_client}",
+  ], local.model_client_environment[var.model_client])
 
   networks_advanced {
     name         = docker_network.this.name
@@ -91,6 +97,16 @@ resource "docker_container" "this" {
   volumes {
     host_path      = "/var/run/docker.sock"
     container_path = "/var/run/docker.sock"
+  }
+
+  dynamic "volumes" {
+    for_each = var.model_client == "bedrock" ? [pathexpand(var.aws_config_directory)] : []
+
+    content {
+      host_path      = volumes.value
+      container_path = "/root/.aws"
+      read_only      = true
+    }
   }
 
   healthcheck {

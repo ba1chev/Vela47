@@ -41,6 +41,9 @@ No modules.
 |------|-------------|------|---------|:--------:|
 | <a name="input_admin_password_length"></a> [admin\_password\_length](#input\_admin\_password\_length) | Length of the password of the admin bootstrapped on the first start | `number` | `24` | no |
 | <a name="input_admin_username"></a> [admin\_username](#input\_admin\_username) | Username of the admin bootstrapped on the first start | `string` | n/a | yes |
+| <a name="input_aws_config_directory"></a> [aws\_config\_directory](#input\_aws\_config\_directory) | Directory of the host's AWS configuration and credentials, mounted read-only with bedrock | `string` | `"~/.aws"` | no |
+| <a name="input_aws_profile"></a> [aws\_profile](#input\_aws\_profile) | Profile in aws\_config\_directory the server calls Bedrock with, AWS\_PROFILE | `string` | n/a | yes |
+| <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | Region the server calls Bedrock in, VELA47\_AWS\_REGION | `string` | n/a | yes |
 | <a name="input_container_address"></a> [container\_address](#input\_container\_address) | Address of the application container on its network | `string` | n/a | yes |
 | <a name="input_database_host"></a> [database\_host](#input\_database\_host) | Address of the database container, VELA47\_DATABASE\_HOST | `string` | n/a | yes |
 | <a name="input_database_password"></a> [database\_password](#input\_database\_password) | Password of the vela47 user on the database, VELA47\_DATABASE\_PASSWORD | `string` | n/a | yes |
@@ -49,10 +52,11 @@ No modules.
 | <a name="input_health_check_retries"></a> [health\_check\_retries](#input\_health\_check\_retries) | Failed health checks in a row after which the container is unhealthy | `number` | `3` | no |
 | <a name="input_health_check_start_period"></a> [health\_check\_start\_period](#input\_health\_check\_start\_period) | Time the server gets to start, including bringing up the sandbox, before failed health checks count | `string` | `"5m"` | no |
 | <a name="input_health_check_timeout"></a> [health\_check\_timeout](#input\_health\_check\_timeout) | Time one health check of the container may take | `string` | `"5s"` | no |
+| <a name="input_model_client"></a> [model\_client](#input\_model\_client) | Backend the models are served by, VELA47\_MODEL\_CLIENT, ollama or bedrock | `string` | n/a | yes |
 | <a name="input_name"></a> [name](#input\_name) | Prefix of the name of the network, image and container | `string` | n/a | yes |
 | <a name="input_network_gateway"></a> [network\_gateway](#input\_network\_gateway) | Gateway of the application network | `string` | n/a | yes |
 | <a name="input_network_subnet"></a> [network\_subnet](#input\_network\_subnet) | Subnet of the application network | `string` | n/a | yes |
-| <a name="input_ollama_host"></a> [ollama\_host](#input\_ollama\_host) | URL of the Ollama server on the host, as the container reaches it | `string` | n/a | yes |
+| <a name="input_ollama_host"></a> [ollama\_host](#input\_ollama\_host) | URL of the Ollama server on the host, as the container reaches it, used with ollama | `string` | n/a | yes |
 | <a name="input_published_address"></a> [published\_address](#input\_published\_address) | Host address the server and its UI are published on, 127.0.0.1 keeps them off the LAN | `string` | n/a | yes |
 | <a name="input_published_port"></a> [published\_port](#input\_published\_port) | Port the server and its UI are published on | `number` | n/a | yes |
 | <a name="input_repository_path"></a> [repository\_path](#input\_repository\_path) | Absolute path of the repository root, the context the server image is built from | `string` | n/a | yes |

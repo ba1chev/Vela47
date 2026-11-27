@@ -21,8 +21,30 @@ variable "sandbox_directory" {
   default     = "deploy/images/local/sandbox"
 }
 
+# Model variables (Ollama on the host, or Bedrock with the AWS credentials of the host)
+variable "model_client" {
+  description = "Backend the models are served by, VELA47_MODEL_CLIENT, ollama or bedrock"
+  type        = string
+}
+
 variable "ollama_host" {
-  description = "URL of the Ollama server on the host, as the container reaches it"
+  description = "URL of the Ollama server on the host, as the container reaches it, used with ollama"
+  type        = string
+}
+
+variable "aws_config_directory" {
+  description = "Directory of the host's AWS configuration and credentials, mounted read-only with bedrock"
+  type        = string
+  default     = "~/.aws"
+}
+
+variable "aws_profile" {
+  description = "Profile in aws_config_directory the server calls Bedrock with, AWS_PROFILE"
+  type        = string
+}
+
+variable "aws_region" {
+  description = "Region the server calls Bedrock in, VELA47_AWS_REGION"
   type        = string
 }
 

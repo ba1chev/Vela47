@@ -4,7 +4,7 @@
 # the kind of change it carries (see docs/change_management.md):
 #   infrastructure: none | additive | breaking
 #   database:       none | expand | contract
-version: 2.0.2
-infrastructure: additive
+version: 2.1.0
+infrastructure: none
 database: none
-summary: Keep the security group rules of the instances and the tasks until they are gone, so a teardown cannot strand the ECS agent
+summary: Let the local environment run its models on Bedrock as well as Ollama, chosen with model_client

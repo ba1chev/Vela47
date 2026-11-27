@@ -7,7 +7,6 @@ from app.server.builders import build_rag_indexer
 from app.intelligence.messages import MessageHuman
 from app.intelligence.tracing import TracingService
 from app.intelligence.model import ModelClientOllama
-from app.server.config_platform import ConfigPlatform
 from app.intelligence.memory import VectorDbMemoryEntry
 from tests.evals.evals_runners.evals_runner_base import EvalsRunnerBase
 from tests.evals.evals_runners.evals_runners_type import EvalsRunnersType
@@ -39,7 +38,7 @@ class EvalsRunnerRagAgent(EvalsRunnerBase[EvalsCaseRagAgent, EvalsRecordRagAgent
 
     def start(self) -> None:
         self._require_ollama()
-        indexer = build_rag_indexer(ConfigPlatform.LOCAL, ModelClientOllama())
+        indexer = build_rag_indexer(ModelClientOllama())
         self._entries = []
         for number, (title, text) in enumerate(EVALS_DOCUMENTS_RAG_AGENT.items()):
             self._entries.extend(indexer.index(f"eval-{number}", title, text))
@@ -49,7 +48,7 @@ class EvalsRunnerRagAgent(EvalsRunnerBase[EvalsCaseRagAgent, EvalsRecordRagAgent
         return sum("Ѐ" <= current <= "ӿ" for current in letters) / len(letters) if letters else 0.0
 
     def run(self, case: EvalsCaseRagAgent, run: int) -> EvalsRecordRagAgent:
-        agent = build_rag_agent(TracingService(), self._entries, ConfigPlatform.LOCAL, ModelClientOllama())
+        agent = build_rag_agent(TracingService(), self._entries, ModelClientOllama())
         history = []
         for asked, answered in case.history:
             history.extend([MessageHuman(content = asked), MessageAI(content = answered, name = "rag")])

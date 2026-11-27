@@ -74,13 +74,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.chat_session_store = ChatSessionStoreSql(database)
     app.state.knowledge_store = KnowledgeStoreSql(database)
     app.state.model_client = build_model_client(config)
-    app.state.rag_indexer = build_rag_indexer(config.platform, app.state.model_client)
+    app.state.rag_indexer = build_rag_indexer(app.state.model_client)
     app.state.web_fetcher = WebFetcher()
     app.state.web_search = build_web_search(config, app.state.web_fetcher)
     logger.info(
         "Database ready: %s in %s, release %s",
         database.database_type.value, config.environment.value, config.version or "unversioned"
     )
+    logger.info("Models: %s", app.state.model_client.client_type.value)
     logger.info("Web search: %s", type(app.state.web_search).__name__)
 
     install_security(

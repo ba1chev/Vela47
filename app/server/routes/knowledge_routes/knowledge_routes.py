@@ -33,9 +33,6 @@ def _describe(document: KnowledgeDocument) -> dict[str, Any]:
 
 
 def _usage(request: Request, owner_id: str) -> dict[str, Any]:
-    """What the sidebar draws its limit from. Sent with every listing and every upload,
-    so the bar moves the moment the storage behind it changes, without a request of its
-    own."""
     config = request.app.state.config
     return {
         "used_bytes": request.app.state.knowledge_store.used_bytes(owner_id),
@@ -47,9 +44,6 @@ def _usage(request: Request, owner_id: str) -> dict[str, Any]:
 
 def _read(title: str, loader_type: Optional[LoaderType], data: bytes,
     encoding: Optional[str] = None) -> LoaderDocument:
-    """The text inside an uploaded or fetched file, by the loader its type calls for. A
-    format no loader reads is 415; a file of a known format that cannot be read — a
-    broken PDF, a scan without a text layer — is 400 with the loader's explanation."""
     if loader_type is None:
         raise HTTPException(
             status_code = 415,
@@ -62,9 +56,6 @@ def _read(title: str, loader_type: Optional[LoaderType], data: bytes,
 
 
 def _ingest(request: Request, owner_id: str, title: str, text: str) -> dict[str, Any]:
-    """Indexes extracted text as one of the owner's documents — the part every way of
-    adding a document shares. The limits count the text that is kept, not the file it
-    came from, since the text is what is stored, embedded and searched."""
     config = request.app.state.config
     store = request.app.state.knowledge_store
     size_bytes = len(text.encode("utf-8"))
@@ -123,9 +114,6 @@ def list_knowledge(request: Request) -> dict[str, Any]:
 
 @knowledge_router.post("", status_code = 201)
 def upload_knowledge(body: UploadKnowledgeRequest, request: Request) -> dict[str, Any]:
-    """Text arrives as text and is read as text — or as a page, when its name or type says
-    it is HTML. Anything else arrives base64 encoded and is read by whichever loader its
-    type and name call for."""
     owner = caller(request)
     authorize(request, IdentityAccessAction.KNOWLEDGE_UPLOAD, format_knowledge_collection_vrn(owner.entity_id))
 
@@ -155,9 +143,6 @@ def upload_knowledge(body: UploadKnowledgeRequest, request: Request) -> dict[str
 
 @knowledge_router.post("/url", status_code = 201)
 def import_knowledge_url(body: ImportKnowledgeUrlRequest, request: Request) -> dict[str, Any]:
-    """Adds a web page, or a PDF or Word document online, by its URL. It is fetched by the
-    same WebFetcher the agents use — public addresses only, size and time bounded — and
-    listed under the title it gives itself unless the caller names one."""
     owner = caller(request)
     authorize(request, IdentityAccessAction.KNOWLEDGE_UPLOAD, format_knowledge_collection_vrn(owner.entity_id))
 

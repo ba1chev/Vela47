@@ -25,8 +25,6 @@ chat_router = APIRouter(prefix = "/api/chat")
 
 
 def _title_for(message: str) -> str:
-    """A conversation is named after its first message, flattened onto one line and cut
-    short — enough to recognise it in a list, which is all a title is for."""
     flattened = " ".join(message.split()) or "New chat"
     if len(flattened) <= TITLE_CHARS:
         return flattened
@@ -34,10 +32,6 @@ def _title_for(message: str) -> str:
 
 
 def _searchable_entries(request: Request, owner_id: str) -> list[VectorDbMemoryEntry]:
-    """The documents the deep agent's research steps may search: the caller's own, when
-    its role allows searching them, and none otherwise. Unlike the RAG agent, the deep
-    agent has other work to do without them, so a caller without the permission still
-    gets an agent — just one whose document search finds nothing."""
     try:
         authorize(request, IdentityAccessAction.KNOWLEDGE_SEARCH, format_knowledge_collection_vrn(owner_id))
     except AuthorizationError:
@@ -66,12 +60,11 @@ def chat_stream(request: Request, message: str = Query(min_length = 1),
     if agent is ChatAgentType.RAG:
         authorize(request, IdentityAccessAction.KNOWLEDGE_SEARCH, format_knowledge_collection_vrn(owner.entity_id))
         entries = state.knowledge_store.load_entries(owner.entity_id)
-        build_agent = lambda tracing_service: build_rag_agent(tracing_service, entries, state.config.platform, state.model_client)
+        build_agent = lambda tracing_service: build_rag_agent(tracing_service, entries, state.model_client)
     else:
         entries = _searchable_entries(request, owner.entity_id)
         build_agent = lambda tracing_service: build_deep_agent(
-            tracing_service, state.sandbox_pool, state.web_fetcher, state.web_search, entries,
-            state.config.platform, state.model_client
+            tracing_service, state.sandbox_pool, state.web_fetcher, state.web_search, entries, state.model_client
         )
 
     return StreamingResponse(

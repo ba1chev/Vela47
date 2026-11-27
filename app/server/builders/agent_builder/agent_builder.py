@@ -17,12 +17,12 @@ from app.intelligence.tools import ToolWriteTest
 from app.intelligence.agents import PromptManager
 from app.intelligence.memory import VectorDbMemory
 from app.intelligence.model import ModelClientBase
+from app.intelligence.model import ModelClientType
 from app.intelligence.model import ModelFoundation
 from app.intelligence.tools import ToolSearchFiles
 from app.intelligence.sandbox import SandboxPoolBase
 from app.intelligence.agents import OperationPipeline
 from app.server.builders import CONTEXT_WINDOW_TOKENS
-from app.server.config_platform import ConfigPlatform
 from app.intelligence.agents import A2AInteractionType
 from app.intelligence.tools import ToolSearchDocuments
 from app.server.builders import build_knowledge_memory
@@ -42,8 +42,8 @@ from app.intelligence.agents import OperationSubagentProbeWorkspace
 from app.intelligence.agents import SUBAGENT_SYSTEM_PROMPT_TEMPLATES
 
 MODEL_NAMES = {
-    ConfigPlatform.LOCAL: "qwen3.5:9b",
-    ConfigPlatform.AWS: "eu.anthropic.claude-sonnet-5-5"
+    ModelClientType.OLLAMA: "qwen3.5:9b",
+    ModelClientType.BEDROCK: "eu.anthropic.claude-sonnet-5-5"
 }
 SUBAGENT_MAX_ITERATIONS = 6
 SUBAGENT_PROBE_FACTORIES = {
@@ -89,8 +89,8 @@ def subagent_peering(sandbox_pool: SandboxPoolBase) -> OperationSubagentPeering:
 
 def build_deep_agent(tracing_service: TracingServiceBase, sandbox_pool: SandboxPoolBase,
     web_fetcher: WebFetcher, web_search: WebSearchBase, knowledge_entries: list[VectorDbMemoryEntry],
-    platform: ConfigPlatform, model_client: ModelClientBase) -> DeepAgent:
-    model_name = MODEL_NAMES[platform]
+    model_client: ModelClientBase) -> DeepAgent:
+    model_name = MODEL_NAMES[model_client.client_type]
     planning_model = ModelFoundation(
         ModelConfig(model_name = model_name, temperature = 0.1, think = False, context_window_tokens = CONTEXT_WINDOW_TOKENS),
         tracing_service,
@@ -106,7 +106,7 @@ def build_deep_agent(tracing_service: TracingServiceBase, sandbox_pool: SandboxP
     )
 
     tool_factories = subagent_tool_factories(
-        build_knowledge_memory(tracing_service, knowledge_entries, platform, model_client), web_fetcher, web_search
+        build_knowledge_memory(tracing_service, knowledge_entries, model_client), web_fetcher, web_search
     )
     blueprints = {
         current_type: OperationSubagentBlueprint(
