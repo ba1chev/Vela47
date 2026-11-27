@@ -42,3 +42,19 @@ class TestDeploymentRecorder:
         recorder.record("staging", "1.1.0", "abc1234", False, "run", "ci")
         assert recorder.may_promote("dev", "1.1.0") and recorder.may_promote("staging", "1.1.0")
         assert not recorder.may_promote("prod", "1.1.0") and not recorder.may_promote("staging", "1.2.0")
+
+    def test_a_teardown_leaves_the_environment_running_nothing_and_remembers_its_last_release(self):
+        s3 = InMemoryS3Client()
+        recorder = DeploymentRecorder(s3, "vela47-artifacts")
+        record(recorder, "1.0.0")
+        record(recorder, "1.1.0", minute = 1)
+        recorder.record_teardown("prod", "run", "ba1chev", datetime(2026, 11, 26, 10, 2, tzinfo = timezone.utc))
+        assert recorder.current("prod")["version"] is None and recorder.current("prod")["previous"] == "1.1.0"
+        assert ("vela47-artifacts", "deployments/prod/history/20261126T100200Z-teardown.yaml") in s3.objects
+
+    def test_the_first_deployment_after_a_teardown_keeps_the_release_before_it(self):
+        recorder = DeploymentRecorder(InMemoryS3Client(), "vela47-artifacts")
+        record(recorder, "1.1.0")
+        recorder.record_teardown("prod", "run", "ba1chev")
+        record(recorder, "1.2.0", minute = 5)
+        assert recorder.current("prod")["previous"] == "1.1.0"
