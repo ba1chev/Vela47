@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 from abc import ABC, abstractmethod
 
 from app.server.knowledge import KnowledgeDocument
@@ -13,10 +13,20 @@ class KnowledgeStoreBase(ABC):
     chunk whose document is gone.
 
     load_entries() returns an owner's chunks ready to be searched, as VectorDbMemoryEntry
-    carrying their stored vectors, so nothing is embedded twice."""
+    carrying their stored vectors, so nothing is embedded twice. The trace of the upload
+    that indexed a document is written once the upload has finished, with set_trace(),
+    and read only through get_trace()."""
 
     @abstractmethod
     def add_document(self, document: KnowledgeDocument, entries: list[VectorDbMemoryEntry]) -> None:
+        raise NotImplementedError("Must be implemented")
+
+    @abstractmethod
+    def set_trace(self, document_id: str, trace: list[dict[str, Any]]) -> None:
+        raise NotImplementedError("Must be implemented")
+
+    @abstractmethod
+    def get_trace(self, document_id: str) -> Optional[list[dict[str, Any]]]:
         raise NotImplementedError("Must be implemented")
 
     @abstractmethod
