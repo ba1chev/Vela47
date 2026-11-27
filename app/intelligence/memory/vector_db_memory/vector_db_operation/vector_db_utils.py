@@ -1,8 +1,9 @@
 import re
 import math
-from typing import TypeVar
+from typing import Any, Optional, TypeVar
 
 TOKEN_PATTERN = re.compile(r"\w+")
+RANKING_TRACE_LIMIT = 50
 
 T = TypeVar("T")
 
@@ -28,7 +29,7 @@ def tokenize(text: str) -> list[str]:
     return TOKEN_PATTERN.findall(text.lower())
 
 
-def reciprocal_rank_fusion(rankings: list[list[T]], rank_constant: int = 60) -> list[T]:
+def reciprocal_rank_scores(rankings: list[list[T]], rank_constant: int = 60) -> list[tuple[T, float]]:
     scores: dict[int, float] = {}
     items: dict[int, T] = {}
 
@@ -38,4 +39,20 @@ def reciprocal_rank_fusion(rankings: list[list[T]], rank_constant: int = 60) -> 
             items[key] = current_item
             scores[key] = scores.get(key, 0.0) + 1.0 / (rank_constant + position)
 
-    return [items[current_key] for current_key in sorted(scores, key = scores.get, reverse = True)]
+    return [(items[current_key], scores[current_key]) for current_key in sorted(scores, key = scores.get, reverse = True)]
+
+
+def reciprocal_rank_fusion(rankings: list[list[T]], rank_constant: int = 60) -> list[T]:
+    return [current_item for current_item, _ in reciprocal_rank_scores(rankings, rank_constant)]
+
+
+def describe_entry(entry: Any, score: Optional[float] = None, **extra: Any) -> dict[str, Any]:
+    metadata = entry.metadata
+    described: dict[str, Any] = {
+        "id": entry.message.id,
+        "title": entry.message.name,
+        "chunk": metadata.source.chunk_index if metadata is not None else None
+    }
+    if score is not None:
+        described["score"] = round(score, 4)
+    return {**described, **extra}
