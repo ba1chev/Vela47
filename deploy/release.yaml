@@ -4,7 +4,7 @@
 # the kind of change it carries (see docs/change_management.md):
 #   infrastructure: none | additive | breaking
 #   database:       none | expand | contract
-version: 2.0.1
-infrastructure: none
+version: 2.0.2
+infrastructure: additive
 database: none
-summary: Record teardowns of an environment and find the release whose Terraform a teardown runs
+summary: Keep the security group rules of the instances and the tasks until they are gone, so a teardown cannot strand the ECS agent

@@ -111,13 +111,14 @@ resource "aws_autoscaling_group" "this" {
     propagate_at_launch = true
   }
 
-  # The ECS agent needs the policies of the instance role, so on destroy they go after the instance;
-  # without them the agent disconnects and a destroy waits forever on a task stuck in STOPPING.
+  # The ECS agent needs the policies of the instance role and the way out of its security group, so on destroy they go
+  # after the instance; without either the agent disconnects and a destroy waits forever on a task stuck in STOPPING.
   # The NAT is in the vpc root module, which is destroyed after this one
   depends_on = [
     aws_iam_role_policy_attachment.instance_container_service,
     aws_iam_role_policy_attachment.instance_session_manager,
     aws_iam_instance_profile.instance,
+    aws_vpc_security_group_egress_rule.instance_all,
   ]
 
   lifecycle {
@@ -280,6 +281,8 @@ resource "aws_ecs_service" "this" {
     aws_ecs_cluster_capacity_providers.this,
     aws_iam_role_policy.task,
     aws_iam_role_policy_attachment.ecs_infrastructure,
+    aws_vpc_security_group_ingress_rule.task_from_load_balancer,
+    aws_vpc_security_group_egress_rule.task_all,
   ]
 
   # After a canary deployment ECS serves from the other target group, so the load balancer of the service is ECS's,
