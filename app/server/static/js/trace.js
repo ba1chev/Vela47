@@ -11,8 +11,8 @@ const RENDER = {
   layer_finished:    { kind: "layer",    closes: true },
   subagent_started:  { kind: "subagent", opens: true },
   subagent_finished: { kind: "subagent", closes: true },
-  sandbox_acquired:  { kind: "sandbox",  skip: true },
-  sandbox_released:  { kind: "sandbox",  skip: true },
+  sandbox_acquired:  { kind: "sandbox" },
+  sandbox_released:  { kind: "sandbox" },
   model_invoked:     { kind: "model" },
   tool_started:      { kind: "tool",     opens: true },
   tool_executed:     { kind: "tool",     closes: true },
@@ -70,8 +70,19 @@ function detailFor(event) {
     case "model_invoked":
       return [
         p.total_tokens ? `${p.total_tokens} tok` : null,
+        p.tokens_per_second ? `${p.tokens_per_second} tok/s` : null,
+        p.first_token_ms != null ? `first token ${formatDuration(p.first_token_ms)}` : null,
+        p.inputs ? `${p.inputs} texts embedded` : null,
         (p.tool_calls && p.tool_calls.length) ? `→ ${p.tool_calls.join(", ")}` : null,
+        p.done_reason && p.done_reason !== "stop" ? `stopped: ${p.done_reason}` : null,
+        p.stop_reason && p.stop_reason !== "end_turn" && p.stop_reason !== "tool_use" ? `stopped: ${p.stop_reason}` : null,
+        p.load_ms > 1000 ? `model loaded in ${formatDuration(p.load_ms)}` : null,
       ].filter(Boolean).join(" · ");
+    case "sandbox_acquired":
+    case "sandbox_released":
+      return p.detail || "";
+    case "run_failed":
+      return p.error || p.detail || "";
     case "tool_started":
       return p.args ? Object.entries(p.args).map(([key, value]) => `${key}: ${typeof value === "string" ? value : JSON.stringify(value)}`).join(" · ") : "";
     case "security_checked":
@@ -193,8 +204,9 @@ function toggleGroup(row) {
   row.head.setAttribute("aria-expanded", String(open));
 }
 
-// A finished group folds away when it holds only leaf steps, so the panel keeps the
-// shape of the run in view instead of every model call; a group that failed stays open.
+// A finished group folds away when it holds only leaf steps, or when it is nested two
+// levels down (a subagent, one of its turns, a tool call), so the panel keeps the shape
+// of the run in view instead of every model call; a group that failed stays open.
 function finishGroup(row) {
   const children = [...row.children.children];
   if (!children.length) return;
@@ -202,7 +214,7 @@ function finishGroup(row) {
   const onlyCalls = children.every((child) => ["model", "tool"].includes(child.dataset.kind));
   row.count.textContent = plural(children.length, onlyCalls ? "call" : "step");
   const holdsGroups = row.children.querySelector(":scope > .ev > .ev-children") !== null;
-  if (!holdsGroups && row.li.dataset.kind !== "error") toggleGroup(row);
+  if ((!holdsGroups || row.depth >= 2) && row.li.dataset.kind !== "error") toggleGroup(row);
 }
 
 // A *_finished event completes the row its *_started opened, rather than adding a
