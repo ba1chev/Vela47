@@ -1,3 +1,4 @@
+import json
 import base64
 from fastapi.testclient import TestClient
 
@@ -58,6 +59,15 @@ def upload_file(client, title, data, content_type = None):
 
 def import_url(client, url, title = None):
     return client.post("/api/knowledge/url", json = {"url": url, "title": title})
+
+
+def frames(response):
+    parsed = []
+    for current_block in response.text.split("\n\n"):
+        lines = dict(current_line.split(": ", 1) for current_line in current_block.splitlines() if ": " in current_line)
+        if "event" in lines:
+            parsed.append((lines["event"], json.loads(lines["data"])))
+    return parsed
 
 
 class TestServerKnowledge:
@@ -228,3 +238,63 @@ class TestServerKnowledge:
 
     def test_importing_a_url_needs_a_session(self):
         assert import_url(make_client(), "https://example.org/").status_code == 401
+
+
+class TestServerKnowledgeTrace:
+    def test_a_streamed_upload_relays_every_stage_and_ends_with_the_document(self):
+        client = make_client()
+        sign_in(client, "ana")
+        response = client.post("/api/knowledge?stream=true", json = {"title": "guide.md", "content": "Error E1042 means the secret is missing."})
+        parsed = frames(response)
+        assert response.headers["content-type"].startswith("text/event-stream")
+        traces = [data for event, data in parsed if event == "trace"]
+        assert traces[0]["type"] == "pipeline_started" and traces[0]["label"] == "Upload · guide.md"
+        assert [current["label"] for current in traces if current["type"] == "layer_finished"] == [
+            "Receive", "Extraction", "Validation", "Chunking", "Embedding", "Metadata", "Security", "Storage"
+        ]
+        event, data = parsed[-1]
+        assert event == "document" and data["document"]["title"] == "guide.md" and data["usage"]["used_bytes"] > 0
+
+    def test_a_streamed_upload_that_fails_ends_with_the_status_and_the_reason(self):
+        client = make_client()
+        sign_in(client, "ana")
+        response = client.post("/api/knowledge?stream=true", json = {"title": "x.bin", "content_base64": "AAAA"})
+        event, data = frames(response)[-1]
+        assert event == "error" and data["status"] == 415 and "not a format" in data["detail"]
+        assert client.get("/api/knowledge").json()["documents"] == []
+
+    def test_the_trace_of_an_upload_is_kept_with_its_document(self):
+        client = make_client()
+        sign_in(client, "ana")
+        document = upload(client).json()["document"]
+        body = client.get(f"/api/knowledge/{document['id']}/trace").json()
+        assert body["document"]["id"] == document["id"]
+        assert body["trace"][0]["label"] == "Upload · guide.md" and body["trace"][-1]["type"] == "pipeline_finished"
+        assert any(current["label"] == "Poisoning check · guide.md, part 1" for current in body["trace"])
+
+    def test_someone_elses_trace_is_403_and_an_unknown_one_404(self):
+        client = make_client()
+        sign_in(client, "ana")
+        document = upload(client).json()["document"]
+        sign_in(client, "bob")
+        assert client.get(f"/api/knowledge/{document['id']}/trace").status_code == 403
+        assert client.get("/api/knowledge/missing/trace").status_code == 404
+
+    def test_a_streamed_import_traces_the_fetch_and_its_address_check(self):
+        page = "<html><head><title>Release notes</title></head><body><p>Hybrid search shipped.</p></body></html>"
+        client = make_client(routes = {"https://example.org/notes": FakeWebServer.page(page)})
+        sign_in(client, "ana")
+        traces = [data for event, data in frames(client.post("/api/knowledge/url?stream=true", json = {"url": "https://example.org/notes"})) if event == "trace"]
+        labels = [current["label"] for current in traces if current["type"] == "step_finished"]
+        assert "Address check" in labels and "GET https://example.org/notes" in labels and "Fetch" in labels
+        (title,) = [current for current in traces if current["label"] == "Title"]
+        assert title["payload"]["chosen"] == "Release notes"
+
+    def test_a_refused_import_shows_the_refused_address_in_its_trace(self):
+        client = make_client()
+        sign_in(client, "ana")
+        parsed = frames(client.post("/api/knowledge/url?stream=true", json = {"url": "http://169.254.169.254/latest/"}))
+        (check,) = [data for event, data in parsed if event == "trace" and data["label"] == "Address check" and data["type"] == "step_finished"]
+        assert check["payload"]["status"] == "error" and check["payload"]["addresses"] == [{"address": "169.254.169.254", "public": False}]
+        assert parsed[-1][0] == "error" and parsed[-1][1]["status"] == 400
+
