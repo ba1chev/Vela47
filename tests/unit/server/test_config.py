@@ -3,6 +3,7 @@ from pydantic import ValidationError
 
 from db import DEFAULT_SQLITE_PATH
 from app.server.config import Config
+from app.intelligence.model import ModelClientType
 from app.server.config_platform import ConfigPlatform
 from app.server.config_environment import ConfigEnvironment
 
@@ -162,6 +163,23 @@ class TestConfig:
     def test_prod_with_an_empty_search_key_has_none(self):
         config = Config.from_environment(PROD, make_reader({"token_secret": "t" * 32, "tavily_api_key": ""}))
         assert config.tavily_api_key is None
+
+    def test_local_runs_on_the_platforms_models_unless_it_chooses_a_backend(self):
+        assert Config.from_environment({}).model_client_type is None
+        config = Config.from_environment({"VELA47_MODEL_CLIENT": "bedrock", "VELA47_AWS_REGION": "eu-central-1"})
+        assert config.model_client_type is ModelClientType.BEDROCK and config.aws_region == "eu-central-1"
+
+    def test_local_on_bedrock_without_a_region_cannot_start(self):
+        with pytest.raises(ValidationError):
+            Config.from_environment({"VELA47_MODEL_CLIENT": "bedrock"})
+
+    def test_an_unknown_model_backend_is_refused(self):
+        with pytest.raises(ValidationError):
+            Config.from_environment({"VELA47_MODEL_CLIENT": "openai"})
+
+    def test_prod_never_chooses_its_model_backend(self):
+        config = Config.from_environment({**PROD, "VELA47_MODEL_CLIENT": "ollama"}, make_reader())
+        assert config.model_client_type is None
 
     def test_local_has_no_search_key(self):
         assert Config.from_environment({"VELA47_TAVILY_API_KEY": "tvly-key"}).tavily_api_key is None
