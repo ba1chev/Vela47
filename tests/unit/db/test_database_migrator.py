@@ -1,9 +1,9 @@
 from sqlalchemy.pool import StaticPool
 from datetime import datetime, timezone
-from sqlalchemy import create_engine, text
 from alembic.script import ScriptDirectory
 from alembic.migration import MigrationContext
 from alembic.autogenerate import compare_metadata
+from sqlalchemy import create_engine, inspect, text
 
 from db import TableBase
 from db import DatabaseSqlite
@@ -56,6 +56,13 @@ class TestDatabaseMigrator:
             assert DatabaseMigrator(connection).current is not None
             assert connection.execute(text("SELECT count(*) FROM identity_entities")).scalar() == 1
 
+    def test_the_document_trace_revision_adds_its_column_once(self):
+        engine = make_engine()
+        migrate(engine)
+        with engine.connect() as connection:
+            columns = [current["name"] for current in inspect(connection).get_columns("knowledge_documents")]
+        assert columns.count("trace") == 1
+
     def test_the_history_is_one_line_from_the_baseline(self):
         script = ScriptDirectory(str(MIGRATIONS_DIRECTORY))
         revisions = list(script.walk_revisions())
@@ -66,4 +73,4 @@ class TestDatabaseMigrator:
         database = DatabaseSqlite()
         database.start()
         with database._engine.connect() as connection:
-            assert DatabaseMigrator(connection).current == BASELINE_REVISION
+            assert DatabaseMigrator(connection).current == DatabaseMigrator(connection).head
