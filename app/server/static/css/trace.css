@@ -162,6 +162,8 @@ button.ev-head:focus-visible { outline: 2px solid var(--accent); outline-offset:
 .ev[data-kind="subagent"] > .ev-head .dot { background: var(--ok); }
 .ev[data-kind="error"] > .ev-head .dot { background: var(--err); }
 .ev[data-kind="security"] > .ev-head .dot { background: var(--warn); }
+.ev[data-kind="check"] > .ev-head .dot { background: var(--ok); opacity: .7; }
+.ev[data-kind="check"] > .ev-head .name { color: var(--muted); }
 
 .ev[data-live="1"] > .ev-head .dot {
   animation: glow 1.3s ease-in-out infinite;
