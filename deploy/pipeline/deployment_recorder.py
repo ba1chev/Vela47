@@ -12,9 +12,10 @@ class DeploymentRecorder:
     """Keeps the record of what each environment runs in the artifacts bucket:
     deployments/<environment>/current.yaml names the release it runs and the one before,
     which is what a rollback redeploys, and every attempt, failed or not, is kept under
-    deployments/<environment>/history/. Only a successful deployment moves current.yaml.
-    A release reaches staging only after it succeeded in dev, and prod only after
-    staging, which the history answers."""
+    deployments/<environment>/history/. Only a successful deployment or a teardown moves
+    current.yaml; after a teardown it runs no release and remembers the last one. A release
+    reaches staging only after it succeeded in dev, and prod only after staging, which
+    the history answers."""
 
     def __init__(self, s3: Any, bucket: str) -> None:
         self._s3: Any = s3
@@ -51,11 +52,12 @@ class DeploymentRecorder:
     def record(self, environment: str, version: str, commit: str, succeeded: bool, run_url: str,
         actor: str, now: Optional[datetime] = None) -> dict[str, Any]:
         now = now or datetime.now(timezone.utc)
-        current = self.current(environment)
+        current = self.current(environment) or {}
+        last = current.get("version")
         document = {
             "environment": environment,
             "version": version,
-            "previous": current["version"] if current and current["version"] != version else (current or {}).get("previous"),
+            "previous": last if last and last != version else current.get("previous"),
             "commit": commit,
             "outcome": "succeeded" if succeeded else "failed",
             "deployed_at": now.isoformat(),
@@ -65,4 +67,22 @@ class DeploymentRecorder:
         self._put(self._key(environment, f"history/{now.strftime('%Y%m%dT%H%M%SZ')}-{version}.yaml"), document)
         if succeeded:
             self._put(self._key(environment, "current.yaml"), document)
+        return document
+
+    def record_teardown(self, environment: str, run_url: str, actor: str,
+        now: Optional[datetime] = None) -> dict[str, Any]:
+        now = now or datetime.now(timezone.utc)
+        current = self.current(environment) or {}
+        document = {
+            "environment": environment,
+            "version": None,
+            "previous": current.get("version") or current.get("previous"),
+            "commit": None,
+            "outcome": "torn_down",
+            "deployed_at": now.isoformat(),
+            "run": run_url,
+            "actor": actor
+        }
+        self._put(self._key(environment, f"history/{now.strftime('%Y%m%dT%H%M%SZ')}-teardown.yaml"), document)
+        self._put(self._key(environment, "current.yaml"), document)
         return document
