@@ -4,6 +4,7 @@
 // one, a server restarted with a new signing key — lands on it.
 async function boot() {
   loadAgentChoice();
+  loadSidebarChoice();
   const result = await api("/api/auth/me");
   if (result.ok) await enterApp(result.data);
   else showGate();
