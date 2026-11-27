@@ -9,6 +9,10 @@ function relativeTime(iso) {
   return new Date(iso).toLocaleDateString();
 }
 
+const PENCIL_ICON = `<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
+  <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16zM13.5 6.5l4 4" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
 function makeSessionItem(session) {
   const li = document.createElement("li");
   li.className = "session-item";
@@ -26,6 +30,18 @@ function makeSessionItem(session) {
   time.textContent = relativeTime(session.updated_at);
   open.append(title, time);
   open.addEventListener("click", () => openSession(session.id));
+  open.addEventListener("dblclick", () => startRename(li, session));
+  open.addEventListener("keydown", (e) => {
+    if (e.key === "F2") startRename(li, session);
+  });
+
+  const rename = document.createElement("button");
+  rename.type = "button";
+  rename.className = "ghost session-edit";
+  rename.innerHTML = PENCIL_ICON;
+  rename.setAttribute("aria-label", `Rename “${session.title}”`);
+  rename.title = "Rename";
+  rename.addEventListener("click", () => startRename(li, session));
 
   const remove = document.createElement("button");
   remove.type = "button";
@@ -34,7 +50,7 @@ function makeSessionItem(session) {
   remove.setAttribute("aria-label", `Delete “${session.title}”`);
   remove.addEventListener("click", () => deleteSession(remove, session.id));
 
-  li.append(open, remove);
+  li.append(open, rename, remove);
   return li;
 }
 
@@ -110,6 +126,72 @@ async function openSession(id) {
   markActive();
   closeDrawer();
   inputEl.focus();
+}
+
+// Renaming happens in place: the title becomes a field, Enter or leaving it saves,
+// Escape puts the old title back. The list shows the new title at once and returns to
+// the old one if the server refuses it.
+function startRename(li, session) {
+  if (li.dataset.editing === "1") return;
+  li.dataset.editing = "1";
+
+  const open = li.querySelector(".session-open");
+  const input = makeElement("input", "session-rename");
+  input.value = session.title;
+  input.maxLength = 200;
+  input.setAttribute("aria-label", "Conversation title");
+  input.spellcheck = false;
+  open.hidden = true;
+  li.prepend(input);
+  input.focus();
+  input.select();
+
+  let finished = false;
+  const finish = (save, refocus) => {
+    if (finished) return;
+    finished = true;
+    const title = input.value.split(/\s+/).filter(Boolean).join(" ");
+    input.remove();
+    open.hidden = false;
+    delete li.dataset.editing;
+    if (save && title && title !== session.title) renameSession(session, title, refocus);
+    else if (refocus) open.focus();
+  };
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      finish(true, true);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      finish(false, true);
+    }
+  });
+  input.addEventListener("blur", () => finish(true, false));
+}
+
+async function renameSession(session, title, refocus) {
+  const previous = session.title;
+  session.title = title;
+  renderSessions();
+
+  const result = await api(`/api/sessions/${encodeURIComponent(session.id)}`, {
+    method: "PATCH",
+    body: { title },
+  });
+  if (result.status === 401) {
+    showGate(EXPIRED);
+    return;
+  }
+  if (!result.ok) {
+    session.title = previous;
+    renderSessions();
+    return;
+  }
+  session.title = result.data.title;
+  renderSessions();
+  if (refocus) sessionListEl.querySelector(`[data-id="${session.id}"] .session-open`)?.focus();
 }
 
 // Deleting asks twice: the first click arms the button for a few seconds, the second
