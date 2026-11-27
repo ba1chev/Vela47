@@ -4,7 +4,7 @@
 # the kind of change it carries (see docs/change_management.md):
 #   infrastructure: none | additive | breaking
 #   database:       none | expand | contract
-version: 2.0.0
-infrastructure: breaking
+version: 2.0.1
+infrastructure: none
 database: none
-summary: Replace the NAT instance of dev with one that installs iptables with swap, since 512 MB were not enough for dnf
+summary: Record teardowns of an environment and find the release whose Terraform a teardown runs

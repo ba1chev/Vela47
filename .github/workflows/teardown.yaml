@@ -1,0 +1,126 @@
+# Tears down one AWS environment completely: the server, the database and the network, in the reverse order of a
+# deployment (docs/deployment_order.md). Started by hand only, by the owner of the repository, from main, after typing
+# the name of the environment a second time; staging and prod also wait for the approval of their GitHub environment.
+# It runs the Terraform of the release the environment runs, so it matches the state. The shared roots stay.
+#   gh workflow run teardown.yaml -f environment=dev -f confirm=dev
+name: Teardown
+
+on:
+  # checkov:skip=CKV_GHA_7:The inputs only choose which environment to remove, they build nothing
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to tear down
+        type: choice
+        options: [dev, staging, prod]
+        required: true
+      confirm:
+        description: Type the name of the environment again to confirm
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deployment-${{ inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: eu-central-1
+  ARTIFACTS_BUCKET: vela47-artifacts
+  ENVIRONMENT: ${{ inputs.environment }}
+  NAME: vela47-${{ inputs.environment }}
+  PYTHONUNBUFFERED: "1"
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+
+jobs:
+  teardown:
+    name: Teardown
+    if: github.ref == 'refs/heads/main' && github.actor == github.repository_owner
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Check the confirmation
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          if [ "$CONFIRM" != "$ENVIRONMENT" ]; then
+            echo "::error::'$CONFIRM' is not '$ENVIRONMENT', nothing is torn down."
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15"
+      - run: pip install -r deploy/pipeline/requirements.txt
+      - uses: aws-actions/configure-aws-credentials@45666896f5d8e0f10ae255413f3a4cdd03bdc8f5 # v6.3.1
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+          role-duration-seconds: 7200
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.17.2
+          terraform_wrapper: false
+      - name: Fetch the Terraform of the release the environment runs
+        id: release
+        run: |
+          version="$(python -m deploy.pipeline.commands.resolve_release --environment "$ENVIRONMENT")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          mkdir -p "$RUNNER_TEMP/release"
+          aws s3 cp "s3://$ARTIFACTS_BUCKET/releases/$version/deploy.tar.gz" - | tar -xz -C "$RUNNER_TEMP/release"
+          echo "roots=$RUNNER_TEMP/release/deploy/terraform/environments/$ENVIRONMENT" >> "$GITHUB_OUTPUT"
+          echo "## Teardown of $ENVIRONMENT with the Terraform of $version" >> "$GITHUB_STEP_SUMMARY"
+      - name: Stop the server tasks
+        run: |
+          if [ "$(aws ecs describe-clusters --clusters "$NAME" --query 'clusters[0].status' --output text 2> /dev/null)" = "ACTIVE" ]; then
+            aws ecs update-service --cluster "$NAME" --service "$NAME-app" --desired-count 0 > /dev/null 2>&1 || true
+            for task in $(aws ecs list-tasks --cluster "$NAME" --query 'taskArns' --output text); do
+              aws ecs stop-task --cluster "$NAME" --task "$task" --reason "Teardown" > /dev/null
+            done
+          fi
+      - name: Lift the deletion protections
+        env:
+          ROOTS: ${{ steps.release.outputs.roots }}
+          TF_VAR_release_version: ${{ steps.release.outputs.version }}
+        run: |
+          terraform -chdir="$ROOTS/database" init -input=false -lockfile=readonly > /dev/null
+          if terraform -chdir="$ROOTS/database" state list 2> /dev/null | grep -q aws_db_instance; then
+            terraform -chdir="$ROOTS/database" apply -auto-approve -input=false \
+              -target=module.database.aws_db_instance.this -var deletion_protection=false
+          fi
+          terraform -chdir="$ROOTS/app" init -input=false -lockfile=readonly > /dev/null
+          if terraform -chdir="$ROOTS/app" state list 2> /dev/null | grep -q aws_lb.this; then
+            terraform -chdir="$ROOTS/app" apply -auto-approve -input=false \
+              -target=module.app.aws_lb.this -target=module.app.aws_secretsmanager_secret.app \
+              -var load_balancer_deletion_protection=false -var secret_recovery_window_in_days=0
+          fi
+      - name: Keep only the newest final snapshot of the database
+        run: |
+          if aws rds describe-db-snapshots --db-snapshot-identifier "$NAME-final" > /dev/null 2>&1; then
+            aws rds delete-db-snapshot --db-snapshot-identifier "$NAME-final" > /dev/null
+            aws rds wait db-snapshot-deleted --db-snapshot-identifier "$NAME-final"
+            echo "Deleted the final snapshot of the previous teardown" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Destroy the server
+        env:
+          ROOTS: ${{ steps.release.outputs.roots }}
+          TF_VAR_release_version: ${{ steps.release.outputs.version }}
+        run: deploy/pipeline/teardown_root.sh "$ROOTS/app" "$NAME-sandbox"
+      - name: Destroy the database
+        env:
+          ROOTS: ${{ steps.release.outputs.roots }}
+        run: deploy/pipeline/teardown_root.sh "$ROOTS/database" "$NAME-sandbox"
+      - name: Destroy the network
+        env:
+          ROOTS: ${{ steps.release.outputs.roots }}
+        run: deploy/pipeline/teardown_root.sh "$ROOTS/vpc/eu-central-1" "$NAME-sandbox"
+      - name: Record the teardown
+        run: python -m deploy.pipeline.commands.record_teardown --environment "$ENVIRONMENT"

@@ -20,5 +20,9 @@ class InMemoryS3Client:
     def put_object(self, Bucket, Key, Body, ContentType):
         self.objects[(Bucket, Key)] = Body
 
-    def list_objects_v2(self, Bucket, Prefix):
-        return {"Contents": [{"Key": key} for bucket, key in sorted(self.objects) if bucket == Bucket and key.startswith(Prefix)]}
+    def list_objects_v2(self, Bucket, Prefix, Delimiter = None):
+        keys = [key for bucket, key in sorted(self.objects) if bucket == Bucket and key.startswith(Prefix)]
+        if Delimiter is None:
+            return {"Contents": [{"Key": key} for key in keys]}
+        prefixes = sorted({Prefix + key[len(Prefix):].split(Delimiter)[0] + Delimiter for key in keys if Delimiter in key[len(Prefix):]})
+        return {"CommonPrefixes": [{"Prefix": current} for current in prefixes]}

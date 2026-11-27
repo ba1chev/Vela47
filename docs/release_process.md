@@ -98,6 +98,12 @@ Each environment has `deployments/<environment>/current.yaml` in `vela47-artifac
 - After a deployment finished, redeploy the previous release: `gh workflow run deployment.yaml -f environment=prod -f version=<previous>`, with `previous` read from `current.yaml`. Releases are only additive within one major version (see `change_management.md`), so the previous code runs on the newer schema.
 - A database is never rolled back by the pipeline. See `change_management.md`.
 
+## Teardown
+
+`.github/workflows/teardown.yaml` removes one AWS environment completely, for when it is not needed and should cost nothing: **Actions → Teardown → Run workflow**, pick the environment and type its name again. Only the owner of the repository can start it, only from `main`, and staging and prod also wait for the approval of their GitHub environment. It never runs at the same time as a deployment of the same environment.
+
+It runs the Terraform of the release the environment runs, stops the server tasks, lifts the deletion protection of the database and the load balancer and the recovery window of the application secret, then destroys the server, the database and the network (`deployment_order.md`). In staging and prod the database leaves a final snapshot, `vela47-<environment>-final`; only the newest one is kept. `deployments/<environment>/current.yaml` then names no release and remembers the last one. The next deployment builds the environment from scratch.
+
 ## Hotfix
 
 Branch `hotfix/<name>` from `main`, raise the patch version, merge. The release goes through dev, staging and prod like any other, with both approvals given at once.
