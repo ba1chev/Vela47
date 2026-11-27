@@ -10,11 +10,7 @@ POLL_INTERVAL_SECONDS = 0.05
 KEEPALIVE_SECONDS = 15.0
 KEEPALIVE_FRAME = ": keep-alive\n\n"
 TRACE_TEXT_CHARS = 20_000
-UNSTORED_TRACE_EVENTS = {
-    TraceEventType.ANSWER_CHUNK,
-    TraceEventType.SANDBOX_ACQUIRED,
-    TraceEventType.SANDBOX_RELEASED
-}
+UNSTORED_TRACE_EVENTS = {TraceEventType.ANSWER_CHUNK}
 
 
 def sse_frame(event: str, data: dict[str, Any]) -> str:
@@ -48,6 +44,8 @@ def stored_trace(events: list[TraceEvent]) -> list[dict[str, Any]]:
 def trace_queue(tracing_service: TracingServiceBase) -> asyncio.Queue[TraceEvent]:
     loop = asyncio.get_running_loop()
     queue: asyncio.Queue[TraceEvent] = asyncio.Queue()
+    for current_event in tracing_service.events():
+        queue.put_nowait(current_event)
     tracing_service.subscribe(lambda event: loop.call_soon_threadsafe(queue.put_nowait, event))
     return queue
 
@@ -67,5 +65,11 @@ async def relay_trace(queue: asyncio.Queue[TraceEvent], work: asyncio.Future,
             last_frame_at = loop.time()
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
+    while not queue.empty():
+        yield trace_frame(queue.get_nowait())
+
+
+async def drain_trace(queue: asyncio.Queue[TraceEvent]) -> AsyncIterator[str]:
+    await asyncio.sleep(0)
     while not queue.empty():
         yield trace_frame(queue.get_nowait())
