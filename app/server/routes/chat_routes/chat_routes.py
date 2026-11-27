@@ -25,8 +25,6 @@ chat_router = APIRouter(prefix = "/api/chat")
 
 
 def _title_for(message: str) -> str:
-    """A conversation is named after its first message, flattened onto one line and cut
-    short — enough to recognise it in a list, which is all a title is for."""
     flattened = " ".join(message.split()) or "New chat"
     if len(flattened) <= TITLE_CHARS:
         return flattened
@@ -34,10 +32,6 @@ def _title_for(message: str) -> str:
 
 
 def _searchable_entries(request: Request, owner_id: str) -> list[VectorDbMemoryEntry]:
-    """The documents the deep agent's research steps may search: the caller's own, when
-    its role allows searching them, and none otherwise. Unlike the RAG agent, the deep
-    agent has other work to do without them, so a caller without the permission still
-    gets an agent — just one whose document search finds nothing."""
     try:
         authorize(request, IdentityAccessAction.KNOWLEDGE_SEARCH, format_knowledge_collection_vrn(owner_id))
     except AuthorizationError:

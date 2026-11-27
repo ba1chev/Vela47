@@ -24,13 +24,6 @@ def _describe(request: Request, session: IdentityAccessRoleSession) -> dict[str,
 
 def _open_session(request: Request, response: Response,
     session: IdentityAccessRoleSession) -> dict[str, Any]:
-    """Hands a freshly assumed role session to the browser as a cookie, which is what
-    lets EventSource carry it — EventSource cannot set an Authorization header. HttpOnly
-    keeps page scripts from ever reading the token, and SameSite=Strict keeps other
-    sites from making the browser send it. Secure is always on on AWS, where TLS ends at
-    the load balancer and the request reaching the server is plain HTTP even though the
-    browser's was not; on LOCAL it follows the scheme, staying off on plain-HTTP localhost,
-    where some browsers refuse to store a Secure cookie at all."""
     response.set_cookie(
         SESSION_COOKIE,
         request.app.state.authentication_service.issue_token(session),
