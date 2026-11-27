@@ -8,8 +8,8 @@ from app.intelligence.messages import MessageBase
 from app.intelligence.model import ModelClientBase
 from app.intelligence.tracing import TraceEventType
 from app.intelligence.model import ModelClientOllama
-from app.intelligence.tracing import TracingServiceNull
 from app.intelligence.tracing import TracingServiceBase
+from app.intelligence.tracing import current_tracing_service
 
 
 class ModelFoundation(ModelBase):
@@ -18,7 +18,8 @@ class ModelFoundation(ModelBase):
     invoke() blocks for the full reply with its usage, stream() yields text as it is
     produced.
 
-    Every call is reported to the tracer here, whatever the backend, so a run's token
+    Every call is reported here, to the injected tracer or else to the run using the
+    model (see current_tracing_service), whatever the backend, so a run's token
     accounting comes from one place and reads the same in development and production.
     How messages, tools and an output schema reach a provider is the client's concern
     (see ModelClientOllama and ModelClientBedrock)."""
@@ -27,15 +28,14 @@ class ModelFoundation(ModelBase):
         tracing_service: Optional[TracingServiceBase] = None,
         client: Optional[ModelClientBase] = None) -> None:
         self._config = config
-        self._tracing_service: TracingServiceBase = (
-            tracing_service
-            if tracing_service is not None
-            else TracingServiceNull()
-        )
+        self._tracing_service: Optional[TracingServiceBase] = tracing_service
         self._client: ModelClientBase = client if client is not None else ModelClientOllama()
 
+    def _tracer(self) -> TracingServiceBase:
+        return self._tracing_service if self._tracing_service is not None else current_tracing_service()
+
     def _report(self, started: float, input_tokens: int, output_tokens: int, payload: dict) -> None:
-        self._tracing_service.emit(
+        self._tracer().emit(
             TraceEventType.MODEL_INVOKED,
             self._config.model_name,
             {
