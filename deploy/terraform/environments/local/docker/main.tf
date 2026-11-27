@@ -19,7 +19,10 @@ module "docker_app" {
 
   name              = var.name
   repository_path   = local.repository_path
+  model_client      = var.model_client
   ollama_host       = var.ollama_host
+  aws_profile       = var.aws_profile
+  aws_region        = var.aws_region
   network_subnet    = var.application_network_subnet
   network_gateway   = var.application_network_gateway
   container_address = var.application_container_address
