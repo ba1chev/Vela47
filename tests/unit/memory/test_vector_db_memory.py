@@ -1,5 +1,6 @@
 from app.intelligence.memory import VectorDbMemory
 from app.intelligence.messages import MessageSystem
+from app.intelligence.tracing import TracingService
 from app.intelligence.memory import HybridSearchPolicy
 from app.intelligence.memory import VectorDbMemoryEntry
 from app.intelligence.memory import SemanticSearchPolicy
@@ -48,3 +49,16 @@ class TestVectorDbMemory:
         found = memory.search_entries("deploy", 2, HybridSearchPolicy())
         assert embeddings.calls == [["Instruct: find it\nQuery: deploy"]]
         assert found[0].message.content == "deploy script"
+
+
+class TestVectorDbMemoryTrace:
+    def test_near_duplicates_removed_are_traced_with_what_they_duplicate(self):
+        embeddings = FakeEmbeddings()
+        memory = VectorDbMemory(embeddings)
+        entries = make_entries(embeddings, "backups run nightly", "backups run nightly", "errors are logged")
+        memory.add_entries(entries)
+        tracer = TracingService()
+        with tracer.step("Search", "retrieval"):
+            memory.search_entries("backups", 3, HybridSearchPolicy())
+        (dedup,) = [current.payload for current in tracer.events() if current.label == "Deduplicate"]
+        assert len(dedup["removed"]) == 1 and dedup["removed"][0]["score"] >= 0.95
