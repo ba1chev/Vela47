@@ -5,14 +5,16 @@ from app.server.builders import MODEL_NAMES
 from app.server.builders import RAG_MODEL_NAMES
 from app.server.builders import build_rag_agent
 from app.server.builders import build_rag_indexer
+from app.intelligence.model import ModelClientType
 from app.intelligence.model import ModelClientOllama
+from app.intelligence.model import ModelClientBedrock
 from app.server.builders import EMBEDDING_MODEL_NAMES
-from app.server.config_platform import ConfigPlatform
 from app.server.builders import build_knowledge_memory
 from app.intelligence.tracing import TracingServiceNull
 from app.server.builders import ANSWER_MAX_OUTPUT_TOKENS
 from app.server.builders import EMBEDDING_QUERY_TEMPLATES
 
+CLIENTS = (ModelClientOllama(), ModelClientBedrock("eu-central-1"))
 ENVIRONMENTS = pathlib.Path(__file__).resolve().parents[4] / "deploy" / "terraform" / "environments"
 AWS_ENVIRONMENTS = ("dev", "staging", "prod")
 
@@ -24,37 +26,36 @@ def allowed_models(environment):
 
 
 class TestRagAgentBuilder:
-    def test_every_platform_has_its_models_and_query_template(self):
+    def test_every_backend_has_its_models_and_query_template(self):
         for current in (RAG_MODEL_NAMES, EMBEDDING_MODEL_NAMES, EMBEDDING_QUERY_TEMPLATES):
-            assert set(current) == set(ConfigPlatform)
+            assert set(current) == set(ModelClientType)
         assert all("{query}" in current for current in EMBEDDING_QUERY_TEMPLATES.values())
 
-    def test_both_agents_share_one_model_per_platform(self):
-        for current_platform in ConfigPlatform:
-            assert RAG_MODEL_NAMES[current_platform] == MODEL_NAMES[current_platform]
+    def test_both_agents_share_one_model_per_backend(self):
+        for current_type in ModelClientType:
+            assert RAG_MODEL_NAMES[current_type] == MODEL_NAMES[current_type]
 
     def test_every_aws_environment_may_call_exactly_the_models_its_server_asks_for(self):
-        aws = ConfigPlatform.AWS
+        bedrock = ModelClientType.BEDROCK
         for current_environment in AWS_ENVIRONMENTS:
-            assert allowed_models(current_environment) == {MODEL_NAMES[aws], RAG_MODEL_NAMES[aws], EMBEDDING_MODEL_NAMES[aws]}
+            assert allowed_models(current_environment) == {MODEL_NAMES[bedrock], RAG_MODEL_NAMES[bedrock], EMBEDDING_MODEL_NAMES[bedrock]}
 
-    def test_the_rag_agent_runs_on_the_models_and_the_client_it_is_given(self):
-        client = ModelClientOllama()
-        for current_platform in ConfigPlatform:
-            agent = build_rag_agent(TracingServiceNull(), [], current_platform, client)
-            assert agent._model._config.model_name == RAG_MODEL_NAMES[current_platform] and agent._model._client is client
-            assert agent._vector_db_memory._embeddings.model_name == EMBEDDING_MODEL_NAMES[current_platform]
-            assert agent._vector_db_memory._embeddings._client is client
-            assert agent._vector_db_memory._query_template == EMBEDDING_QUERY_TEMPLATES[current_platform]
+    def test_the_rag_agent_runs_on_the_models_of_the_client_it_is_given(self):
+        for current_client in CLIENTS:
+            current_type = current_client.client_type
+            agent = build_rag_agent(TracingServiceNull(), [], current_client)
+            assert agent._model._config.model_name == RAG_MODEL_NAMES[current_type] and agent._model._client is current_client
+            assert agent._vector_db_memory._embeddings.model_name == EMBEDDING_MODEL_NAMES[current_type]
+            assert agent._vector_db_memory._embeddings._client is current_client
+            assert agent._vector_db_memory._query_template == EMBEDDING_QUERY_TEMPLATES[current_type]
 
     def test_documents_are_searched_with_the_embedding_model_they_were_indexed_with(self):
-        client = ModelClientOllama()
-        for current_platform in ConfigPlatform:
-            memory = build_knowledge_memory(TracingServiceNull(), [], current_platform, client)
-            indexer = build_rag_indexer(current_platform, client)
-            assert memory._embeddings.model_name == indexer._embeddings.model_name == EMBEDDING_MODEL_NAMES[current_platform]
-            assert indexer._embeddings._client is client
+        for current_client in CLIENTS:
+            memory = build_knowledge_memory(TracingServiceNull(), [], current_client)
+            indexer = build_rag_indexer(current_client)
+            assert memory._embeddings.model_name == indexer._embeddings.model_name == EMBEDDING_MODEL_NAMES[current_client.client_type]
+            assert indexer._embeddings._client is current_client
 
     def test_the_answer_has_room_for_a_long_reply(self):
-        agent = build_rag_agent(TracingServiceNull(), [], ConfigPlatform.LOCAL, ModelClientOllama())
+        agent = build_rag_agent(TracingServiceNull(), [], ModelClientOllama())
         assert agent._model._config.max_output_tokens == ANSWER_MAX_OUTPUT_TOKENS
