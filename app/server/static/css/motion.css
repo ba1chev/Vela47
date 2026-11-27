@@ -1,7 +1,7 @@
 /* Loaded last, so it overrides every animation above for viewers who ask for less motion. */
 
 @media (prefers-reduced-motion: reduce) {
-  .chat, .trace, .sessions, .gate-card, .modal-card, .account-menu, .session-item,
+  .chat, .trace, .sessions, .gate-card, .modal-card, .account-menu, .session-item, .session-rename,
   .knowledge-item, .sources, .knowledge-item[data-pending="1"] .knowledge-meta,
   .chat-head::after, .trace-head::after, .sessions-head::after,
   .status[data-state="running"],
@@ -13,4 +13,8 @@
   .thinking i { opacity: .7; }
   .orb span { opacity: .3; }
   .sessions, .trace, .usage-fill { transition: none; }
+  .app, .sessions-rail, .sessions-head h2, #new-chat, .sessions-body, .knowledge {
+    transition: none !important;
+  }
+  .knowledge[data-flash="1"] { animation: none; }
 }
