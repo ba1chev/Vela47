@@ -35,10 +35,11 @@ A release goes dev → staging → prod, the same artifact each time. Each deplo
 
 ## Destroying an environment
 
-The reverse order: `app`, then `database`, then `vpc/eu-central-1`.
+The Teardown workflow does it (`release_process.md`), in the reverse order: `app`, then `database`, then `vpc/eu-central-1`.
 
 - `app` goes first because the ECS agent confirms stopped tasks through the NAT, and the instances need their role until they are gone. That is why the auto scaling group depends on the role's policy attachments.
-- In staging and prod, turn off the deletion protection of the database and the load balancer first, in a `breaking` release. `PlanGuard` refuses to delete a database in the pipeline, so the destroy itself is run by hand.
-- If a destroy hangs on a draining service, free it with `aws ecs deregister-container-instance --force`.
+- The server tasks are stopped first, so the service does not wait for them to drain.
+- In staging and prod the deletion protection of the database and the load balancer is lifted first, with a targeted apply. `PlanGuard` still refuses to delete a database in a deployment; only the Teardown workflow does.
+- Lambda keeps the network interfaces of the sandbox function for up to half an hour after the function is gone, and its security group cannot be deleted before them. The workflow deletes them as soon as AWS releases them.
 
 The `shared` roots stay. The state bucket is protected by `prevent_destroy`.
