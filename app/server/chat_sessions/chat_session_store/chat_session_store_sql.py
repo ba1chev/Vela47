@@ -98,6 +98,15 @@ class ChatSessionStoreSql(ChatSessionStoreBase):
             row.updated_at = datetime.now(timezone.utc)
             return self._to_chat_session(row)
 
+    def rename_session(self, session_id: str, title: str) -> ChatSession:
+        with self._database.transaction() as transaction:
+            row = transaction.get(ChatSessionTable, session_id)
+            if row is None:
+                raise KeyError(f"No chat session with id '{session_id}'.")
+
+            row.title = title
+            return self._to_chat_session(row)
+
     def delete_session(self, session_id: str) -> bool:
         with self._database.transaction() as transaction:
             row = transaction.get(ChatSessionTable, session_id)
