@@ -1,9 +1,12 @@
 import math
 from operator import mul
 
+from app.intelligence.tracing import rounded
 from app.intelligence.model import ModelEmbeddings
+from app.intelligence.tracing import describe_numbers
 from app.intelligence.agents import RagSemanticScoringBase
 from app.intelligence.agents import RagSemanticScoringType
+from app.intelligence.tracing import current_tracing_service
 
 
 class RagSemanticScoringTextTiling(RagSemanticScoringBase):
@@ -34,7 +37,10 @@ class RagSemanticScoringTextTiling(RagSemanticScoringBase):
         return RagSemanticScoringType.TEXT_TILING
 
     def score(self, units: list[str]) -> tuple[list[float], dict[tuple[int, int], float]]:
-        vectors = self._vectors(units)
+        with current_tracing_service().step("Sentence embeddings", "embedding", {"sentences": len(units)}) as span:
+            vectors = self._vectors(units)
+            span["dimensions"] = len(vectors[0]) if vectors else 0
+            span["detail"] = f"{len(vectors)} sentences embedded, {span['dimensions']} dimensions, scaled to unit length"
         lengths = [len(current_unit) for current_unit in units]
         return self._cut_costs(units, vectors), self._extend_costs(lengths, vectors)
 
@@ -48,6 +54,8 @@ class RagSemanticScoringTextTiling(RagSemanticScoringBase):
             similarities[gap] = sum(map(mul, left, right)) / norms if norms else 0.0
 
         costs = [0.0] * count
+        depths = [0.0] * count
+        paragraphs: list[int] = []
         for gap in range(1, count):
             left_peak = right_peak = gap
             while left_peak > 1 and similarities[left_peak - 1] >= similarities[left_peak]:
@@ -58,6 +66,26 @@ class RagSemanticScoringTextTiling(RagSemanticScoringBase):
             paragraph = "\n\n" in units[gap - 1][len(units[gap - 1].rstrip()):]
             costs[gap] = max(0.0, self._cut_weight * (1 - depth) + self._cut_fee
                 - (self._paragraph_discount if paragraph else 0.0))
+            depths[gap] = depth
+            if paragraph:
+                paragraphs.append(gap)
+
+        gaps = similarities[1:]
+        deepest = max(range(1, count), key = depths.__getitem__)
+        current_tracing_service().record("Window similarity", "scoring", {
+            "detail": f"{count - 1} gaps, mean similarity {sum(gaps) / len(gaps):.3f}, "
+                f"deepest dip {depths[deepest]:.3f} before sentence {deepest + 1}",
+            "window_sentences": window,
+            "cut_weight": self._cut_weight,
+            "cut_fee": self._cut_fee,
+            "paragraph_discount": self._paragraph_discount,
+            "similarities": rounded(similarities),
+            "depths": rounded(depths),
+            "cut_costs": rounded(costs),
+            "paragraph_gaps": paragraphs,
+            "similarity": describe_numbers(gaps),
+            "depth": describe_numbers(depths[1:])
+        })
         return costs
 
     def _extend_costs(self, lengths: list[int], vectors: list[list[float]]) -> dict[tuple[int, int], float]:
@@ -79,4 +107,13 @@ class RagSemanticScoringTextTiling(RagSemanticScoringBase):
                 gain = math.sqrt(grown) - math.sqrt(norm_squared)
                 costs[(start, index)] = max(0.0, self._extend_weight * (1 - gain))
                 norm_squared, index = grown, index + 1
+
+        values = list(costs.values())
+        current_tracing_service().record("Extend costs", "scoring", {
+            "detail": f"{len(values)} ways to grow a chunk priced, mean cost {sum(values) / len(values):.3f}"
+                if values else "no chunk can grow",
+            "extend_weight": self._extend_weight,
+            "pairs": len(values),
+            "cost": describe_numbers(values)
+        })
         return costs
