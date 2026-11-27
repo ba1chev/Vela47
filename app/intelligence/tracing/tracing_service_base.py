@@ -2,13 +2,13 @@ import time
 from uuid import uuid4
 from contextvars import ContextVar
 from abc import ABC, abstractmethod
-from contextlib import contextmanager, AbstractContextManager
 from typing import Any, Callable, Iterator, Optional
+from contextlib import contextmanager, AbstractContextManager
 
 from app.intelligence.tracing import TraceEvent
 from app.intelligence.tracing import TraceEventType
 
-CURRENT_SPAN: ContextVar[Optional[tuple[int, str]]] = ContextVar("vela47_current_span", default = None)
+CURRENT_SPAN: ContextVar[Optional[tuple["TracingServiceBase", str]]] = ContextVar("vela47_current_span", default = None)
 
 
 class TracingServiceBase(ABC):
@@ -18,8 +18,8 @@ class TracingServiceBase(ABC):
     shared buffer would interleave unrelated runs into one unreadable stream.
 
     span() opens a span, and every event reported inside it, from any depth of the call
-    stack, gets that span as its parent. That is what lets the trace be a tree without a
-    component knowing who called it. A span the body leaves by an exception finishes with
+    stack, gets that span as its parent, so the trace is a tree without a component
+    knowing who called it; current_tracing_service() finds the tracer the same way. A span the body leaves by an exception finishes with
     status "error" and the exception, and the exception still propagates.
 
     Components depend on this interface rather than a concrete service, which is what
@@ -43,7 +43,7 @@ class TracingServiceBase(ABC):
 
     def current_span_id(self) -> Optional[str]:
         current = CURRENT_SPAN.get()
-        if current is None or current[0] != id(self):
+        if current is None or current[0] is not self:
             return None
         return current[1]
 
@@ -54,7 +54,7 @@ class TracingServiceBase(ABC):
         span_id = uuid4().hex[:16]
         parent_id = self.current_span_id()
         self.emit(started, label, dict(payload or {}), span_id = span_id, parent_id = parent_id)
-        token = CURRENT_SPAN.set((id(self), span_id))
+        token = CURRENT_SPAN.set((self, span_id))
         extra: dict[str, Any] = {}
         start = time.perf_counter()
         try:
