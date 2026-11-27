@@ -22,10 +22,33 @@ variable "published_address" {
   }
 }
 
+variable "model_client" {
+  description = "Backend the models are served by, ollama on the host or bedrock with the models of the AWS environments"
+  type        = string
+  default     = "ollama"
+
+  validation {
+    condition     = contains(["ollama", "bedrock"], var.model_client)
+    error_message = "The model client must be ollama or bedrock."
+  }
+}
+
 variable "ollama_host" {
-  description = "URL of the Ollama server on the host, as the application container reaches it"
+  description = "URL of the Ollama server on the host, as the application container reaches it, used with ollama"
   type        = string
   default     = "http://host.docker.internal:11434"
+}
+
+variable "aws_profile" {
+  description = "Profile in the host's ~/.aws the server calls Bedrock with, used with bedrock"
+  type        = string
+  default     = "default"
+}
+
+variable "aws_region" {
+  description = "Region the server calls Bedrock in, used with bedrock, the eu. inference profiles need an EU region"
+  type        = string
+  default     = "eu-central-1"
 }
 
 variable "admin_username" {
