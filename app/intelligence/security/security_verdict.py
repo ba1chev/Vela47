@@ -24,6 +24,17 @@ class SecurityVerdict(BaseModel):
             "short excerpt. Empty when nothing matched."
     )
 
+    signatures: list[str] = Field(
+        default_factory = list,
+        description = "Name of every signature the text was checked against, matched or not, so a "
+            "clean verdict still says what it is clean of."
+    )
+    characters: int = Field(
+        default = 0,
+        ge = 0,
+        description = "Length of the inspected text in characters, before any normalisation."
+    )
+
     @property
     def flagged(self) -> bool:
         return bool(self.matches)
