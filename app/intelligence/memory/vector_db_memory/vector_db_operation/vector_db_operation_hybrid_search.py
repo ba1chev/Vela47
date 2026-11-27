@@ -1,8 +1,10 @@
+from app.intelligence.memory import describe_entry
 from app.intelligence.memory import VectorDbOperation
 from app.intelligence.memory import VectorDbMemoryEntry
 from app.intelligence.memory import VectorDbOperationType
-from app.intelligence.memory import reciprocal_rank_fusion
+from app.intelligence.memory import reciprocal_rank_scores
 from app.intelligence.memory import VectorDbOperationSearch
+from app.intelligence.tracing import current_tracing_service
 from app.intelligence.memory import VectorDbOperationKeywordSearch
 
 
@@ -34,4 +36,16 @@ class VectorDbOperationHybridSearch(VectorDbOperation):
     def apply(self, entries: list[VectorDbMemoryEntry]) -> list[VectorDbMemoryEntry]:
         dense = VectorDbOperationSearch(query_vector = self._query_vector, top_k = len(entries)).apply(entries)
         lexical = VectorDbOperationKeywordSearch(query = self._query, top_k = len(entries)).apply(entries)
-        return reciprocal_rank_fusion([dense, lexical], self._rank_constant)[:self._top_k]
+        fused = reciprocal_rank_scores([dense, lexical], self._rank_constant)[:self._top_k]
+        dense_ranks = {id(current): rank for rank, current in enumerate(dense, start = 1)}
+        lexical_ranks = {id(current): rank for rank, current in enumerate(lexical, start = 1)}
+        current_tracing_service().record("Fusion", "retrieval", {
+            "detail": f"top {len(fused)} by reciprocal rank fusion (k = {self._rank_constant})",
+            "rank_constant": self._rank_constant,
+            "top_k": self._top_k,
+            "ranking": [
+                describe_entry(current, score, dense_rank = dense_ranks.get(id(current)), keyword_rank = lexical_ranks.get(id(current)))
+                for current, score in fused
+            ]
+        })
+        return [current for current, _ in fused]
