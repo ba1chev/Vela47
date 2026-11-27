@@ -138,6 +138,14 @@ class ModelClientBedrock(ModelClientBase):
             request["toolConfig"] = self._tool_config(tools)
         return request
 
+    def _provider(self, stop_reason: Optional[str], usage: dict, metrics: dict) -> dict[str, Any]:
+        return {
+            "stop_reason": stop_reason,
+            "latency_ms": metrics.get("latencyMs"),
+            "cache_read_tokens": usage.get("cacheReadInputTokens"),
+            "cache_write_tokens": usage.get("cacheWriteInputTokens")
+        }
+
     def _usage(self, usage: dict) -> MessageUsageMetadata:
         input_tokens, output_tokens = usage.get("inputTokens", 0), usage.get("outputTokens", 0)
         return MessageUsageMetadata(
@@ -185,17 +193,28 @@ class ModelClientBedrock(ModelClientBase):
                     id = block["toolUse"]["toolUseId"])
                 for block in blocks if "toolUse" in block
             ],
-            usage_metadata = self._usage(response.get("usage", {}))
+            usage_metadata = self._usage(response.get("usage", {})),
+            response_metadata = {"provider": self._provider(
+                response.get("stopReason"), response.get("usage", {}), response.get("metrics", {})
+            )}
         )
 
     def stream(self, config: ModelConfig, messages: list[MessageBase]) -> Iterator[MessageAI]:
         usage: dict = {}
+        metrics: dict = {}
+        stop_reason: Optional[str] = None
         for event in self._send(self._runtime.converse_stream, self._request(config, messages))["stream"]:
             text = event.get("contentBlockDelta", {}).get("delta", {}).get("text")
             if text:
                 yield MessageAI(content = text)
             usage = event.get("metadata", {}).get("usage", usage)
-        yield MessageAI(content = "", usage_metadata = self._usage(usage))
+            metrics = event.get("metadata", {}).get("metrics", metrics)
+            stop_reason = event.get("messageStop", {}).get("stopReason", stop_reason)
+        yield MessageAI(
+            content = "",
+            usage_metadata = self._usage(usage),
+            response_metadata = {"provider": self._provider(stop_reason, usage, metrics)}
+        )
 
     def _embed_one(self, model_name: str, text: str) -> tuple[list[float], int]:
         response = self._runtime.invoke_model(
