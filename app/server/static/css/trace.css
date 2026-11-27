@@ -163,6 +163,18 @@ button.ev-head:focus-visible { outline: 2px solid var(--accent); outline-offset:
 .ev[data-kind="error"] > .ev-head .dot { background: var(--err); }
 .ev[data-kind="security"] > .ev-head .dot { background: var(--warn); }
 .ev[data-kind="check"] > .ev-head .dot { background: var(--ok); opacity: .7; }
+
+/* Steps are coloured by the family of work they belong to: the network, reading and
+   limits, cutting the text, describing the chunks. */
+.ev[data-category="web"] > .ev-head .dot,
+.ev[data-category="http"] > .ev-head .dot,
+.ev[data-category="guard"] > .ev-head .dot { background: var(--accent-3); }
+.ev[data-category="chunker"] > .ev-head .dot,
+.ev[data-category="scoring"] > .ev-head .dot,
+.ev[data-category="search"] > .ev-head .dot,
+.ev[data-category="embedding"] > .ev-head .dot { background: var(--accent-2); }
+.ev[data-category="metadata"] > .ev-head .dot { background: var(--agent-test); }
+.ev[data-kind="error"] > .ev-head .dot { background: var(--err); }
 .ev[data-kind="check"] > .ev-head .name { color: var(--muted); }
 
 .ev[data-live="1"] > .ev-head .dot {
