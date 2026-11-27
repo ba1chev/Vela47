@@ -107,10 +107,6 @@ class SecurityPrompt(SecurityBase):
             )
         ).strip()
 
-    def _readable(self, text: str) -> str:
-        revealed = self.TAG_CHARACTERS.sub(lambda current: self._decoded(current.group()), text)
-        return unicodedata.normalize("NFKC", self.INVISIBLE_CHARACTERS.sub("", revealed))
-
     def _excerpt(self, text: str) -> str:
         flattened = " ".join(text.split())
         if len(flattened) <= self.EXCERPT_CHARS:
@@ -123,9 +119,19 @@ class SecurityPrompt(SecurityBase):
         if hidden:
             matches["hidden_text"] = self._excerpt(hidden)
 
-        readable = self._readable(text)
+        revealed = self.TAG_CHARACTERS.sub(lambda current: self._decoded(current.group()), text)
+        visible = self.INVISIBLE_CHARACTERS.sub("", revealed)
+        readable = unicodedata.normalize("NFKC", visible)
         for current_name, current_signature in self.signatures.items():
             found = current_signature.search(readable)
             if found is not None:
                 matches[current_name] = self._excerpt(found.group())
-        return SecurityPromptVerdict(prompt_type = self.prompt_type, matches = matches)
+        return SecurityPromptVerdict(
+            prompt_type = self.prompt_type,
+            matches = matches,
+            signatures = ["hidden_text", *self.signatures],
+            characters = len(text),
+            invisible_characters = len(revealed) - len(visible),
+            hidden_characters = sum(len(current.group()) for current in self.TAG_CHARACTERS.finditer(text)),
+            normalized = readable != visible
+        )
