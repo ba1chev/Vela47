@@ -3,9 +3,14 @@
 from app.server.knowledge.knowledge_document import KnowledgeDocument
 from app.server.knowledge.knowledge_store.knowledge_store_base import KnowledgeStoreBase
 from app.server.knowledge.knowledge_store.knowledge_store_sql import KnowledgeStoreSql
+from app.server.knowledge.knowledge_ingestion_error import KnowledgeIngestionError
+from app.server.knowledge.knowledge_ingestion import READABLE_FORMATS, KnowledgeIngestion
 
 __all__ = [
     "KnowledgeDocument",
     "KnowledgeStoreBase",
-    "KnowledgeStoreSql"
+    "KnowledgeStoreSql",
+    "KnowledgeIngestionError",
+    "READABLE_FORMATS",
+    "KnowledgeIngestion"
 ]
