@@ -1,5 +1,5 @@
-from typing import Optional
-from sqlalchemy import delete, func, select
+from typing import Any, Optional
+from sqlalchemy import delete, func, select, update
 
 from db import DatabaseBase
 from db import KnowledgeChunkTable
@@ -96,6 +96,18 @@ class KnowledgeStoreSql(KnowledgeStoreBase):
         with self._database.transaction() as transaction:
             row = transaction.get(KnowledgeDocumentTable, document_id)
             return self._to_document(row) if row is not None else None
+
+    def set_trace(self, document_id: str, trace: list[dict[str, Any]]) -> None:
+        with self._database.transaction() as transaction:
+            transaction.execute(
+                update(KnowledgeDocumentTable).where(KnowledgeDocumentTable.id == document_id).values(trace = trace)
+            )
+
+    def get_trace(self, document_id: str) -> Optional[list[dict[str, Any]]]:
+        with self._database.transaction() as transaction:
+            return transaction.scalar(
+                select(KnowledgeDocumentTable.trace).where(KnowledgeDocumentTable.id == document_id)
+            )
 
     def delete_document(self, document_id: str) -> bool:
         with self._database.transaction() as transaction:
