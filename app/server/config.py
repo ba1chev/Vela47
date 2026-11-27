@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, SecretStr, model_validator
 from db import DatabaseConfig
 from db import DatabaseCredentials
 from app.server.config_secrets import read_secret
+from app.intelligence.model import ModelClientType
 from app.server.config_platform import ConfigPlatform
 from app.server.config_environment import ConfigEnvironment
 
@@ -27,8 +28,8 @@ class Config(BaseModel):
     the token secret, the first admin and the search key are read once from an
     application secret, and no database password is held here at all, since the database
     reads its RDS-managed secret for every new connection. LOCAL has a default for every
-    field and runs on SQLite unless a database host is set. AWS requires what it cannot
-    run safely without."""
+    field, runs on SQLite unless a database host is set and on Ollama unless Bedrock is
+    chosen. AWS requires what it cannot run safely without."""
 
     model_config = {"frozen": True}
 
@@ -55,10 +56,16 @@ class Config(BaseModel):
             "local PostgreSQL — VELA47_DATABASE_USERNAME and VELA47_DATABASE_PASSWORD. Its "
             "password never rotates, so it is held here; AWS never holds one."
     )
+    model_client_type: Optional[ModelClientType] = Field(
+        default = None,
+        description = "LOCAL only, optional. Backend the models are served by — VELA47_MODEL_CLIENT, "
+            "'ollama' or 'bedrock'. Unset, the platform's own: Ollama on LOCAL, Bedrock on AWS. "
+            "Bedrock on LOCAL runs the models of AWS with the AWS credentials of the machine."
+    )
     aws_region: Optional[str] = Field(
         default = None,
-        description = "AWS only, required. Region of the secrets — VELA47_AWS_REGION, falling back "
-            "to AWS_REGION and AWS_DEFAULT_REGION."
+        description = "Required on AWS and for Bedrock on LOCAL. Region of the secrets and the "
+            "models — VELA47_AWS_REGION, falling back to AWS_REGION and AWS_DEFAULT_REGION."
     )
     knowledge_max_file_bytes: int = Field(
         default = 512 * 1024,
@@ -121,6 +128,8 @@ class Config(BaseModel):
             raise ValueError(
                 "LOCAL with a database host needs VELA47_DATABASE_USERNAME and VELA47_DATABASE_PASSWORD."
             )
+        if self.model_client_type is ModelClientType.BEDROCK and self.aws_region is None:
+            raise ValueError("LOCAL on Bedrock needs a region (VELA47_AWS_REGION) to call the models in.")
         return self
 
     @model_validator(mode = "after")
@@ -172,6 +181,7 @@ class Config(BaseModel):
                 token_secret = environ.get("VELA47_TOKEN_SECRET") or None,
                 admin_username = environ.get("VELA47_ADMIN_USERNAME") or None,
                 admin_password = environ.get("VELA47_ADMIN_PASSWORD") or None,
+                model_client_type = environ.get("VELA47_MODEL_CLIENT") or None,
                 database_credentials = (
                     DatabaseCredentials(username = database_username, password = database_password)
                     if database_username and database_password
