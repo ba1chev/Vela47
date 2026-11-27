@@ -17,7 +17,7 @@ from app.intelligence.tracing import TracingServiceBase
 POLL_INTERVAL_SECONDS = 0.05
 KEEPALIVE_SECONDS = 15.0
 KEEPALIVE_FRAME = ": keep-alive\n\n"
-TRACE_TEXT_CHARS = 300
+TRACE_TEXT_CHARS = 20_000
 UNSTORED_TRACE_EVENTS = {
     TraceEventType.ANSWER_CHUNK,
     TraceEventType.SANDBOX_ACQUIRED,
