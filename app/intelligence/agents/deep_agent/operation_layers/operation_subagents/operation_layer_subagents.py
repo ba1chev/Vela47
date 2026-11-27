@@ -70,15 +70,25 @@ class OperationSubagentsLayer(OperationLayerBase):
         self._tracing_service.emit(
             TraceEventType.SANDBOX_RELEASED,
             f"slot {slot.id}",
-            {"slot": slot.id, "available": self._sandbox_pool.available}
+            {
+                "slot": slot.id,
+                "reference": slot.reference,
+                "available": self._sandbox_pool.available,
+                "detail": f"{slot.reference or 'slot ' + str(slot.id)} back in the pool, {self._sandbox_pool.available} free"
+            }
         )
 
     def _acquire(self, authors: dict[OperationSubagentType, tuple[OperationSubagent, SandboxSlot]]) -> SandboxSlot:
         try:
             return self._sandbox_pool.acquire()
-        except RuntimeError:
+        except RuntimeError as error:
             if not authors:
                 raise
+            self._tracing_service.record("Pool exhausted", "sandbox", {
+                "detail": f"no free slot, so {len(authors)} kept author(s) give theirs back",
+                "error": str(error),
+                "authors": [current_type.name for current_type in authors]
+            })
         for _, current_slot in authors.values():
             self._release(current_slot)
         authors.clear()
@@ -147,6 +157,11 @@ class OperationSubagentsLayer(OperationLayerBase):
         if task.subagent_type in authors:
             self._release(authors[task.subagent_type][1])
         authors[task.subagent_type] = (subagent, slot)
+        self._tracing_service.record("Kept as author", "sandbox", {
+            "detail": f"{task.subagent_type.name} keeps {slot.reference or 'slot ' + str(slot.id)} so a later step can message it",
+            "subagent": task.subagent_type.name,
+            "slot": slot.id
+        })
         return True
 
     def _run_task(self, task: OperationTask, run_id: str,
@@ -155,7 +170,14 @@ class OperationSubagentsLayer(OperationLayerBase):
         self._tracing_service.emit(
             TraceEventType.SANDBOX_ACQUIRED,
             f"slot {slot.id}",
-            {"slot": slot.id, "available": self._sandbox_pool.available, "task_id": task.id}
+            {
+                "slot": slot.id,
+                "reference": slot.reference,
+                "pool": type(self._sandbox_pool).__name__,
+                "available": self._sandbox_pool.available,
+                "task_id": task.id,
+                "detail": f"{slot.reference or 'slot ' + str(slot.id)} leased for {task.subagent_type.name}, {self._sandbox_pool.available} free"
+            }
         )
         kept = False
         try:
@@ -168,7 +190,21 @@ class OperationSubagentsLayer(OperationLayerBase):
                 interaction: Optional[A2AInteractionBase] = None
                 try:
                     sandbox_env = self._sandbox_pool.env_for(slot, run_id)
+                    self._tracing_service.record("Workspace", "sandbox", {
+                        "detail": f"{type(sandbox_env).__name__} {sandbox_env.identifier}, {len(sandbox_env.list_files())} file(s) already there",
+                        "environment": type(sandbox_env).__name__,
+                        "identifier": sandbox_env.identifier,
+                        "run_id": run_id,
+                        "files": sandbox_env.list_files()
+                    })
                     interaction, peer_tool = self._peer_of(task, slot, authors)
+                    if peer_tool is not None:
+                        self._tracing_service.record("Peer", "a2a", {
+                            "detail": f"can message the {peer_tool.peer_name} worker up to {peer_tool.max_messages} time(s) over {interaction.interaction_type.value}",
+                            "peer": peer_tool.peer_name,
+                            "interaction": interaction.interaction_type.value,
+                            "max_messages": peer_tool.max_messages
+                        })
                     subagent = self._subagent_factory.create(task.subagent_type, sandbox_env, peer_tool = peer_tool)
                     if interaction is not None:
                         interaction.append_right(subagent)
