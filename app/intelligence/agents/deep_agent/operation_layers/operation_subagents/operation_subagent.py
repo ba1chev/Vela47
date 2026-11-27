@@ -69,14 +69,29 @@ class OperationSubagent(AgentBase):
             current_tool.observe(message)
 
     def execute(self, human_message: MessageHuman) -> MessageAI:
+        self._tracing_service.record("Setup", "subagent", {
+            "detail": f"{len(self._tool_registry.all())} tools, at most {self._max_iterations} turns",
+            "tools": [current_tool.name for current_tool in self._tool_registry.all()],
+            "probes": [type(current_probe).__name__ for current_probe in self._probes],
+            "max_iterations": self._max_iterations,
+            "system_prompt": [current.content for current in self._prompt_manager.build_system_messages()],
+            "task": human_message.content
+        })
         for current_probe in self._probes:
-            current_probe.before()
+            with self._tracing_service.step(f"{self._probe_name(current_probe)} probe · before", "probe"):
+                current_probe.before()
         response = self._react(human_message)
         messages = self._short_term_memory.get_all()
-        self._evidence = [
-            current_fact for current_probe in self._probes for current_fact in current_probe.after(messages)
-        ]
+        self._evidence = []
+        for current_probe in self._probes:
+            with self._tracing_service.step(f"{self._probe_name(current_probe)} probe · after", "probe") as span:
+                facts = current_probe.after(messages)
+                span.update({"facts": facts, "detail": " ".join(facts)})
+            self._evidence.extend(facts)
         return response
+
+    def _probe_name(self, probe: OperationSubagentProbeBase) -> str:
+        return type(probe).__name__.removeprefix("OperationSubagentProbe")
 
     def _react(self, human_message: MessageHuman) -> MessageAI:
         self._append_human(human_message)
@@ -84,36 +99,56 @@ class OperationSubagent(AgentBase):
         used_tools = False
         reminded = False
 
-        for _ in range(self._max_iterations):
-            self._context_window_middleware.process(self._context_window)
-            response = self._model.invoke(
-                self._compose_messages(),
-                tools = self._tool_registry.schemas()
-            )
+        for iteration in range(self._max_iterations):
+            with self._tracing_service.step(f"Turn {iteration + 1}", "turn", {"iteration": iteration + 1, "max_iterations": self._max_iterations}) as span:
+                self._window()
+                response = self._model.invoke(
+                    self._compose_messages(),
+                    tools = self._tool_registry.schemas()
+                )
+                self._append_ai(response)
+                if not response.tool_calls:
+                    if used_tools or reminded:
+                        span["detail"] = "answered without a tool call, which ends the step"
+                        return self._report(response)
+                    reminded = True
+                    self._append_human(MessageHuman(content = SUBAGENT_ACT_PROMPT))
+                    span["detail"] = "answered before using any tool, so it was told to act"
+                    self._tracing_service.record("Reminded to act", "turn", {"prompt": SUBAGENT_ACT_PROMPT})
+                    continue
+                used_tools = True
+                span["detail"] = "called " + ", ".join(current_call.name for current_call in response.tool_calls)
+                for current_call in response.tool_calls:
+                    self._append_tool(self._tool_executor.execute(current_call))
+
+        with self._tracing_service.step("Out of turns", "turn", {"max_iterations": self._max_iterations}) as span:
+            self._append_human(MessageHuman(content = SUBAGENT_REPORT_PROMPT))
+            self._window()
+            response = self._model.invoke(self._compose_messages())
             self._append_ai(response)
-
-            if not response.tool_calls:
-                if used_tools or reminded:
-                    return self._report(response)
-                reminded = True
-                self._append_human(MessageHuman(content = SUBAGENT_ACT_PROMPT))
-                continue
-
-            used_tools = True
-            for current_call in response.tool_calls:
-                self._append_tool(self._tool_executor.execute(current_call))
-
-        self._append_human(MessageHuman(content = SUBAGENT_REPORT_PROMPT))
-        self._context_window_middleware.process(self._context_window)
-        response = self._model.invoke(self._compose_messages())
-        self._append_ai(response)
+            span["detail"] = f"all {self._max_iterations} turns used, asked for its report without tools"
         return self._report(response)
+
+    def _window(self) -> None:
+        before = len(self._short_term_memory.get_all())
+        self._context_window_middleware.process(self._context_window)
+        self._tracing_service.record("Context window", "memory", {
+            "detail": f"{len(self._context_window.build())} of {before} messages in the window",
+            "middleware": type(self._context_window_middleware).__name__,
+            "remembered": before,
+            "window": len(self._context_window.build())
+        })
 
     def _report(self, response: MessageAI) -> MessageAI:
         content = response.content if isinstance(response.content, str) else str(response.content)
         cleaned = self.TOOL_CALL_TEXT.sub("", content).strip()
         if cleaned == content.strip():
             return response
+        self._tracing_service.record("Report cleaned", "turn", {
+            "detail": "tool call text written as prose was removed from the report",
+            "original": content,
+            "cleaned": cleaned
+        })
         if cleaned:
             return MessageAI(content = cleaned)
 
