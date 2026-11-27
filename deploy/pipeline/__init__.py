@@ -5,6 +5,7 @@ from deploy.pipeline.database_change import DatabaseChange
 from deploy.pipeline.release_manifest import RELEASE_MANIFEST_PATH, ReleaseManifest
 from deploy.pipeline.release_rules import ReleaseRules
 from deploy.pipeline.release_artifact import ReleaseArtifact
+from deploy.pipeline.release_catalog import RELEASES_PREFIX, ReleaseCatalog
 from deploy.pipeline.plan_guard import PlanGuard
 from deploy.pipeline.smoke_test import SmokeTest, fetch_over_http
 from deploy.pipeline.ecs_rollout import EcsRollout
@@ -17,6 +18,8 @@ __all__ = [
     "ReleaseManifest",
     "ReleaseRules",
     "ReleaseArtifact",
+    "RELEASES_PREFIX",
+    "ReleaseCatalog",
     "PlanGuard",
     "SmokeTest",
     "fetch_over_http",
