@@ -26,7 +26,7 @@ class LoaderDocx(LoaderBase):
     def loader_type(self) -> LoaderType:
         return LoaderType.DOCX
 
-    def _check_archive(self, data: bytes) -> None:
+    def _check_archive(self, data: bytes) -> int:
         try:
             with zipfile.ZipFile(io.BytesIO(data)) as archive:
                 inflated = sum(current_entry.file_size for current_entry in archive.infolist())
@@ -34,6 +34,7 @@ class LoaderDocx(LoaderBase):
             raise ValueError("The file is not a Word document (.docx).") from None
         if inflated > self.MAX_UNCOMPRESSED_BYTES:
             raise ValueError("The Word document expands to more than its size allows and was refused.")
+        return inflated
 
     def _paragraph(self, paragraph: Paragraph) -> str:
         text = paragraph.text.strip()
@@ -63,22 +64,30 @@ class LoaderDocx(LoaderBase):
         return "\n".join(rows)
 
     def load(self, data: bytes, encoding: Optional[str] = None) -> LoaderDocument:
-        self._check_archive(data)
+        inflated = self._check_archive(data)
         try:
             document = Document(io.BytesIO(data))
         except Exception as error:
             raise ValueError(f"The Word document could not be opened: {error}") from None
 
+        contents = list(document.iter_inner_content())
         blocks = [
             self._paragraph(current_block)
             if isinstance(current_block, Paragraph)
             else self._table(current_block)
-            for current_block in document.iter_inner_content()
+            for current_block in contents
         ]
         title = (document.core_properties.title or "").strip()
 
         return LoaderDocument(
             text = self._tidy("\n\n".join(current_block for current_block in blocks if current_block)),
             title = title or None,
-            loader_type = self.loader_type
+            loader_type = self.loader_type,
+            details = {
+                "inflated_bytes": inflated,
+                "paragraphs": sum(isinstance(current, Paragraph) for current in contents),
+                "tables": sum(not isinstance(current, Paragraph) for current in contents),
+                "headings": sum(current.startswith("#") for current in blocks),
+                "list_items": sum(current.startswith("- ") for current in blocks)
+            }
         )
