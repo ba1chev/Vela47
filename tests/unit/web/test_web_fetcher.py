@@ -4,6 +4,8 @@ import pytest
 from app.intelligence.web import WebFetcher
 from app.intelligence.web import WebAccessError
 from app.intelligence.web import WebAddressGuard
+from app.intelligence.tracing import TraceEventType
+from app.intelligence.tracing import TracingService
 from tests.fixtures.web.fake_resolver import FakeResolver
 from tests.fixtures.web.fake_web_server import FakeWebServer
 
@@ -106,3 +108,22 @@ class TestWebFetcher:
         with pytest.raises(WebAccessError):
             fetcher.fetch("http://localhost:8000/admin")
         assert server.requests == []
+
+
+class TestWebFetcherTrace:
+    def test_every_hop_is_a_step_inside_the_fetch(self):
+        fetcher, _, _ = make_fetcher({
+            "https://example.org/old": FakeWebServer.redirect("https://docs.example.org/new"),
+            "https://docs.example.org/new": FakeWebServer.page("moved")
+        })
+        tracer = TracingService()
+        with tracer.step("Import", "ingest"):
+            fetcher.fetch("https://example.org/old")
+        finished = [current for current in tracer.events() if current.type is TraceEventType.STEP_FINISHED]
+        assert [current.label for current in finished] == [
+            "Address check", "GET https://example.org/old", "Address check", "GET https://docs.example.org/new", "Fetch", "Import"
+        ]
+        hops = {current.label: current for current in finished}
+        assert hops["GET https://example.org/old"].payload["status_code"] == 302
+        assert hops["Fetch"].payload["final_url"] == "https://docs.example.org/new" and hops["Fetch"].payload["bytes"] == 5
+        assert hops["GET https://docs.example.org/new"].parent_id == hops["Fetch"].span_id
