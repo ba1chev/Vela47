@@ -1,9 +1,11 @@
 from datetime import datetime
+from typing import Any, Optional
 from sqlalchemy import Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from db import TableBase
 from db import UtcDateTime
+from db import JSON_DOCUMENT
 
 
 class KnowledgeDocumentTable(TableBase):
@@ -42,4 +44,11 @@ class KnowledgeDocumentTable(TableBase):
     created_at: Mapped[datetime] = mapped_column(
         UtcDateTime(),
         comment = "When the document was uploaded, in UTC."
+    )
+    trace: Mapped[Optional[list[dict[str, Any]]]] = mapped_column(
+        JSON_DOCUMENT,
+        nullable = True,
+        deferred = True,
+        comment = "The trace of the upload that indexed the document, as a JSON list of events. "
+            "Loaded only when asked for, so listing documents never reads it."
     )
