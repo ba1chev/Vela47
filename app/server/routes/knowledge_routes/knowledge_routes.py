@@ -55,9 +55,8 @@ def _added(request: Request, owner_id: str, document: KnowledgeDocument,
     return {"document": _describe(document), "usage": _usage(request, owner_id)}
 
 
-async def _stream_ingestion(request: Request, owner_id: str,
+async def _stream_ingestion(request: Request, owner_id: str, tracing_service: TracingServiceBase,
     ingest: Callable[[KnowledgeIngestion], KnowledgeDocument]) -> AsyncIterator[str]:
-    tracing_service = TracingService()
     queue = trace_queue(tracing_service)
     work = asyncio.create_task(asyncio.to_thread(ingest, _ingestion(request, tracing_service)))
 
@@ -75,17 +74,25 @@ async def _stream_ingestion(request: Request, owner_id: str,
         yield sse_frame("error", {"status": 500, "detail": f"{type(error).__name__}: {error}"})
 
 
-def _add(request: Request, owner_id: str, stream: bool,
+def _authorized(request: Request) -> tuple[str, TracingServiceBase]:
+    owner = caller(request)
+    tracing_service = TracingService()
+    with tracing_service.step("Request", "server") as span:
+        authorize(request, IdentityAccessAction.KNOWLEDGE_UPLOAD, format_knowledge_collection_vrn(owner.entity_id))
+        span["detail"] = f"{owner.role_type.value} {owner.entity_type.value} adding a document"
+    return owner.entity_id, tracing_service
+
+
+def _add(request: Request, owner_id: str, tracing_service: TracingServiceBase, stream: bool,
     ingest: Callable[[KnowledgeIngestion], KnowledgeDocument]) -> Any:
     if stream:
         return StreamingResponse(
-            _stream_ingestion(request, owner_id, ingest),
+            _stream_ingestion(request, owner_id, tracing_service, ingest),
             status_code = 201,
             media_type = "text/event-stream",
             headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
         )
 
-    tracing_service = TracingService()
     try:
         document = ingest(_ingestion(request, tracing_service))
     except KnowledgeIngestionError as error:
@@ -110,17 +117,15 @@ def list_knowledge(request: Request) -> dict[str, Any]:
 @knowledge_router.post("", status_code = 201)
 def upload_knowledge(body: UploadKnowledgeRequest, request: Request,
     stream: bool = Query(default = False)) -> Any:
-    owner = caller(request)
-    authorize(request, IdentityAccessAction.KNOWLEDGE_UPLOAD, format_knowledge_collection_vrn(owner.entity_id))
-    return _add(request, owner.entity_id, stream, lambda ingestion: ingestion.upload(owner.entity_id, body))
+    owner_id, tracing_service = _authorized(request)
+    return _add(request, owner_id, tracing_service, stream, lambda ingestion: ingestion.upload(owner_id, body))
 
 
 @knowledge_router.post("/url", status_code = 201)
 def import_knowledge_url(body: ImportKnowledgeUrlRequest, request: Request,
     stream: bool = Query(default = False)) -> Any:
-    owner = caller(request)
-    authorize(request, IdentityAccessAction.KNOWLEDGE_UPLOAD, format_knowledge_collection_vrn(owner.entity_id))
-    return _add(request, owner.entity_id, stream, lambda ingestion: ingestion.import_url(owner.entity_id, body))
+    owner_id, tracing_service = _authorized(request)
+    return _add(request, owner_id, tracing_service, stream, lambda ingestion: ingestion.import_url(owner_id, body))
 
 
 @knowledge_router.get("/{document_id}/trace")
