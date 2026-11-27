@@ -248,7 +248,10 @@ class TestServerKnowledgeTrace:
         parsed = frames(response)
         assert response.headers["content-type"].startswith("text/event-stream")
         traces = [data for event, data in parsed if event == "trace"]
-        assert traces[0]["type"] == "pipeline_started" and traces[0]["label"] == "Upload · guide.md"
+        (pipeline,) = [current for current in traces if current["type"] == "pipeline_started"]
+        assert pipeline["label"] == "Upload · guide.md"
+        (decision,) = [current for current in traces if current["payload"].get("category") == "auth"]
+        assert decision["label"] == "knowledge:Upload · allow" and decision["payload"]["role"] == "user"
         assert [current["label"] for current in traces if current["type"] == "layer_finished"] == [
             "Receive", "Extraction", "Validation", "Chunking", "Embedding", "Metadata", "Security", "Storage"
         ]
@@ -269,7 +272,8 @@ class TestServerKnowledgeTrace:
         document = upload(client).json()["document"]
         body = client.get(f"/api/knowledge/{document['id']}/trace").json()
         assert body["document"]["id"] == document["id"]
-        assert body["trace"][0]["label"] == "Upload · guide.md" and body["trace"][-1]["type"] == "pipeline_finished"
+        assert body["trace"][0]["label"] == "Request" and body["trace"][-1]["type"] == "pipeline_finished"
+        assert any(current["label"] == "Upload · guide.md" for current in body["trace"])
         assert any(current["label"] == "Poisoning check · guide.md, part 1" for current in body["trace"])
 
     def test_someone_elses_trace_is_403_and_an_unknown_one_404(self):
