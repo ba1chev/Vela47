@@ -13,7 +13,9 @@ class ChatSessionStoreBase(ABC):
     append_messages() exists instead of a read followed by a write of the whole session
     because two turns appended at the same moment must both survive. Implementations
     have to make it atomic, and it raises KeyError for a conversation that does not exist
-    rather than creating one implicitly."""
+    rather than creating one implicitly. rename_session() raises KeyError the same way, and
+    leaves updated_at alone: a new title is not a new turn, so it must not move the
+    conversation to the top of the list."""
 
     @abstractmethod
     def create_session(self, chat_session: ChatSession) -> None:
@@ -29,6 +31,10 @@ class ChatSessionStoreBase(ABC):
 
     @abstractmethod
     def append_messages(self, session_id: str, messages: list[MessageBase]) -> ChatSession:
+        raise NotImplementedError("Must be implemented")
+
+    @abstractmethod
+    def rename_session(self, session_id: str, title: str) -> ChatSession:
         raise NotImplementedError("Must be implemented")
 
     @abstractmethod
