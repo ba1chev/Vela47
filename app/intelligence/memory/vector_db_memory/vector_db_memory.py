@@ -7,6 +7,7 @@ from app.intelligence.memory import VectorDbMemoryEntry
 from app.intelligence.messages import MessageFactoryBase
 from app.intelligence.memory import VectorDbOperationPolicy
 from app.intelligence.memory import VectorDbOperationManager
+from app.intelligence.tracing import current_tracing_service
 
 
 class VectorDbMemory(MemoryBase):
@@ -45,7 +46,13 @@ class VectorDbMemory(MemoryBase):
         if not self._entries:
             return []
 
-        query_vector = self._embeddings.embed(self._query_template.format(query = query))
+        embedded = self._query_template.format(query = query)
+        current_tracing_service().record("Query embedding", "retrieval", {
+            "detail": f"the query embedded with its instruction, searched over {len(self._entries)} chunks",
+            "text": embedded,
+            "entries": len(self._entries)
+        })
+        query_vector = self._embeddings.embed(embedded)
         operations = policy.resolve(self._entries, query, query_vector, top_k)
         return self._operation_manager.apply(operations, self._entries)
 
