@@ -1,9 +1,10 @@
 import httpx
 import socket
 import ipaddress
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 from app.intelligence.web import WebAccessError
+from app.intelligence.tracing import current_tracing_service
 
 NAT64_NETWORK = ipaddress.ip_network("64:ff9b::/96")
 
@@ -16,7 +17,8 @@ class WebAddressGuard:
     are refused, also inside IPv6 forms.
 
     The fetcher connects to exactly the approved address, so DNS cannot be rebound
-    between the check and the connection. The resolver is injectable for tests."""
+    between the check and the connection. Every check is traced as a step with each
+    resolved address and its verdict. The resolver is injectable for tests."""
 
     ALLOWED_SCHEMES = {"http", "https"}
 
@@ -54,6 +56,13 @@ class WebAddressGuard:
         )
 
     def check(self, url: httpx.URL) -> str:
+        with current_tracing_service().step("Address check", "guard", {"url": str(url), "host": url.host}) as span:
+            address = self._check(url, span)
+            span["chosen"] = address
+            span["detail"] = f"{url.host} resolves to {len(span['addresses'])} public address(es), connecting to {address}"
+        return address
+
+    def _check(self, url: httpx.URL, report: dict[str, Any]) -> str:
         if url.scheme not in self.ALLOWED_SCHEMES:
             raise WebAccessError(f"Only http and https URLs can be fetched, not '{url.scheme}:'.")
         if not url.host:
@@ -62,6 +71,9 @@ class WebAddressGuard:
             raise WebAccessError("URLs that carry a user name or password are refused.")
 
         addresses = self._resolver(url.host, url.port or (443 if url.scheme == "https" else 80))
+        report["addresses"] = [
+            {"address": current_address, "public": self.is_public(current_address)} for current_address in addresses
+        ]
         if not addresses:
             raise WebAccessError(f"'{url.host}' did not resolve to any address.")
 
