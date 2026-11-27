@@ -96,6 +96,18 @@ class TestChatSessionStoreSql:
         store.append_messages(older.id, [MessageHuman(content = "bump")])
         assert [current.id for current in store.list_sessions("o1")] == [older.id, newer.id]
 
+    def test_renaming_changes_the_title_and_keeps_the_rest(self):
+        store = make_store()
+        session = make_session(title = "Old", messages = [MessageHuman(content = "hi")])
+        store.create_session(session)
+        renamed = store.rename_session(session.id, "New")
+        assert renamed.title == "New" and store.get_session(session.id).title == "New"
+        assert renamed.messages == session.messages and renamed.updated_at == session.updated_at
+
+    def test_renaming_an_unknown_session_raises_key_error(self):
+        with pytest.raises(KeyError):
+            make_store().rename_session("missing", "New")
+
     def test_delete_reports_whether_there_was_anything_to_delete(self):
         store = make_store()
         session = make_session()
